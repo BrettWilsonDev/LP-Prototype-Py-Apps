@@ -169,7 +169,7 @@ def DoDualPivotOperation(tab):
 
     newTab[rowIndex] = pivotMathRow
 
-    # print(f"the pivot col is {pivotColIndex} and the pivot row is {rowIndex}")
+    print(f"the pivot col in Dual is {pivotColIndex + 1} and the pivot row is {rowIndex + 1}")
 
     return newTab, thetaRow
 
@@ -251,7 +251,7 @@ def DoPrimalPivotOperation(tab, isMin):
 
             operationTab[i][j] = mathItem
 
-    print(f"the pivot col is {colIndex} and the pivot row is {rowIndex}")
+    print(f"the pivot col in primal is {colIndex + 1} and the pivot row is {rowIndex + 1}")
 
     return operationTab, thetasCol
 
@@ -318,9 +318,9 @@ def GetInput():
 
     objFunc, constrants = read_file('data.txt')
     print("data in:")
-    print(objFunc)
+    print(f"objective function {objFunc}")
     print()
-    print(constrants)
+    print(f"constrants {constrants}")
 
     amtOfE = 0
     amtOfS = 0
@@ -342,6 +342,7 @@ def GetInput():
 
 
 def DoDualSimplex():
+    print()
     isMin = False
     # isMin = True
 
@@ -350,9 +351,10 @@ def DoDualSimplex():
     tableaus = []
 
     tab, isMin, amtOfE, amtOfS, lenObj = GetInput()
+    print()
 
     tableaus.append(tab)
-    displayTableau = []
+    # displayTableau = []
 
     while True:
         rhsTest = []
@@ -378,7 +380,7 @@ def DoDualSimplex():
         allObjFuncPositive = all(num >= 0 for num in objFuncTest)
 
     if allObjFuncPositive:
-        print("Optimal Solution Found")
+        print("\nOptimal Solution Found")
         print(tableaus[-1][0][-1])
         print()
     else:
@@ -387,7 +389,7 @@ def DoDualSimplex():
             # printTab(tableaus[-1])
 
             if tableaus[-1] is None:
-                print("No Optimal Solution Found")
+                print("\nNo Optimal Solution Found")
                 break
 
             objFuncTest = []
@@ -409,12 +411,12 @@ def DoDualSimplex():
             tableaus.append(tab)
             # print(tableaus[-1])
 
-        print("Optimal Solution Found")
+        print("\nOptimal Solution Found")
         if tableaus[-1] is not None:
             print(tableaus[-1][0][-1])
             print()
         else:
-            print("No Optimal Solution Found")
+            print("\nNo Optimal Solution Found")
 
     # for i in range(len(tableaus)):
     #     for j in range(len(tableaus[i])):
@@ -482,11 +484,12 @@ def DoDualSimplex():
 def main():
     while True:
         DoDualSimplex()
-        goAgin = input("exit press 1: ")
+        print()
+        goAgin = input("To exit press 1 or Press enter to continue: ")
         if goAgin.lower() == "continue":
             continue
         elif goAgin == "1":
             break
-        else:
-            print("Invalid input. Please enter 1 to exit or 'continue' to continue.")
+        # else:
+        #     print("Invalid input. Please enter 1 to exit or 'continue' to continue.")
 main()

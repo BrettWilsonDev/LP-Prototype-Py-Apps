@@ -2,23 +2,28 @@ import math
 
 import re
 
+import tkinter as tk
+
+
 def read_file(file_path):
     with open(file_path, 'r') as file:
         content = file.readlines()
 
     # Extract the first list
     first_list_str = content[0].strip()
-    first_list = [int(num.strip()) for num in first_list_str.strip('[]').split(',')]
-    
+    first_list = [int(num.strip())
+                  for num in first_list_str.strip('[]').split(',')]
+
     # # Extract the list of lists
     # second_list_str = [line.strip() for line in content[2:] if line.strip()]
     # second_list = [[int(num) for num in re.findall(r'\d+', sublist)] for sublist in second_list_str]
 
     # Extract the list of lists, skipping lines starting with '#'
-    second_list_str = [line.strip() for line in content[2:] if line.strip() and not line.strip().startswith('#')]
-    second_list = [[int(num) for num in re.findall(r'\d+', sublist)] for sublist in second_list_str]
-    
-    
+    second_list_str = [line.strip() for line in content[2:]
+                       if line.strip() and not line.strip().startswith('#')]
+    second_list = [[int(num) for num in re.findall(r'\d+', sublist)]
+                   for sublist in second_list_str]
+
     del second_list[0]
     del second_list[-1]
 
@@ -27,19 +32,19 @@ def read_file(file_path):
 # def read_file(file_path):
 #     with open(file_path, 'r') as file:
 #         content = file.readlines()
-    
+
 #     # is_true = content[0].strip() == 0
 
 #     first_list_str = content[1].strip()
 #     first_list = [int(num.strip()) for num in first_list_str.strip('[]').split(',') if num.strip()]
-    
+
 #     # Extract the list of lists, skipping lines starting with '#'
 #     second_list_str = [line.strip() for line in content[3:] if line.strip() and not line.strip().startswith('#')]
 #     second_list = [[int(num) for num in re.findall(r'\d+', sublist)] for sublist in second_list_str]
-    
+
 #     del second_list[0]
 #     del second_list[-1]
-    
+
 #     return first_list, second_list
 
 
@@ -100,10 +105,19 @@ def DoFormulationOperation(objFunc, constraints):
 
 
 def DoDualPivotOperation(tab):
+    # for item in tab:
+    #     if item == -0.0:
+    #         item = 0.0
+
     thetaRow = []
 
     rhs = [row[-1] for row in tab]
-    minRhsNum = min(rhs)
+    rhsNeg = [row[-1] for row in tab if row[-1] < 0]
+    # minRhsNum = min(rhs)
+    # print(rhsNeg)
+    minRhsNum = max(rhsNeg)
+
+    # print(minRhsNum)
 
     pivotRow = rhs.index(minRhsNum)
 
@@ -131,8 +145,6 @@ def DoDualPivotOperation(tab):
 
     rowIndex = pivotRow
     colIndex = dualPivotThetas.index(smallestPosPivotTheta)
-
-
 
     oldTab = tab.copy()
 
@@ -169,12 +181,17 @@ def DoDualPivotOperation(tab):
 
     newTab[rowIndex] = pivotMathRow
 
-    print(f"the pivot col in Dual is {pivotColIndex + 1} and the pivot row is {rowIndex + 1}")
+    print(f"the pivot col in Dual is {
+          pivotColIndex + 1} and the pivot row is {rowIndex + 1}")
 
     return newTab, thetaRow
 
 
 def DoPrimalPivotOperation(tab, isMin):
+    # for item in tab:
+    #     if item == -0.0:
+    #         item = 0.0
+
     thetasCol = []
 
     testRow = tab[0][:-1]
@@ -185,7 +202,7 @@ def DoPrimalPivotOperation(tab, isMin):
     else:
         largestNegativeNumber = min(
             num for num in testRow if num < 0 and num != 0)
-        
+
     # print(largestNegativeNumber)
 
     colIndex = tab[0].index(largestNegativeNumber)
@@ -216,25 +233,51 @@ def DoPrimalPivotOperation(tab, isMin):
 
     minTheta = min(num for num in thetas if num > 0)
 
+    # todo fix the below
+    if minTheta == float('inf'):
+        if 0 in thetas:
+            minTheta = 0
+        else:
+            return None, None
+
+    # print(f"thetas: {thetas}")
+    # print(f"t")
     rowIndex = thetas.index(minTheta) + 1
 
     # print()
     # printTab(tab)
     # print()
 
-    # print(f"\nthe pivot row {rowIndex} and the pivot column {colIndex}")
+    # print(f"\n######################the pivot row {rowIndex} and the pivot column {colIndex}")
 
     operationTab = []
 
     divNumber = tab[rowIndex][colIndex]
+    # print(divNumber)
+
+    # if divNumber == 'inf':
+    #     divNumber = 1
+
+    if divNumber == 0:
+        return None, None
+
+    # print("div number", divNumber)
 
     operationTab = [[0 for _ in row] for row in tab]
 
     for i in range(len(tab)):
         for j in range(len(tab[i])):
+            # print(f"{operationTab[rowIndex][j]} = {tab[rowIndex][j]} / {divNumber}")
             operationTab[rowIndex][j] = tab[rowIndex][j] / divNumber
             if operationTab[rowIndex][j] == -0.0:
                 operationTab[rowIndex][j] = 0.0
+
+            # if divNumber != 0:
+            #     operationTab[rowIndex][j] = tab[rowIndex][j] / divNumber
+            # else:
+            #     operationTab[rowIndex][j] = float('inf')
+            # if operationTab[rowIndex][j] == -0.0:
+            #     operationTab[rowIndex][j] = 0.0
 
     # print(operationTab[rowIndex])
 
@@ -251,14 +294,15 @@ def DoPrimalPivotOperation(tab, isMin):
 
             operationTab[i][j] = mathItem
 
-    print(f"the pivot col in primal is {colIndex + 1} and the pivot row is {rowIndex + 1}")
+    print(f"the pivot col in primal is {
+          colIndex + 1} and the pivot row is {rowIndex + 1}")
 
     return operationTab, thetasCol
 
 
 def GetInput():
     isMin = False
-    objFunc = []    
+    objFunc = []
 
     # 0 is <= and 1 is >= and 2 is =
     constrants = []
@@ -354,9 +398,13 @@ def DoDualSimplex():
     print()
 
     tableaus.append(tab)
-    # displayTableau = []
 
     while True:
+        for items in tableaus[-1]:
+            for item in items:
+                if item == -0.0:
+                    item = 0.0
+
         rhsTest = []
         for i in range(len(tableaus[-1])):
             rhsTest.append(tableaus[-1][i][-1])
@@ -368,6 +416,10 @@ def DoDualSimplex():
         tab, thetaRow = DoDualPivotOperation(tableaus[-1])
         # displayTableau.append(tab)
         # displayTableau[-1].append(thetaRow)
+        for items in tab:
+            for item in items:
+                if item == -0.0:
+                    item = 0.0
         tableaus.append(tab)
 
     objFuncTest = []
@@ -388,6 +440,11 @@ def DoDualSimplex():
         while True:
             # printTab(tableaus[-1])
 
+            for items in tableaus[-1]:
+                for item in items:
+                    if item == -0.0:
+                        item = 0.0
+
             if tableaus[-1] is None:
                 print("\nNo Optimal Solution Found")
                 break
@@ -404,7 +461,10 @@ def DoDualSimplex():
                 break
 
             tab, thetaCol = DoPrimalPivotOperation(tableaus[-1], isMin)
-            
+
+            if thetaCol is None and tab is None:
+                break
+
             # displayTableau.append(tab)
             thetaCols.append(thetaCol.copy())
             # displayTableau[-1][-1].append(thetaCol.copy)
@@ -423,8 +483,8 @@ def DoDualSimplex():
     #         tableaus[i][j].append(thetaCols[i][j])
             # print(tableaus[i][j][-1], end=" ")
 
-                # if math.isnan(tableaus[i][j][k]):
-                #     continue
+            # if math.isnan(tableaus[i][j][k]):
+            #     continue
 
     # for item in tableaus:
     #     printTab(item)
@@ -440,7 +500,7 @@ def DoDualSimplex():
 
     topRow = []
 
-    topRowSize = lenObj + amtOfE + amtOfS    
+    topRowSize = lenObj + amtOfE + amtOfS
 
     # for i in range(topRowSize):
     #     if amtOfX < lenObj:
@@ -459,14 +519,14 @@ def DoDualSimplex():
         if amtOfX < lenObj:
             topRow.append(xVars[amtOfX])
             amtOfX += 1
-    
+
     for i in range(amtOfE):
         if amtOfSlack < amtOfE:
             topRow.append("e{}".format(amtOfExcess + 1))
             amtOfExcess += 1
 
     for i in range(amtOfS):
-      if amtOfExcess < amtOfS:
+        if amtOfExcess < amtOfS:
             topRow.append("s{}".format(amtOfSlack + 1))
             amtOfSlack += 1
 
@@ -481,7 +541,21 @@ def DoDualSimplex():
             print()
         print()
 
+
 def main():
+
+    # # Create a new Tkinter window
+    # window = tk.Tk()
+
+    # # Create a label widget
+    # label = tk.Label(window, text="Hello, Tkinter!")
+
+    # # Pack the label widget into the window
+    # label.pack()
+
+    # # Start the Tkinter event loop
+    # window.mainloop()
+
     while True:
         DoDualSimplex()
         print()
@@ -490,6 +564,7 @@ def main():
             continue
         elif goAgin == "1":
             break
+
         # else:
         #     print("Invalid input. Please enter 1 to exit or 'continue' to continue.")
 main()

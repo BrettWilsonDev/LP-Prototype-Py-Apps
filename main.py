@@ -143,8 +143,11 @@ def DoDualPivotOperation(tab):
 
     smallestPosPivotTheta = min(dualPivotThetas)
 
+    print(smallestPosPivotTheta)
+
     rowIndex = pivotRow
     colIndex = dualPivotThetas.index(smallestPosPivotTheta)
+    # print(colIndex)
 
     oldTab = tab.copy()
 
@@ -182,7 +185,7 @@ def DoDualPivotOperation(tab):
     newTab[rowIndex] = pivotMathRow
 
     print(f"the pivot col in Dual is {
-          pivotColIndex + 1} and the pivot row is {rowIndex + 1}")
+          colIndex + 1} and the pivot row is {rowIndex + 1}")
 
     return newTab, thetaRow
 

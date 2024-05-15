@@ -10,6 +10,7 @@ import OpenGL.GL as gl
 from imgui.integrations.pygame import PygameRenderer
 import imgui
 import os
+import copy
 
 
 def read_file(file_path):
@@ -575,7 +576,7 @@ def DoGui():
 
     problemType = "Max"
 
-    constraints = [] 
+    # constraints = [] 
 
     # goal constraints
     amtOfObjVars = 2
@@ -617,7 +618,7 @@ def DoGui():
             amtOfObjVars += 1
             for i in range(len(constraints)):
                 constraints[i].append(0.0)
-                objFunc.append(0.0)
+            objFunc.append(0.0)
 
         imgui.same_line()
 
@@ -643,7 +644,6 @@ def DoGui():
 
         if imgui.button("Constraint +"):
             amtOfConstraints += 1
-            # goalConstraints.append([0.0, 0.0])
             constraints.append([0.0] * amtOfObjVars)
             constraints[-1].append(0.0) # add sign spot
             constraints[-1].append(0.0) # add rhs spot
@@ -675,9 +675,9 @@ def DoGui():
 
             imgui.same_line()  
             imgui.push_item_width(50)
-            changed, selectedItemSignC = imgui.combo("comboC{}{}".format(i, j), signItemsChoices[i], signItems)
+            changed, selectedItemSign = imgui.combo("comboC{}{}".format(i, j), signItemsChoices[i], signItems)
             if changed:
-                signItemsChoices[i] = selectedItemSignC
+                signItemsChoices[i] = selectedItemSign
                 constraints[i][-1] = signItemsChoices[i]
 
             imgui.pop_item_width()
@@ -698,7 +698,12 @@ def DoGui():
         if imgui.button("Solve"):
             print(objFunc, constraints, isMin)
             try:
-                DoDualSimplex(objFunc, constraints, isMin)
+                a = copy.deepcopy(objFunc)
+                b = copy.deepcopy(constraints)
+                DoDualSimplex(a, b, isMin)
+                # constraints = [[0.0, 0.0, 0.0, 0.0]] 
+                # amtOfObjVars = 2
+                # objFunc = [0.0, 0.0]
             except Exception as e:
                 print("math error:", e) 
 

@@ -2,7 +2,14 @@ import math
 
 import re
 
-import tkinter as tk
+# import tkinter as tk**
+
+import sys
+import pygame
+import OpenGL.GL as gl
+from imgui.integrations.pygame import PygameRenderer
+import imgui
+import os
 
 
 def read_file(file_path):
@@ -11,7 +18,7 @@ def read_file(file_path):
 
     # Extract the first list
     first_list_str = content[0].strip()
-    first_list = [int(num.strip())
+    first_list = [float(num.strip())
                   for num in first_list_str.strip('[]').split(',')]
 
     # # Extract the list of lists
@@ -21,7 +28,7 @@ def read_file(file_path):
     # Extract the list of lists, skipping lines starting with '#'
     second_list_str = [line.strip() for line in content[2:]
                        if line.strip() and not line.strip().startswith('#')]
-    second_list = [[int(num) for num in re.findall(r'\d+', sublist)]
+    second_list = [[float(num) for num in re.findall(r'\d+', sublist)]
                    for sublist in second_list_str]
 
     del second_list[0]
@@ -143,7 +150,7 @@ def DoDualPivotOperation(tab):
 
     smallestPosPivotTheta = min(dualPivotThetas)
 
-    print(smallestPosPivotTheta)
+    # print(smallestPosPivotTheta)
 
     rowIndex = pivotRow
     colIndex = dualPivotThetas.index(smallestPosPivotTheta)
@@ -303,12 +310,12 @@ def DoPrimalPivotOperation(tab, isMin):
     return operationTab, thetasCol
 
 
-def GetInput():
-    isMin = False
-    objFunc = []
+def GetInput(objFunc, constrants, isMin):
+    # isMin = False
+    # objFunc = []
 
     # 0 is <= and 1 is >= and 2 is =
-    constrants = []
+    # constrants = []
 
     # objFunc = [100, 30]
 
@@ -363,11 +370,11 @@ def GetInput():
     #     [10, 4, 40, 0]
     # ]
 
-    objFunc, constrants = read_file('data.txt')
-    print("data in:")
-    print(f"objective function {objFunc}")
-    print()
-    print(f"constrants {constrants}")
+    # objFunc, constrants = read_file('data.txt')
+    # print("data in:")
+    # print(f"objective function {objFunc}")
+    # print()
+    # print(f"constrants {constrants}")
 
     amtOfE = 0
     amtOfS = 0
@@ -382,22 +389,22 @@ def GetInput():
     # printTab(tab)
     # print(amtOfE, amtOfS)
 
-    print()
-    isMin = int(input("is Problem max or min 0 or 1: "))
+    # print()
+    # isMin = int(input("is Problem max or min 0 or 1: "))
 
     return tab, isMin, amtOfE, amtOfS, len(objFunc)
 
 
-def DoDualSimplex():
+def DoDualSimplex(objFunc, constraints, isMin):
     print()
-    isMin = False
+    # isMin = False
     # isMin = True
 
     # thetaRows = []
     thetaCols = []
     tableaus = []
 
-    tab, isMin, amtOfE, amtOfS, lenObj = GetInput()
+    tab, isMin, amtOfE, amtOfS, lenObj = GetInput(objFunc, constraints, isMin)
     print()
 
     tableaus.append(tab)
@@ -544,30 +551,176 @@ def DoDualSimplex():
             print()
         print()
 
+def DoGui():
+    pygame.init()
+    size = 1920 / 2, 1080 / 2
+    
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print("\nBrett's simplex prototype tool for goal simplex problems\n")
+
+    pygame.display.set_mode(size, pygame.DOUBLEBUF |
+                            pygame.OPENGL | pygame.RESIZABLE)
+
+    pygame.display.set_caption("Goal Simplex Prototype")
+
+    icon = pygame.Surface((1, 1)).convert_alpha()
+    icon.fill((0, 0, 0, 1))
+    pygame.display.set_icon(icon)
+
+    imgui.create_context()
+    impl = PygameRenderer()
+
+    io = imgui.get_io()
+    io.display_size = size   
+
+    problemType = "Max"
+
+    constraints = [] 
+
+    # goal constraints
+    amtOfObjVars = 2
+    objFunc = [0.0, 0.0]
+
+    constraints = [[0.0, 0.0, 0.0, 0.0]] 
+    signItems = ["<=", ">="]
+    signItemsChoices = [0]
+
+    amtOfConstraints = 1
+
+    while 1:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+
+            impl.process_event(event)
+
+        imgui.new_frame()
+
+        window_size = pygame.display.get_window_size()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (window_size[0]), (window_size[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        if imgui.radio_button("Max", problemType == "Max"):
+            problemType = "Max"
+
+        if imgui.radio_button("Min", problemType == "Min"):
+            problemType = "Min"
+
+        imgui.text("Problem is: {}".format(problemType))
+
+        # obj vars ===========================================
+        if imgui.button("decision variables +"):
+            amtOfObjVars += 1
+            for i in range(len(constraints)):
+                constraints[i].append(0.0)
+                objFunc.append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("decision variables -"):
+            if amtOfObjVars != 2:
+                amtOfObjVars += -1
+                for i in range(len(constraints)):
+                    constraints[i].pop()
+                objFunc.pop()
+
+        imgui.spacing()
+
+        for i in range(len(objFunc)):
+            value = objFunc[i]
+            imgui.set_next_item_width(50)
+            imgui.same_line()
+            changed, objFunc[i] = imgui.input_float(
+                "objFunc {}".format(i + 1), value)
+
+            if changed:
+                # Value has been updated
+                pass
+
+        if imgui.button("Constraint +"):
+            amtOfConstraints += 1
+            # goalConstraints.append([0.0, 0.0])
+            constraints.append([0.0] * amtOfObjVars)
+            constraints[-1].append(0.0) # add sign spot
+            constraints[-1].append(0.0) # add rhs spot
+            signItemsChoices.append(0)
+
+        imgui.same_line()
+
+        if imgui.button("Constraint -"):
+            if amtOfConstraints != 1:
+                amtOfConstraints += -1
+                constraints.pop()
+                signItemsChoices.pop()
+
+        # spaceGui(6)
+        for i in range(amtOfConstraints):
+            imgui.spacing()
+            if len(constraints) <= i:
+                # Fill with default values if needed
+                constraints.append([0.0] * (amtOfObjVars + 2))
+
+            for j in range(amtOfObjVars):
+                value = constraints[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "xC{}{}".format(i, j), value)
+                if changed:
+                    constraints[i][j] = xValue
+
+            imgui.same_line()  
+            imgui.push_item_width(50)
+            changed, selectedItemSignC = imgui.combo("comboC{}{}".format(i, j), signItemsChoices[i], signItems)
+            if changed:
+                signItemsChoices[i] = selectedItemSignC
+                constraints[i][-1] = signItemsChoices[i]
+
+            imgui.pop_item_width()
+            imgui.same_line()   
+            imgui.set_next_item_width(50)
+            rhsValue = constraints[i][-2]
+            rhsChanged, rhs = imgui.input_float(
+                "RHSC{}{}".format(i, j), rhsValue)
+                
+            if rhsChanged:
+                constraints[i][-2] = rhs 
+
+        if problemType == "Min":
+            isMin = True
+        else:
+            isMin = False
+
+        if imgui.button("Solve"):
+            print(objFunc, constraints, isMin)
+            try:
+                DoDualSimplex(objFunc, constraints, isMin)
+            except Exception as e:
+                print("math error:", e) 
+
+        imgui.end()
+
+        # gl stuff
+        gl.glClearColor(0, 0, 0, 1)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+        imgui.render()
+        impl.render(imgui.get_draw_data())
+
+        pygame.display.flip()
 
 def main():
 
-    # # Create a new Tkinter window
-    # window = tk.Tk()
-
-    # # Create a label widget
-    # label = tk.Label(window, text="Hello, Tkinter!")
-
-    # # Pack the label widget into the window
-    # label.pack()
-
-    # # Start the Tkinter event loop
-    # window.mainloop()
-
-    while True:
-        DoDualSimplex()
-        print()
-        goAgin = input("To exit press 1 or Press enter to continue: ")
-        if goAgin.lower() == "continue":
-            continue
-        elif goAgin == "1":
-            break
-
-        # else:
-        #     print("Invalid input. Please enter 1 to exit or 'continue' to continue.")
+    DoGui()
+    # while True:
+    #     DoDualSimplex()
+    #     print()
+    #     goAgin = input("To exit press 1 or Press enter to continue: ")
+    #     if goAgin.lower() == "continue":
+    #         continue
+    #     elif goAgin == "1":
+    #         break
 main()

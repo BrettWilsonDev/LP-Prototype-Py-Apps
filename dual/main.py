@@ -123,7 +123,8 @@ def DoDualPivotOperation(tab):
     rhsNeg = [row[-1] for row in tab if row[-1] < 0]
     # minRhsNum = min(rhs)
     # print(rhsNeg)
-    minRhsNum = max(rhsNeg)
+    # minRhsNum = max(rhsNeg)
+    minRhsNum = min(rhsNeg)
 
     # print(minRhsNum)
 

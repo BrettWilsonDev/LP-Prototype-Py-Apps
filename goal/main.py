@@ -42,7 +42,7 @@ def GetInput():
         # [100, 60, 600, 0],
     ]
 
-    return penlites, goalConstraints, constraints
+    # return penlites, goalConstraints, constraints
 
 
 def BuildFirstPenlitesTableau(penlites, goalConstraints, constraints):
@@ -91,6 +91,8 @@ def BuildFirstPenlitesTableau(penlites, goalConstraints, constraints):
     for i in range(len(penlites), tabSizeH - len(constraints)):
         tab[i][onesCtr] = 1
         tab[i][onesCtr + 1] = -1
+        # if onesCtr + 1 < len(tab[i]):
+        #     tab[i][onesCtr + 1] = -1
         onesCtr += 2
 
     # put the 1 for normal constraints in the slack spots
@@ -196,6 +198,12 @@ def DoPivotOperations(tab, conStart, zRow, tabNum=1):
 
     print(f"pivoting on table {tabNum}\nIn row {
           pivotRow + 1} and col {pivotCol + 1}\n")
+    
+    
+    for i in range(len(newTab)):
+        for j in range(len(newTab[i])):
+            print("{:10.3f}".format(newTab[i][j]), end=" ")
+        print()
 
     return newTab, zRhs
 
@@ -634,19 +642,20 @@ def DoGui():
 
         spaceGui(6)
         if imgui.button("Solve"):
-            try:
+            # try:
                 if goalType == "Penalties":
                     tableaus = DoPenlites(penlites, goalConstraints, constraints)
                     # print(tableaus)
                 else:
+                    print([], goalConstraints, constraints)
                     tableaus = DoPreemptive([], goalConstraints, constraints)
                     # print(len(tableaus))
                     # print(tableaus)
-                # table print =================================================
-            except Exception as e:
-                print("math error:", e) 
-                imgui.spacing()
-                imgui.text(f"Math Error: {e}")
+            #     # table print =================================================
+            # except Exception as e:
+            #     print("math error:", e) 
+            #     imgui.spacing()
+            #     imgui.text(f"Math Error: {e}")
 
 
             # penlites = []

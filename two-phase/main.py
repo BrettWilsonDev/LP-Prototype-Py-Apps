@@ -2,6 +2,8 @@ import copy
 
 
 def testInput():
+    isMin = False
+
     objFunc = [100, 30]
 
     # # 0 is <= and 1 is >= and 2 is =
@@ -14,7 +16,28 @@ def testInput():
         # [0, 7, -8, 1],
     ]
 
-    return objFunc, constraints
+
+    # objFunc = [100, 80, 40]
+
+    # # # # # 0 is <= and 1 is >= and 2 is =
+    # constraints = [
+    #     [2, 1, 1, 3, 1],
+    #     [1, 1, 0, 2, 1],
+    # ]
+
+    # objFunc = [100, 30, 40]
+
+    # # # 0 is <= and 1 is >= and 2 is =
+    # constraints = [
+    #     [0, 1, 3, 4, 1],
+    #     [1, 1, 7, 4, 0],
+    #     [10, 4, 40, 5, 0],
+    # ]
+
+    # isMin = True
+    # isMin = False
+
+    return objFunc, constraints, isMin
 
 
 def FormulateFirstTab(objFunc, constraints):
@@ -206,13 +229,17 @@ def DoPivotOperationsPhase1(tab):
     #         print("{:10.3f}".format(newTab[i][j]), end=" ")
     #     print()
 
-    print(f"The pivot row is {pivotRow + 1} and the pivot col is {pivotCol + 1}")
+    print(f"In Phase 1, The pivot row is {pivotRow + 1} and the pivot col is {pivotCol + 1}")
 
     return newTab, isAllNegW
 
 
 def DoPivotOperationsPhase2(tab, isMin):
-    largestZ = min(tab[1][:-1])
+
+    if isMin:
+        largestZ = max(tab[1][:-1])
+    else:
+        largestZ = min(tab[1][:-1])
     # print(largestW)
 
     pivotCol = tab[1][:-1].index(largestZ)
@@ -260,9 +287,9 @@ def DoPivotOperationsPhase2(tab, isMin):
                     (tab[i][pivotCol] * newTab[pivotRow][j])
 
     if isMin:
-        isAllNegZ = all(num <= 0 for num in newTab[1])
+        isAllNegZ = all(num <= 0 for num in newTab[1][:-1])
     else:
-        isAllNegZ = all(num >= 0 for num in newTab[1])
+        isAllNegZ = all(num >= 0 for num in newTab[1][:-1])
 
     # print(isAllNegZ)
 
@@ -272,7 +299,7 @@ def DoPivotOperationsPhase2(tab, isMin):
     #         print("{:10.3f}".format(newTab[i][j]), end=" ")
     #     print()
 
-    print(f"The pivot row is {pivotRow + 1} and the pivot col is {pivotCol + 1}")
+    print(f"In Phase 2, The pivot row is {pivotRow + 1} and the pivot col is {pivotCol + 1}")
 
     return newTab, isAllNegZ
 
@@ -281,7 +308,7 @@ def main():
     isMin = False
     tabs = []
     isAllNegW = False
-    objFunc, constraints = testInput()
+    objFunc, constraints, isMin = testInput()
     tab, aCols = FormulateFirstTab(objFunc, constraints)
     tabs.append(tab)
 
@@ -302,7 +329,7 @@ def main():
         tabs.append(tab)
 
         phase1Ctr += 1
-        if isAllNegW or phase1Ctr > 5:
+        if isAllNegW or phase1Ctr > 50:
             break
 
 
@@ -324,10 +351,10 @@ def main():
     tabs.append(newTab)
 
     if not isMin:
-        AllPosZ = all(num >= 0 for num in tabs[-1][1])
+        AllPosZ = all(num >= 0 for num in tabs[-1][1][:-1])
         # print(AllPosZ)
     else:
-        AllPosZ = all(num <= 0 for num in tabs[-1][1])
+        AllPosZ = all(num <= 0 for num in tabs[-1][1][:-1])
         # print(AllPosZ)
 
     phase2Ctr = 0
@@ -335,7 +362,7 @@ def main():
         tab, AllPosZ = DoPivotOperationsPhase2(tabs[-1], isMin)
         tabs.append(tab)
 
-        if AllPosZ or phase2Ctr > 5:
+        if AllPosZ or phase2Ctr > 25:
             break
 
         phase2Ctr += 1

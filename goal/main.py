@@ -116,6 +116,18 @@ def BuildFirstPenlitesTableau(penlites, goalConstraints, constraints):
 
     conStart = len(penlites)
 
+    for i in range(len(tab)):
+        for j in range(len(tab[i])):
+            print("{:10.3f}".format(tab[i][j]), end=" ")
+        print()
+
+    print()
+
+    for i in range(len(newTab)):
+        for j in range(len(newTab[i])):
+            print("{:10.3f}".format(newTab[i][j]), end=" ")
+        print()
+
     return tab, newTab, conStart
 
 
@@ -197,7 +209,7 @@ def DoPivotOperations(tab, conStart, zRow, tabNum=1):
         zRhs.append(newTab[i][-1])
 
     print(f"pivoting on table {tabNum}\nIn row {
-          pivotRow + 1} and col {pivotCol + 1}\n")
+          pivotRow + 1} and col {pivotCol + 1 - 1}\n")
     
     
     for i in range(len(newTab)):
@@ -326,6 +338,18 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
             elif goalConstraints[i][-1] == 1:
                 newTab[i][j] = tab[i + penlites][j] + tab[i][j]
         gCtr += 1
+
+    for i in range(len(tab)):
+        for j in range(len(tab[i])):
+            print("{:10.3f}".format(tab[i][j]), end=" ")
+        print()
+
+    print()
+
+    for i in range(len(newTab)):
+        for j in range(len(newTab[i])):
+            print("{:10.3f}".format(newTab[i][j]), end=" ")
+        print()
 
     return tab, newTab, penlites
 
@@ -642,7 +666,7 @@ def DoGui():
 
         spaceGui(6)
         if imgui.button("Solve"):
-            # try:
+            try:
                 if goalType == "Penalties":
                     tableaus = DoPenlites(penlites, goalConstraints, constraints)
                     # print(tableaus)
@@ -652,8 +676,8 @@ def DoGui():
                     # print(len(tableaus))
                     # print(tableaus)
             #     # table print =================================================
-            # except Exception as e:
-            #     print("math error:", e) 
+            except Exception as e:
+                print("math error:", e) 
             #     imgui.spacing()
             #     imgui.text(f"Math Error: {e}")
 

@@ -34,6 +34,31 @@ def testInput():
     #     [10, 4, 40, 5, 0],
     # ]
 
+    
+    # objFunc = [5, -4, 3]
+
+    # # # 0 is <= and 1 is >= and 2 is =
+    # constraints = [
+    #     [2, 1, -6, 20, 1],
+    #     [2, 1, -6, 20, 0],
+    #     [6, 5, 10, 76, 0],
+    #     [8, -3, 6, 50, 0],
+    # ]
+
+    objFunc = [1200, 800]
+
+    # # 0 is <= and 1 is >= and 2 is =
+    constraints = [
+        [8, 4, 1600, 0],
+        [4, 4, 1000, 0],
+        [1, 0, 170, 0],
+        [0, 1, 200, 0],
+        [1, 0, 40, 1],
+        [0, 1, 25, 1],
+        [1, -1, 0, 1],
+        [1, -4, 0, 0],
+    ]
+
     # isMin = True
     # isMin = False
 
@@ -119,7 +144,8 @@ def FormulateFirstTab(objFunc, constraints):
 
     # print(constraints)
 
-    constraints.sort(key=lambda x: x[-1], reverse=True)
+    # constraints[2:].sort(key=lambda x: x[-1], reverse=True)
+    # constraints.sort(key=lambda x: x[-1], reverse=True)
 
     # print(constraints)
 

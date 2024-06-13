@@ -12,6 +12,9 @@ import imgui
 import os
 import copy
 
+IMPivotCols = []
+IMPivotRows = []
+IMHeaderRow = []
 
 def read_file(file_path):
     with open(file_path, 'r') as file:
@@ -89,6 +92,28 @@ def DoFormulationOperation(objFunc, constraints):
 
     tableSizeH = len(constraints) + 1
 
+    # print(excessCount, slackCount, len(objFunc))
+
+    # build the display header row eg x1 x2 e1 e2 s1 s2 rhs
+    imCtr = 1
+    for i in range(len(objFunc)):
+        IMHeaderRow.append("x" + str(imCtr))
+        imCtr += 1
+
+    imCtr = 1
+
+    if excessCount > 0:
+        for i in range(excessCount):
+            IMHeaderRow.append("e" + str(imCtr))
+            imCtr += 1
+
+    if slackCount > 0:
+        for i in range(slackCount):
+            IMHeaderRow.append("s" + str(imCtr))
+            imCtr += 1
+
+    IMHeaderRow.append("rhs")
+    
     tableSizeW = excessCount + slackCount + 1 + len(objFunc)
     opTable = []
     for i in range(tableSizeH):
@@ -195,6 +220,11 @@ def DoDualPivotOperation(tab):
 
     print(f"the pivot col in Dual is {
           colIndex + 1} and the pivot row is {rowIndex + 1}")
+    
+    global IMPivotCols
+    IMPivotCols.append(colIndex)
+    global IMPivotRows
+    IMPivotRows.append(rowIndex)
 
     return newTab, thetaRow
 
@@ -308,6 +338,11 @@ def DoPrimalPivotOperation(tab, isMin):
 
     print(f"the pivot col in primal is {
           colIndex + 1} and the pivot row is {rowIndex + 1}")
+    
+    global IMPivotCols
+    IMPivotCols.append(colIndex)
+    global IMPivotRows
+    IMPivotRows.append(rowIndex)
 
     return operationTab, thetasCol
 
@@ -553,10 +588,20 @@ def DoDualSimplex(objFunc, constraints, isMin):
             print()
         print()
 
+        # print(tableaus)
+
+        # flattened_data = [item for sublist in tableaus for subsublist in sublist for item in subsublist]
+
+        # for item in flattened_data:
+        #     imgui.text(f'{item:8.3f}')
+
+    return tableaus
+
+
 def DoGui():
     pygame.init()
     size = 1920 / 2, 1080 / 2
-    
+
     os.system('cls' if os.name == 'nt' else 'clear')
     print("\nBrett's simplex prototype tool for goal simplex problems\n")
 
@@ -573,21 +618,34 @@ def DoGui():
     impl = PygameRenderer()
 
     io = imgui.get_io()
-    io.display_size = size   
+    io.display_size = size
 
     problemType = "Max"
 
-    # constraints = [] 
+    # constraints = []
 
     # goal constraints
     amtOfObjVars = 2
     objFunc = [0.0, 0.0]
 
-    constraints = [[0.0, 0.0, 0.0, 0.0]] 
+    constraints = [[0.0, 0.0, 0.0, 0.0]]
     signItems = ["<=", ">="]
     signItemsChoices = [0]
 
     amtOfConstraints = 1
+
+    tableaus = []
+
+    pivotCol = -1
+    pivotRow = -1
+    tCol = -1
+    tRow = -1
+    tHeader = []
+
+    global IMPivotCols
+    global IMPivotRows
+    global IMHeaderRow
+
 
     while 1:
         for event in pygame.event.get():
@@ -646,8 +704,8 @@ def DoGui():
         if imgui.button("Constraint +"):
             amtOfConstraints += 1
             constraints.append([0.0] * amtOfObjVars)
-            constraints[-1].append(0.0) # add sign spot
-            constraints[-1].append(0.0) # add rhs spot
+            constraints[-1].append(0.0)  # add sign spot
+            constraints[-1].append(0.0)  # add rhs spot
             signItemsChoices.append(0)
 
         imgui.same_line()
@@ -674,22 +732,23 @@ def DoGui():
                 if changed:
                     constraints[i][j] = xValue
 
-            imgui.same_line()  
+            imgui.same_line()
             imgui.push_item_width(50)
-            changed, selectedItemSign = imgui.combo("comboC{}{}".format(i, j), signItemsChoices[i], signItems)
+            changed, selectedItemSign = imgui.combo(
+                "comboC{}{}".format(i, j), signItemsChoices[i], signItems)
             if changed:
                 signItemsChoices[i] = selectedItemSign
                 constraints[i][-1] = signItemsChoices[i]
 
             imgui.pop_item_width()
-            imgui.same_line()   
+            imgui.same_line()
             imgui.set_next_item_width(50)
             rhsValue = constraints[i][-2]
             rhsChanged, rhs = imgui.input_float(
                 "RHSC{}{}".format(i, j), rhsValue)
-                
+
             if rhsChanged:
-                constraints[i][-2] = rhs 
+                constraints[i][-2] = rhs
 
         if problemType == "Min":
             isMin = True
@@ -701,12 +760,90 @@ def DoGui():
             try:
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)
-                DoDualSimplex(a, b, isMin)
-                # constraints = [[0.0, 0.0, 0.0, 0.0]] 
+                tableaus = DoDualSimplex(a, b, isMin)
+                # constraints = [[0.0, 0.0, 0.0, 0.0]]
                 # amtOfObjVars = 2
                 # objFunc = [0.0, 0.0]
+                # print(len(tableaus))
+                # print(len(IMPivotCols))
+                # print(len(IMPivotRows))
+                # print(IMPivotRows)
+
+                IMPivotCols.append(-1)
+                IMPivotRows.append(-1)
+
+                # print(IMHeaderRow[-1])
+                # print(len(IMHeaderRow))
+                # print()
+                # print(len(tableaus))
+                # print(len(tableaus[-1]))
+                # print(len(tableaus[-1][-1]))
+
+
+                tRow = copy.deepcopy(IMPivotRows)
+                tCol = copy.deepcopy(IMPivotCols)
+                tHeader = copy.deepcopy(IMHeaderRow)
+
+                IMHeaderRow.clear()
+                IMPivotRows.clear()
+                IMPivotCols.clear()
+
+
+                # for item in flattened_data:
+                #     imgui.text(f'{item:8.3f}')
+                text = "solved"
             except Exception as e:
-                print("math error:", e) 
+                print("math error:", e)
+
+
+        # for i in range(len(tableaus)):
+        #     for j in range(len(tableaus[i])):
+        #         for k in range(len(tableaus[i][j])):
+        #             imgui.text("{:>8.3f}".format(tableaus[i][j][k]))
+        #             if k < len(tableaus[i][j]) - 1:
+        #                 imgui.same_line(0, 20)
+        #         imgui.spacing()
+        #     imgui.spacing()
+
+        # pivotCol = 2
+        # pivotRow = 1
+
+        imgui.spacing()
+        imgui.spacing()
+        for i in range(len(tableaus)):
+            pivotCol = tCol[i]
+            pivotRow = tRow[i]
+            imgui.text("Tableau {}".format(i + 1))
+            imgui.text("t-" + str(i + 1))
+            imgui.same_line(0, 20)
+            for hCtr in range(len(tHeader)):
+                imgui.text("{:>8}".format(str(tHeader[hCtr])))
+                imgui.same_line(0, 20)
+            imgui.spacing()
+            for j in range(len(tableaus[i])):
+                if j == pivotRow and pivotRow != -1:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                if j == 0:
+                    imgui.text("z  ")
+                else:
+                    imgui.text("c " + str(j))
+                imgui.same_line(0, 20)
+                for k in range(len(tableaus[i][j])):
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    imgui.text("{:>8.3f}".format(tableaus[i][j][k]))
+                    if k < len(tableaus[i][j]) - 1:
+                        imgui.same_line(0, 20)
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.pop_style_color()
+                if j == pivotRow and pivotRow != -1:
+                    imgui.pop_style_color()
+                imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+        imgui.spacing()
 
         imgui.end()
 

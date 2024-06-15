@@ -666,6 +666,7 @@ def DoGui():
 
         spaceGui(6)
         if imgui.button("Solve"):
+            # tableaus = DoPreemptive([], goalConstraints, constraints)
             try:
                 if goalType == "Penalties":
                     tableaus = DoPenlites(penlites, goalConstraints, constraints)

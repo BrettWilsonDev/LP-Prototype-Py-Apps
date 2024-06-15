@@ -620,11 +620,13 @@ def DoGui():
     io = imgui.get_io()
     io.display_size = size
 
+    # simplex specific vars
+
     problemType = "Max"
 
     # constraints = []
 
-    # goal constraints
+    # dual constraints
     amtOfObjVars = 2
     objFunc = [0.0, 0.0]
 
@@ -791,7 +793,7 @@ def DoGui():
 
                 # for item in flattened_data:
                 #     imgui.text(f'{item:8.3f}')
-                text = "solved"
+                # text = "solved"
             except Exception as e:
                 print("math error:", e)
 

@@ -11,6 +11,7 @@ import os
 IMPivotCols = []
 IMPivotRows = []
 IMHeaderRow = []
+IMPhaseType = []
 
 
 def testInput():
@@ -23,56 +24,7 @@ def testInput():
         [0, 1, 3, 1],
         [1, 1, 7, 0],
         [10, 4, 40, 0],
-        # [2, 3, 4, 1],
-        # [5, -6, 7, 0],
-        # [0, 7, -8, 1],
     ]
-
-
-    # objFunc = [100, 80, 40]
-
-    # # # # # 0 is <= and 1 is >= and 2 is =
-    # constraints = [
-    #     [2, 1, 1, 3, 1],
-    #     [1, 1, 0, 2, 1],
-    # ]
-
-    # objFunc = [100, 30, 40]
-
-    # # # 0 is <= and 1 is >= and 2 is =
-    # constraints = [
-    #     [0, 1, 3, 4, 1],
-    #     [1, 1, 7, 4, 0],
-    #     [10, 4, 40, 5, 0],
-    # ]
-
-    
-    # objFunc = [5, -4, 3]
-
-    # # # 0 is <= and 1 is >= and 2 is =
-    # constraints = [
-    #     [2, 1, -6, 20, 1],
-    #     [2, 1, -6, 20, 0],
-    #     [6, 5, 10, 76, 0],
-    #     [8, -3, 6, 50, 0],
-    # ]
-
-    objFunc = [1200, 800]
-
-    # # 0 is <= and 1 is >= and 2 is =
-    constraints = [
-        [8, 4, 1600, 0],
-        [4, 4, 1000, 0],
-        [1, 0, 170, 0],
-        [0, 1, 200, 0],
-        [1, 0, 40, 1],
-        [0, 1, 25, 1],
-        [1, -1, 0, 1],
-        [1, -4, 0, 0],
-    ]
-
-    # isMin = True
-    # isMin = False
 
     return objFunc, constraints, isMin
 
@@ -94,7 +46,7 @@ def FormulateFirstTab(objFunc, constraints):
             excessCount += 1
         else:
             slackCount += 1
-            
+
     # build the display header row eg x1 x2 e1 e2 s1 s2 rhs
     imCtr = 1
     for i in range(len(objFunc)):
@@ -116,30 +68,15 @@ def FormulateFirstTab(objFunc, constraints):
 
     IMHeaderRow.append("rhs")
 
-    # print(tableH)
-    # print(tableW)
-    # print()
-
-    # for i in range(tableH):
-    #     tab.append([])
-    #     for j in range(tableW):
-    #         tab[i].append(0)
-
-    # eCons = copy.deepcopy(constraints)
     eCons = []
-
-    # print(eCons)
 
     for i in range(len(constraints)):
         if constraints[i][-1] == 1:
             eCons.append(copy.deepcopy(constraints[i]))
 
-    # print(eCons)
     for i in range(len(eCons)):
         for j in range(len(eCons[i])):
             eCons[i][j] = eCons[i][j] * -1
-
-    # print(eCons)
 
     # calculate summed w row
     summedW = []
@@ -183,13 +120,6 @@ def FormulateFirstTab(objFunc, constraints):
     for i in range(objFuncSize):
         tab[1][i] = objFunc[i] * -1
 
-    # print(constraints)
-
-    # constraints[2:].sort(key=lambda x: x[-1], reverse=True)
-    # constraints.sort(key=lambda x: x[-1], reverse=True)
-
-    # print(constraints)
-
     tempAllCons = []
     tempCons = []
     for i in range(tableH - 2):
@@ -214,8 +144,6 @@ def FormulateFirstTab(objFunc, constraints):
             tempAllCons[i][aCtr] = 1
             aCtr += 1
 
-    # print(aCtr)
-
     for i in range(2, len(tab)):
         for j in range(len(tab[i])):
             tab[i][j] = tempAllCons[i - 2][j]
@@ -225,39 +153,25 @@ def FormulateFirstTab(objFunc, constraints):
             if tempAllCons[i - 2][j] == -1:
                 tab[0][j] = -1
 
-    # print(tempAllCons)
-
-    # for i in range(len(tab)):
-    #     for j in range(len(tab[i])):
-    #         print("{:10.3f}".format(tab[i][j]), end=" ")
-    #     print()
-
     return tab, aCols
 
 
 def DoPivotOperationsPhase1(tab):
     largestW = max(tab[0][:-1])
-    # print(largestW)
 
     pivotCol = tab[0][:-1].index(largestW)
-    # print(pivotCol)
 
     thetas = []
     for i in range(2, len(tab)):
-        # print(f"{tab[i][-1]} / {tab[i][pivotCol]} = {tab[i][-1] / tab[i][pivotCol]}")
-
         if tab[i][pivotCol] == 0:
             thetas.append(float('inf'))
         else:
             thetas.append(tab[i][-1] / tab[i][pivotCol])
 
-    # print(thetas)
     theta = min(x for x in thetas if x > 0 and x != float('inf'))
-    # print(theta)
 
     pivotRow = thetas.index(theta)
     pivotRow += 2
-    # print(pivotRow)
 
     newTab = copy.deepcopy(tab)
 
@@ -267,7 +181,6 @@ def DoPivotOperationsPhase1(tab):
 
     # the div row
     divNum = tab[pivotRow][pivotCol]
-    # print(divNum)
 
     if divNum == 0:
         print("Divide by 0 error")
@@ -289,14 +202,8 @@ def DoPivotOperationsPhase1(tab):
 
     isAllNegW = all(num <= 0 for num in newTab[0]) if newTab[0] else False
 
-    # print(isAllNegW)
-
-    # for i in range(len(newTab)):
-    #     for j in range(len(newTab[i])):
-    #         print("{:10.3f}".format(newTab[i][j]), end=" ")
-    #     print()
-
-    print(f"In Phase 1, The pivot row is {pivotRow + 1} and the pivot col is {pivotCol + 1}")
+    print(f"In Phase 1, The pivot row is {
+          pivotRow + 1} and the pivot col is {pivotCol + 1}")
 
     global IMPivotCols
     IMPivotCols.append(pivotCol)
@@ -312,27 +219,20 @@ def DoPivotOperationsPhase2(tab, isMin):
         largestZ = max(tab[1][:-1])
     else:
         largestZ = min(tab[1][:-1])
-    # print(largestW)
 
     pivotCol = tab[1][:-1].index(largestZ)
-    # print(pivotCol)
 
     thetas = []
     for i in range(2, len(tab)):
-        # print(f"{tab[i][-1]} / {tab[i][pivotCol]} = {tab[i][-1] / tab[i][pivotCol]}")
-
         if tab[i][pivotCol] == 0:
             thetas.append(float('inf'))
         else:
             thetas.append(tab[i][-1] / tab[i][pivotCol])
 
-    # print(thetas)
     theta = min(x for x in thetas if x > 0 and x != float('inf'))
-    # print(theta)
 
     pivotRow = thetas.index(theta)
     pivotRow += 2
-    # print(pivotRow)
 
     newTab = copy.deepcopy(tab)
 
@@ -363,15 +263,8 @@ def DoPivotOperationsPhase2(tab, isMin):
     else:
         isAllNegZ = all(num >= 0 for num in newTab[1][:-1])
 
-    # print(isAllNegZ)
-
-
-    # for i in range(len(newTab)):
-    #     for j in range(len(newTab[i])):
-    #         print("{:10.3f}".format(newTab[i][j]), end=" ")
-    #     print()
-
-    print(f"In Phase 2, The pivot row is {pivotRow + 1} and the pivot col is {pivotCol + 1}")
+    print(f"In Phase 2, The pivot row is {
+          pivotRow + 1} and the pivot col is {pivotCol + 1}")
 
     global IMPivotCols
     IMPivotCols.append(pivotCol)
@@ -380,79 +273,61 @@ def DoPivotOperationsPhase2(tab, isMin):
 
     return newTab, isAllNegZ
 
+
 def DoTwoPhase(objFunc, constraints, isMin):
-    # isMin = False
+    global IMPhaseType
     tabs = []
     isAllNegW = False
-    # objFunc, constraints, isMin = testInput()
     tab, aCols = FormulateFirstTab(objFunc, constraints)
     tabs.append(tab)
 
     isAllNegW = all(num <= 0 for num in tabs[-1][0]) if tabs[-1][0] else False
-
-    # print()
-    # tab, isAllNegW = DoPivotOperationsPhase1(tabs[-1])
-    # tabs.append(tab)
-
-    # tab, isAllNegW = DoPivotOperationsPhase1(tabs[-1])
-    # tabs.append(tab)
-
-    # print(tabs[-1])
-
     phase1Ctr = 0
     while not isAllNegW:
         tab, isAllNegW = DoPivotOperationsPhase1(tabs[-1])
         tabs.append(tab)
 
         phase1Ctr += 1
-        if isAllNegW or phase1Ctr > 50:
+        IMPhaseType.append(0)
+        if isAllNegW or phase1Ctr > 100:
             break
-
-
-    # print(phase1Ctr)
 
     tabPhaseNum = phase1Ctr + 1
 
     newTab = copy.deepcopy(tabs[-1])
-    # for i in range(len(newTab)):
-    #     for j in range(len(newTab[i])):
 
     for k in range(len(aCols)):
         for i in range(len(newTab)):
-            # print(newTab[i][aCols[k]])
             newTab[i][aCols[k]] = 0
 
-    # del tabs[-1]
-    # del newTab[0]
     tabs.append(newTab)
 
     if not isMin:
         AllPosZ = all(num >= 0 for num in tabs[-1][1][:-1])
-        # print(AllPosZ)
     else:
         AllPosZ = all(num <= 0 for num in tabs[-1][1][:-1])
-        # print(AllPosZ)
 
     phase2Ctr = 0
     while not AllPosZ:
         tab, AllPosZ = DoPivotOperationsPhase2(tabs[-1], isMin)
         tabs.append(tab)
 
-        if AllPosZ or phase2Ctr > 25:
+        if AllPosZ or phase2Ctr > 100:
             break
 
         phase2Ctr += 1
+        IMPhaseType.append(2)
 
     print("\nNote there is a extra table before phase 2 to show all\n")
 
+    IMPhaseType.append(2)
     currentPhase = 1
     for i in range(len(tabs)):
         if i == tabPhaseNum:
             currentPhase = 2
-        
+
         print("Phase {}".format(currentPhase))
         print("Tableau {}".format(i + 1))
-        # print(" ".join(["{:>10}".format(val) for val in topRow]))
         for j in range(len(tabs[i])):
             for k in range(len(tabs[i][j])):
                 print("{:10.3f}".format(tabs[i][j][k]), end=" ")
@@ -460,6 +335,7 @@ def DoTwoPhase(objFunc, constraints, isMin):
         print()
 
     return tabs
+
 
 def DoGui():
     pygame.init()
@@ -507,6 +383,7 @@ def DoGui():
     global IMPivotCols
     global IMPivotRows
     global IMHeaderRow
+    global IMPhaseType
 
     while 1:
         # windowing stuff
@@ -525,7 +402,6 @@ def DoGui():
             (window_size[0]), (window_size[1]))  # Set the window size
         imgui.begin("Tableaus Output",
                     flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-        
 
         # simplex stuff
 
@@ -632,18 +508,21 @@ def DoGui():
                 IMPivotCols.append(-1)
                 IMPivotRows.append(-1)
 
-                # IMPivotCols.append(-1)
-                # IMPivotRows.append(-1)
-
-                print(len(tableaus))
+                IMPhaseType.append(0)
+                IMPhaseType.append(0)
 
                 tRow = copy.deepcopy(IMPivotRows)
                 tCol = copy.deepcopy(IMPivotCols)
                 tHeader = copy.deepcopy(IMHeaderRow)
+                tPhase = copy.deepcopy(IMPhaseType)
+
+                # print(len(tableaus))
+                # print(tPhase)
 
                 IMHeaderRow.clear()
                 IMPivotRows.clear()
                 IMPivotCols.clear()
+                IMPhaseType.clear()
 
             except Exception as e:
                 print("math error:", e)
@@ -653,6 +532,10 @@ def DoGui():
         for i in range(len(tableaus)):
             pivotCol = tCol[i]
             pivotRow = tRow[i]
+            # if tPhase[i] == 0:
+            #     imgui.text("Phase 1")
+            # else:
+            #     imgui.text("Phase 2")
             imgui.text("Tableau {}".format(i + 1))
             imgui.text("t-" + str(i + 1))
             imgui.same_line(0, 20)
@@ -697,8 +580,9 @@ def DoGui():
 
         pygame.display.flip()
 
+
 def main():
-    # DoTwoPhase()
     DoGui()
+
 
 main()

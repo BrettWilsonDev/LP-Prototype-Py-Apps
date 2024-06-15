@@ -2,8 +2,6 @@ import math
 
 import re
 
-# import tkinter as tk**
-
 import sys
 import pygame
 import OpenGL.GL as gl
@@ -16,6 +14,7 @@ IMPivotCols = []
 IMPivotRows = []
 IMHeaderRow = []
 
+
 def read_file(file_path):
     with open(file_path, 'r') as file:
         content = file.readlines()
@@ -24,10 +23,6 @@ def read_file(file_path):
     first_list_str = content[0].strip()
     first_list = [float(num.strip())
                   for num in first_list_str.strip('[]').split(',')]
-
-    # # Extract the list of lists
-    # second_list_str = [line.strip() for line in content[2:] if line.strip()]
-    # second_list = [[int(num) for num in re.findall(r'\d+', sublist)] for sublist in second_list_str]
 
     # Extract the list of lists, skipping lines starting with '#'
     second_list_str = [line.strip() for line in content[2:]
@@ -40,30 +35,6 @@ def read_file(file_path):
 
     return first_list, second_list
 
-# def read_file(file_path):
-#     with open(file_path, 'r') as file:
-#         content = file.readlines()
-
-#     # is_true = content[0].strip() == 0
-
-#     first_list_str = content[1].strip()
-#     first_list = [int(num.strip()) for num in first_list_str.strip('[]').split(',') if num.strip()]
-
-#     # Extract the list of lists, skipping lines starting with '#'
-#     second_list_str = [line.strip() for line in content[3:] if line.strip() and not line.strip().startswith('#')]
-#     second_list = [[int(num) for num in re.findall(r'\d+', sublist)] for sublist in second_list_str]
-
-#     del second_list[0]
-#     del second_list[-1]
-
-#     return first_list, second_list
-
-
-# file_path = "data.txt"  # Replace "your_file.txt" with the path to your file
-# first_list, second_list = read_file(file_path)
-
-# print("First List:", first_list)
-# print("Second List of Lists:", second_list)
 
 def printTab(tab):
     if tab is None:
@@ -92,8 +63,6 @@ def DoFormulationOperation(objFunc, constraints):
 
     tableSizeH = len(constraints) + 1
 
-    # print(excessCount, slackCount, len(objFunc))
-
     # build the display header row eg x1 x2 e1 e2 s1 s2 rhs
     imCtr = 1
     for i in range(len(objFunc)):
@@ -113,7 +82,7 @@ def DoFormulationOperation(objFunc, constraints):
             imCtr += 1
 
     IMHeaderRow.append("rhs")
-    
+
     tableSizeW = excessCount + slackCount + 1 + len(objFunc)
     opTable = []
     for i in range(tableSizeH):
@@ -138,20 +107,12 @@ def DoFormulationOperation(objFunc, constraints):
 
 
 def DoDualPivotOperation(tab):
-    # for item in tab:
-    #     if item == -0.0:
-    #         item = 0.0
-
     thetaRow = []
 
     rhs = [row[-1] for row in tab]
     rhsNeg = [row[-1] for row in tab if row[-1] < 0]
-    # minRhsNum = min(rhs)
-    # print(rhsNeg)
-    # minRhsNum = max(rhsNeg)
-    minRhsNum = min(rhsNeg)
 
-    # print(minRhsNum)
+    minRhsNum = min(rhsNeg)
 
     pivotRow = rhs.index(minRhsNum)
 
@@ -177,17 +138,13 @@ def DoDualPivotOperation(tab):
 
     smallestPosPivotTheta = min(dualPivotThetas)
 
-    # print(smallestPosPivotTheta)
-
     rowIndex = pivotRow
     colIndex = dualPivotThetas.index(smallestPosPivotTheta)
-    # print(colIndex)
 
     oldTab = tab.copy()
 
     newTab = []
 
-    # # print(rowIndex, colIndex)
     divNumber = tab[rowIndex][colIndex]
 
     newTab = [[0 for _ in row] for row in oldTab]
@@ -212,15 +169,13 @@ def DoDualPivotOperation(tab):
             mathItem = oldTab[i][j] - \
                 (oldTab[i][colIndex] * newTab[rowIndex][j])
 
-            # # print(f"{newTab[i][j]} - ({oldTab[i][colIndex]} * {newTab[rowIndex][j]}) = {mathItem}")
-
             newTab[i][j] = mathItem
 
     newTab[rowIndex] = pivotMathRow
 
     print(f"the pivot col in Dual is {
           colIndex + 1} and the pivot row is {rowIndex + 1}")
-    
+
     global IMPivotCols
     IMPivotCols.append(colIndex)
     global IMPivotRows
@@ -230,10 +185,6 @@ def DoDualPivotOperation(tab):
 
 
 def DoPrimalPivotOperation(tab, isMin):
-    # for item in tab:
-    #     if item == -0.0:
-    #         item = 0.0
-
     thetasCol = []
 
     testRow = tab[0][:-1]
@@ -244,8 +195,6 @@ def DoPrimalPivotOperation(tab, isMin):
     else:
         largestNegativeNumber = min(
             num for num in testRow if num < 0 and num != 0)
-
-    # print(largestNegativeNumber)
 
     colIndex = tab[0].index(largestNegativeNumber)
 
@@ -263,11 +212,6 @@ def DoPrimalPivotOperation(tab, isMin):
 
     thetasCol = thetas.copy()
 
-    # print(thetas)
-
-    # print("theatascol")
-    # print(thetasCol)
-
     allNegativeThetas = all(num < 0 for num in thetas)
 
     if allNegativeThetas:
@@ -275,53 +219,28 @@ def DoPrimalPivotOperation(tab, isMin):
 
     minTheta = min(num for num in thetas if num > 0)
 
-    # todo fix the below
     if minTheta == float('inf'):
         if 0 in thetas:
             minTheta = 0
         else:
             return None, None
 
-    # print(f"thetas: {thetas}")
-    # print(f"t")
     rowIndex = thetas.index(minTheta) + 1
-
-    # print()
-    # printTab(tab)
-    # print()
-
-    # print(f"\n######################the pivot row {rowIndex} and the pivot column {colIndex}")
 
     operationTab = []
 
     divNumber = tab[rowIndex][colIndex]
-    # print(divNumber)
-
-    # if divNumber == 'inf':
-    #     divNumber = 1
 
     if divNumber == 0:
         return None, None
-
-    # print("div number", divNumber)
 
     operationTab = [[0 for _ in row] for row in tab]
 
     for i in range(len(tab)):
         for j in range(len(tab[i])):
-            # print(f"{operationTab[rowIndex][j]} = {tab[rowIndex][j]} / {divNumber}")
             operationTab[rowIndex][j] = tab[rowIndex][j] / divNumber
             if operationTab[rowIndex][j] == -0.0:
                 operationTab[rowIndex][j] = 0.0
-
-            # if divNumber != 0:
-            #     operationTab[rowIndex][j] = tab[rowIndex][j] / divNumber
-            # else:
-            #     operationTab[rowIndex][j] = float('inf')
-            # if operationTab[rowIndex][j] == -0.0:
-            #     operationTab[rowIndex][j] = 0.0
-
-    # print(operationTab[rowIndex])
 
     # the formula: Element_New_Table((i, j)) = Element_Old_Table((i, j)) - (Element_Old_Table((i, Pivot_column)) * Element_New_Table((Pivot_Row, j)))
     for i in range(len(tab)):
@@ -332,13 +251,11 @@ def DoPrimalPivotOperation(tab, isMin):
             mathItem = tab[i][j] - \
                 (tab[i][colIndex] * operationTab[rowIndex][j])
 
-            # # print(f"{tab[i][j]} - ({tab[i][colIndex]} * {operationTab[rowIndex][j]}) = {mathItem}")
-
             operationTab[i][j] = mathItem
 
     print(f"the pivot col in primal is {
           colIndex + 1} and the pivot row is {rowIndex + 1}")
-    
+
     global IMPivotCols
     IMPivotCols.append(colIndex)
     global IMPivotRows
@@ -348,71 +265,6 @@ def DoPrimalPivotOperation(tab, isMin):
 
 
 def GetInput(objFunc, constrants, isMin):
-    # isMin = False
-    # objFunc = []
-
-    # 0 is <= and 1 is >= and 2 is =
-    # constrants = []
-
-    # objFunc = [100, 30]
-
-    # # 0 is <= and 1 is >= and 2 is =
-    # constrants = [
-    #     [0, 1, 3, 1],
-    #     [1, 1, 7, 0],
-    #     [10, 4, 40, 0]
-    # ]
-
-    # objFunc = [50, 20, 30, 80]
-
-    # # 0 is <= and 1 is >= and 2 is =
-    # constrants = [
-    #     [400, 200, 150, 500, 500, 1],
-    #     [3, 2, 0, 0, 6, 1],
-    #     [2, 2, 4, 4, 10, 1],
-    #     [2, 4, 1, 5, 8, 1],
-    # ]
-
-    # console input
-    # isMin = int(input("is Problem max or min 0 or 1: "))
-    # amtOfObjfuncs = int(input("amount of objective functions vars: "))
-    # amtOfConstrants = int(input("amount of constrants: "))
-
-    # for i in range(amtOfObjfuncs):
-    #     objFunc.append(int(input(f"objective function x{i+1}: ")))
-
-    # print("x-2 is what the constraint is = to")
-    # print("x-1 is what the constraint sign is")
-    # print("0 is <= and 1 is >= and 2 is = put it at the end")
-    # for i in range(amtOfConstrants):
-    #     constrants.append([])
-    #     ctr = 1
-    #     for j in range(amtOfObjfuncs + 2):
-    #         if ctr != 0:
-    #             constrants[i].append(int(input(f"constrant num {i+1} x{ctr}: ")))
-
-    #         if ctr != amtOfObjfuncs:
-    #             ctr += 1
-    #         else:
-    #             ctr = -2
-    #     print()
-
-    # isMin = False
-    # objFunc = [100, 30]
-
-    # # 0 is <= and 1 is >= and 2 is =
-    # constrants = [
-    #     [0, 1, 3, 1],
-    #     [1, 1, 7, 0],
-    #     [10, 4, 40, 0]
-    # ]
-
-    # objFunc, constrants = read_file('data.txt')
-    # print("data in:")
-    # print(f"objective function {objFunc}")
-    # print()
-    # print(f"constrants {constrants}")
-
     amtOfE = 0
     amtOfS = 0
     for i in range(len(constrants)):
@@ -423,21 +275,12 @@ def GetInput(objFunc, constrants, isMin):
 
     tab = DoFormulationOperation(objFunc, constrants)
 
-    # printTab(tab)
-    # print(amtOfE, amtOfS)
-
-    # print()
-    # isMin = int(input("is Problem max or min 0 or 1: "))
-
     return tab, isMin, amtOfE, amtOfS, len(objFunc)
 
 
 def DoDualSimplex(objFunc, constraints, isMin):
     print()
-    # isMin = False
-    # isMin = True
 
-    # thetaRows = []
     thetaCols = []
     tableaus = []
 
@@ -461,8 +304,6 @@ def DoDualSimplex(objFunc, constraints, isMin):
             break
 
         tab, thetaRow = DoDualPivotOperation(tableaus[-1])
-        # displayTableau.append(tab)
-        # displayTableau[-1].append(thetaRow)
         for items in tab:
             for item in items:
                 if item == -0.0:
@@ -483,10 +324,7 @@ def DoDualSimplex(objFunc, constraints, isMin):
         print(tableaus[-1][0][-1])
         print()
     else:
-        # # print("No Optimal Solution Found")
         while True:
-            # printTab(tableaus[-1])
-
             for items in tableaus[-1]:
                 for item in items:
                     if item == -0.0:
@@ -512,11 +350,8 @@ def DoDualSimplex(objFunc, constraints, isMin):
             if thetaCol is None and tab is None:
                 break
 
-            # displayTableau.append(tab)
             thetaCols.append(thetaCol.copy())
-            # displayTableau[-1][-1].append(thetaCol.copy)
             tableaus.append(tab)
-            # print(tableaus[-1])
 
         print("\nOptimal Solution Found")
         if tableaus[-1] is not None:
@@ -524,18 +359,6 @@ def DoDualSimplex(objFunc, constraints, isMin):
             print()
         else:
             print("\nNo Optimal Solution Found")
-
-    # for i in range(len(tableaus)):
-    #     for j in range(len(tableaus[i])):
-    #         tableaus[i][j].append(thetaCols[i][j])
-            # print(tableaus[i][j][-1], end=" ")
-
-            # if math.isnan(tableaus[i][j][k]):
-            #     continue
-
-    # for item in tableaus:
-    #     printTab(item)
-    #     print()
 
     xVars = []
     for i in range(lenObj):
@@ -548,19 +371,6 @@ def DoDualSimplex(objFunc, constraints, isMin):
     topRow = []
 
     topRowSize = lenObj + amtOfE + amtOfS
-
-    # for i in range(topRowSize):
-    #     if amtOfX < lenObj:
-    #         topRow.append(xVars[amtOfX])
-    #         amtOfX += 1
-
-    #     if amtOfSlack < amtOfE:
-    #         topRow.append("e{}".format(amtOfExcess + 1))
-    #         amtOfSlack += 1
-
-    #     if amtOfExcess < amtOfS:
-    #         topRow.append("s{}".format(amtOfSlack + 1))
-    #         amtOfExcess += 1
 
     for i in range(lenObj):
         if amtOfX < lenObj:
@@ -587,13 +397,6 @@ def DoDualSimplex(objFunc, constraints, isMin):
                 print("{:10.3f}".format(tableaus[i][j][k]), end=" ")
             print()
         print()
-
-        # print(tableaus)
-
-        # flattened_data = [item for sublist in tableaus for subsublist in sublist for item in subsublist]
-
-        # for item in flattened_data:
-        #     imgui.text(f'{item:8.3f}')
 
     return tableaus
 
@@ -647,7 +450,6 @@ def DoGui():
     global IMPivotCols
     global IMPivotRows
     global IMHeaderRow
-
 
     while 1:
         for event in pygame.event.get():
@@ -763,24 +565,9 @@ def DoGui():
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)
                 tableaus = DoDualSimplex(a, b, isMin)
-                # constraints = [[0.0, 0.0, 0.0, 0.0]]
-                # amtOfObjVars = 2
-                # objFunc = [0.0, 0.0]
-                # print(len(tableaus))
-                # print(len(IMPivotCols))
-                # print(len(IMPivotRows))
-                # print(IMPivotRows)
 
                 IMPivotCols.append(-1)
                 IMPivotRows.append(-1)
-
-                # print(IMHeaderRow[-1])
-                # print(len(IMHeaderRow))
-                # print()
-                # print(len(tableaus))
-                # print(len(tableaus[-1]))
-                # print(len(tableaus[-1][-1]))
-
 
                 tRow = copy.deepcopy(IMPivotRows)
                 tCol = copy.deepcopy(IMPivotCols)
@@ -790,25 +577,8 @@ def DoGui():
                 IMPivotRows.clear()
                 IMPivotCols.clear()
 
-
-                # for item in flattened_data:
-                #     imgui.text(f'{item:8.3f}')
-                # text = "solved"
             except Exception as e:
                 print("math error:", e)
-
-
-        # for i in range(len(tableaus)):
-        #     for j in range(len(tableaus[i])):
-        #         for k in range(len(tableaus[i][j])):
-        #             imgui.text("{:>8.3f}".format(tableaus[i][j][k]))
-        #             if k < len(tableaus[i][j]) - 1:
-        #                 imgui.same_line(0, 20)
-        #         imgui.spacing()
-        #     imgui.spacing()
-
-        # pivotCol = 2
-        # pivotRow = 1
 
         imgui.spacing()
         imgui.spacing()
@@ -857,15 +627,9 @@ def DoGui():
 
         pygame.display.flip()
 
-def main():
 
+def main():
     DoGui()
-    # while True:
-    #     DoDualSimplex()
-    #     print()
-    #     goAgin = input("To exit press 1 or Press enter to continue: ")
-    #     if goAgin.lower() == "continue":
-    #         continue
-    #     elif goAgin == "1":
-    #         break
+
+
 main()

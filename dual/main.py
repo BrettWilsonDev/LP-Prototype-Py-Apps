@@ -398,7 +398,37 @@ def DoDualSimplex(objFunc, constraints, isMin):
             print()
         print()
 
-    return tableaus
+    tSCVars = []
+    for k in range(lenObj):
+        columnIndex = k  # Index of the column you want to work with
+        tCVars = []
+
+        for i in range(len(tableaus[-1])):
+            columnValue = tableaus[-1][i][columnIndex]
+            # Now you can work with the value in the column
+            # print(columnValue)
+            tCVars.append(columnValue)
+        if (sum(1 for num in tCVars if num != 0) == 1):
+            tSCVars.append(tCVars)
+        else:
+            tSCVars.append(None)
+        # print()
+
+    changingVars = []
+    for i in range(len(tSCVars)):
+        if tSCVars[i] is not None:
+            # print(tableaus[-1][tSCVars[i].index(1.0)][-1])
+            changingVars.append(tableaus[-1][tSCVars[i].index(1.0)][-1])
+        else:
+            # print(0)
+            changingVars.append(0)
+
+    print(changingVars)
+
+    optimalSolution = tableaus[-1][0][-1]
+    print(optimalSolution)
+
+    return tableaus, changingVars, optimalSolution
 
 
 def DoGui():
@@ -562,9 +592,23 @@ def DoGui():
         if imgui.button("Solve"):
             print(objFunc, constraints, isMin)
             try:
+                # objFunc = [100, 30]
+
+                # constraints = [[0,1,3,1],[1,1,7,0],[10,4,40,0]]
+
+                # objFunc = [60, 30, 20]
+
+                # constraints = [[8,6,1,48,0],[4,2,1.5,20,0],[2,1.5,0.5,8,0]]
+
+                objFunc = [48, 20, 8]
+
+                constraints = [[8,4,2,60,1],
+                               [6,2,1.5,30,1],
+                               [1,1.5,0.5,20,1]]
+
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)
-                tableaus = DoDualSimplex(a, b, isMin)
+                tableaus, changingVars, optimalSolution = DoDualSimplex(a, b, isMin)
 
                 IMPivotCols.append(-1)
                 IMPivotRows.append(-1)

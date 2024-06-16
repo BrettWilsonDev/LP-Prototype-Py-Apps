@@ -600,11 +600,11 @@ def DoGui():
 
                 # constraints = [[8,6,1,48,0],[4,2,1.5,20,0],[2,1.5,0.5,8,0]]
 
-                objFunc = [48, 20, 8]
+                # objFunc = [48, 20, 8]
 
-                constraints = [[8,4,2,60,1],
-                               [6,2,1.5,30,1],
-                               [1,1.5,0.5,20,1]]
+                # constraints = [[8,4,2,60,1],
+                #                [6,2,1.5,30,1],
+                #                [1,1.5,0.5,20,1]]
 
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)

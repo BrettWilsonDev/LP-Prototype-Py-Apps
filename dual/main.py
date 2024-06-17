@@ -481,6 +481,8 @@ def DoGui():
     global IMPivotRows
     global IMHeaderRow
 
+    errorE = ""
+
     while 1:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -621,8 +623,16 @@ def DoGui():
                 IMPivotRows.clear()
                 IMPivotCols.clear()
 
+                errorE = ""
             except Exception as e:
                 print("math error:", e)
+                imgui.text("math error: {}".format(e))
+                errorE = "math error: {}".format(e)
+
+        imgui.spacing()
+        imgui.spacing()
+
+        imgui.text(errorE)
 
         imgui.spacing()
         imgui.spacing()

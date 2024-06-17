@@ -1,4 +1,3 @@
-# from dualSimplex import *
 import dualSimplex
 
 import math
@@ -50,10 +49,7 @@ def doGui():
     io.display_size = size
 
     # simplex specific vars
-
     problemType = "Max"
-
-    # constraints = []
 
     # dual constraints
     amtOfObjVars = 2
@@ -177,30 +173,9 @@ def doGui():
             isMin = False
 
         if imgui.button("Solve"):
-            # print(objFunc, constraints, isMin)
             try:
-                # objFunc = [100, 30]
-
-                # constraints = [[0,1,3,1],[1,1,7,0],[10,4,40,0]]
-
-                # objFunc = [60, 30, 20]
-
-                # constraints = [[8,6,1,48,0],[4,2,1.5,20,0],[2,1.5,0.5,8,0]]
-
-                # objFunc = [48, 20, 8]
-
-                # constraints = [[8,4,2,60,1],
-                #                [6,2,1.5,30,1],
-                #                [1,1.5,0.5,20,1]]
-
-                objFunc = [60, 30, 20]
-
-                constraints = [[8,6,1,48,0],[4,2,1.5,20,0],[2,1.5,0.5,8,0]]
-
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)
-                # tableaus, changingVars, optimalSolution = dualSimplex.DoDualSimplex(a, b, isMin)
-
                 objFunc, optimalSolution, changingVars, constraintsLhs, cellRef, dualObjFunc, dualOptimalSolution, dualChangingVars, dualConstraintsLhs, dualCellRef = doDuality(a, b, isMin)
 
                 # for display reasons
@@ -231,7 +206,6 @@ def doGui():
             except Exception as e:
                 print("math error:", e)
                 
-
         imgui.spacing()
         imgui.spacing()
 
@@ -334,7 +308,6 @@ def doGui():
                 dualDisplayCons[i].append(">=")
             else:
                 dualDisplayCons[i].append("<=")
-            # dualDisplayCons[i].append(constraints[i][-2])
             dualDisplayCons[i].append(objFunc[i])
 
             tSlack = dualDisplayCons[i][-1] - dualDisplayCons[i][-3]
@@ -365,7 +338,6 @@ def doGui():
             imgui.pop_style_color()
             imgui.same_line(0, 20)
 
-
         imgui.end()
 
         # gl stuff
@@ -377,16 +349,11 @@ def doGui():
         pygame.display.flip()
 
 def doDuality(objFunc, constraints, isMin):
-    # print(objFunc)
-
     print(f"\nobjective function: {objFunc}")
 
     a = copy.deepcopy(objFunc)
     b = copy.deepcopy(constraints)
     tableaus, changingVars, optimalSolution = dualSimplex.DoDualSimplex(a, b, isMin)
-
-    # print(optimalSolution)
-    # print(changingVars)
 
     print(f"\noptimal solution: {optimalSolution}")
 
@@ -402,12 +369,10 @@ def doDuality(objFunc, constraints, isMin):
     cellRef = []
 
     for i in range(len(constraintsLhs)):
-        # tSum = sum(a * b for a, b in zip(optimalSolution, constraints[i]))
         tSum = sum([a * b for a, b in zip(changingVars, constraintsLhs[i])])
         # print(tSum)
         print(f"Cell Ref: {tSum}")
         cellRef.append(tSum)
-
 
     print()
     for i in range(len(constraintsLhs)):
@@ -422,8 +387,6 @@ def doDuality(objFunc, constraints, isMin):
     dualObjFunc = []
     for i in range(len(constraintsLhs)):
         dualObjFunc.append(constraints[i][-2])
-
-    # print(dualObjFunc)
 
     print(f"\ndual objective function: {dualObjFunc}")
 
@@ -441,8 +404,6 @@ def doDuality(objFunc, constraints, isMin):
         else:
             dualConstraints[i].append(1)
 
-    # print(dualConstraints)
-
     isMin = not isMin
 
     a = []
@@ -450,9 +411,6 @@ def doDuality(objFunc, constraints, isMin):
     a = copy.deepcopy(dualObjFunc)
     b = copy.deepcopy(dualConstraints)
     tableaus, dualChangingVars, dualOptimalSolution = dualSimplex.DoDualSimplex(a, b, isMin)
-
-    # print(optimalSolution)
-    # print(changingVars)
 
     print(f"\noptimal solution: {dualOptimalSolution}")
 
@@ -467,9 +425,7 @@ def doDuality(objFunc, constraints, isMin):
     dualCellRef = []
 
     for i in range(len(dualConstraintsLhs)):
-        # tSum = sum(a * b for a, b in zip(optimalSolution, constraints[i]))
         tSum = sum([a * b for a, b in zip(dualChangingVars, dualConstraintsLhs[i])])
-        # print(tSum)
         print(f"Cell Ref: {tSum}")
         dualCellRef.append(tSum)
 
@@ -481,67 +437,8 @@ def doDuality(objFunc, constraints, isMin):
 
     return objFunc, optimalSolution, changingVars, constraintsLhs, cellRef, dualObjFunc, dualOptimalSolution, dualChangingVars, dualConstraintsLhs, dualCellRef
 
-    # Define the arrays
-    # arr1 = [8, 6, 1]
-    # arr2 = [2, 0, 8]
-
-    # Calculate the sum of the product of corresponding elements
-    # sum_product = sum(a * b for a, b in zip(arr1, arr2))
-
-    # Print the result
-    # print(sum_product)
-
-    # matrix = [
-    #     [8, 6, 1],
-    #     [4, 2, 1.5],
-    #     [2, 1.5, 0.5]
-    # ]
-
-    # print(transposeMat(matrix))
-
-
-    
-    
 
 def main():
-    # # objFunc = [48, 20, 8]
-
-    # # constraints = [[8,4,2,60,1],
-    # #                [6,2,1.5,30,1],
-    # #                [1,1.5,0.5,20,1]]
-    
-    # # objFunc = [60, 30, 20]
-
-    # # constraints = [[8,6,1,0],
-    # #                [4,2,1.5,0],
-    # #                [2,1.5,0.5,0]]
-    
-    # # objFunc = [100, 30]
-
-    # # constraints = [[0,1,3,1],[1,1,7,0],[10,4,40,0]]
-
-    # objFunc = [60, 30, 20]
-
-    # constraints = [[8,6,1,48,0],[4,2,1.5,20,0],[2,1.5,0.5,8,0]]
-
-    # # objFunc = [30, 32, 26, 24]
-
-    # # constraints = [[8,4,4,8,160,0],
-    # #                [1,0,0,0,6,0],
-    # #                [1,0,0,0,6,1],
-    # #                [1,1,1,1,20,1],
-    # # ]
-
-    # # objFunc = [3, 2]
-
-    # # constraints = [[2,1,100,0],
-    # #                [1,1,80,0],
-    # #                [1,0,40,0],
-    # # ]
-
-
     doGui()
-
-
 
 main()

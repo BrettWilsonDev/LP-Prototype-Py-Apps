@@ -8,6 +8,8 @@ from imgui.integrations.pygame import PygameRenderer
 import imgui
 import os
 
+gTab = []
+
 def spaceGui(amt):
     for i in range(amt):
         imgui.spacing()
@@ -128,6 +130,10 @@ def BuildFirstPenlitesTableau(penlites, goalConstraints, constraints):
             print("{:10.3f}".format(newTab[i][j]), end=" ")
         print()
 
+    global gTab
+    gTab.append(copy.deepcopy(tab))
+    gTab.append(copy.deepcopy(newTab))
+
     return tab, newTab, conStart
 
 
@@ -212,10 +218,14 @@ def DoPivotOperations(tab, conStart, zRow, tabNum=1):
           pivotRow + 1} and col {pivotCol + 1 - 1}\n")
     
     
-    for i in range(len(newTab)):
-        for j in range(len(newTab[i])):
-            print("{:10.3f}".format(newTab[i][j]), end=" ")
-        print()
+    # for i in range(len(newTab)):
+    #     for j in range(len(newTab[i])):
+    #         print("{:10.3f}".format(newTab[i][j]), end=" ")
+    #     print()
+
+    global gTab
+
+    gTab.append(copy.deepcopy(newTab))
 
     return newTab, zRhs
 
@@ -346,10 +356,14 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
 
     print()
 
-    for i in range(len(newTab)):
-        for j in range(len(newTab[i])):
-            print("{:10.3f}".format(newTab[i][j]), end=" ")
-        print()
+    # for i in range(len(newTab)):
+    #     for j in range(len(newTab[i])):
+    #         print("{:10.3f}".format(newTab[i][j]), end=" ")
+    #     print()
+
+    global gTab
+    gTab.append(copy.deepcopy(tab))
+    gTab.append(copy.deepcopy(newTab))
 
     return tab, newTab, penlites
 
@@ -374,6 +388,7 @@ def DoPreemptive(penlites, goalConstraints, constraints):
         tableaus.append(tab)
         tabNum += 1
 
+        # print(goalConstraints[zRow][-1])
         if goalConstraints[zRow][-1] == 0:
             if zRhs[zRow] <= goalConstraints[zRow][-2]:
                 # print(zRhs[zRow])
@@ -408,13 +423,13 @@ def DoPreemptive(penlites, goalConstraints, constraints):
     if loopFlag == False:
         print(f"Tableau {tabNum} may be the optimal tableau\n")
 
-    for i in range(len(tableaus)):
-        print("Tableau {}".format(i + 1))
-        for j in range(len(tableaus[i])):
-            for k in range(len(tableaus[i][j])):
-                print("{:10.3f}".format(tableaus[i][j][k]), end=" ")
-            print()
-        print()
+    # for i in range(len(tableaus)):
+    #     print("Tableau {}".format(i + 1))
+    #     for j in range(len(tableaus[i])):
+    #         for k in range(len(tableaus[i][j])):
+    #             print("{:10.3f}".format(tableaus[i][j][k]), end=" ")
+    #         print()
+    #     print()
 
     return tableaus, tabNum
 
@@ -666,12 +681,19 @@ def DoGui():
 
         spaceGui(6)
         if imgui.button("Solve"):
+            goalConstraints = [
+                [400, 300, 250, 28000, 0],
+                [60, 50, 40, 5000, 1],
+                [20, 35, 20, 3000, 1],
+                [20, 15, 40, 1000, 1],
+            ]
             # tableaus = DoPreemptive([], goalConstraints, constraints)
+            global gTab
             try:
                 if goalType == "Penalties":
                     tableaus = DoPenlites(penlites, goalConstraints, constraints)
-                    # print(tableaus)
                 else:
+                    print(len(gTab))
                     print([], goalConstraints, constraints)
                     tableaus = DoPreemptive([], goalConstraints, constraints)
                     # print(len(tableaus))
@@ -681,6 +703,14 @@ def DoGui():
                 print("math error:", e) 
             #     imgui.spacing()
             #     imgui.text(f"Math Error: {e}")
+
+            # for i in range(len(gTab)):
+            #     print("Tableau {}".format(i + 1))
+            for j in range(len(gTab[i])):
+                for k in range(len(gTab[i][j])):
+                    print("{:10.3f}".format(gTab[i][j][k]), end=" ")
+                print()
+            print()
 
 
             # penlites = []

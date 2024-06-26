@@ -212,6 +212,8 @@ def doGui():
 
                 for i in range(len(objFunc)):
                     headerString.append("x{}".format(i + 1))
+
+                for i in range(len(dualObjFunc)):
                     dualHeaderString.append("y{}".format(i + 1))
 
 

@@ -9,7 +9,7 @@ d = sp.symbols('d')
 def testInput():
     objFunc = [60, 30, 20]
     constraints = [[8, 6, 1, 48, 0],
-                   [4, 2, 1.5, 20, 0],
+                   [4, 2+d, 1.5, 20, 0],
                    [2, 1.5, 0.5, 8, 0],
                    ]
 
@@ -171,5 +171,27 @@ def main():
     for i in range(len(changingBv)):
         print(changingBv[i])
 
+    changingTable = copy.deepcopy(tableaus[-1])
+
+    changingZRow.append(changingOptmal)
+
+    changingTable[0] = changingZRow
+
+    transposeChangingB = sp.Matrix(changingBv).transpose().tolist()
+
+    print()
+    for i in range(len(transposeChangingB)):
+        print(transposeChangingB[i])
+
+    for i in range(len(changingTable) - 1):
+        for j in range(len(changingTable[i])):
+            changingTable[i + 1][j] = transposeChangingB[i][j]
+            # print(changingTable[i][j])
+
+    print()
+    for i in range(len(changingTable)):
+        for j in range(len(changingTable[0])):
+            print(changingTable[i][j], end=" ")
+        print()
 
 main()

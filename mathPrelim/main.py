@@ -54,8 +54,66 @@ def scrubDelta(lst):
 
     return cleaned_list
 
+def DoFormulationOperation(objFunc, constraints, absRule = False):
+    excessCount = 0
+    slackCount = 0
 
-def doSensitivityAnalysis(objFunc, constraints, isMin):
+    for i in range(len(constraints)):
+        if constraints[i][-1] == 1:
+            excessCount += 1
+        else:
+            slackCount += 1
+
+    for i in range(len(constraints)):
+        for j in range(len(constraints[i])):
+            if constraints[i][-1] == 1:
+                constraints[i][j] = -1 * constraints[i][j]
+
+    for i in range(len(constraints)):
+        del constraints[i][-1]
+
+    tableSizeH = len(constraints) + 1
+
+    tableSizeW = excessCount + slackCount + 1 + len(objFunc)
+    opTable = []
+    for i in range(tableSizeH):
+        opTable.append([])
+        for j in range(tableSizeW):
+            opTable[i].append(0)
+
+    for i in range(len(objFunc)):
+        opTable[0][i] = -objFunc[i]
+
+    for i in range(len(constraints)):
+        for j in range(len(constraints[i]) - 1):
+            opTable[i + 1][j] = constraints[i][j]
+            opTable[i + 1][-1] = constraints[i][-1]
+
+    # added the slack and excess 1s
+    for i in range(1, len(opTable)):
+        for j in range(len(objFunc), len(opTable[i]) - 1):
+            opTable[i][i + 1 * len(objFunc) - 1] = 1
+
+    # strange abs rule
+    if absRule:
+        for i in range(len(opTable[0])):
+            opTable[0][i] = abs(opTable[0][i])
+
+        for i in range(len(opTable)):
+            for j in range(len(objFunc)):
+                opTable[i][j] = abs(opTable[i][j])
+
+        for i in range(len(opTable)):
+            opTable[i][-1] = abs(opTable[i][-1])
+
+        for i in range(len(opTable)):
+            for j in range(tableSizeW - excessCount - 1, len(opTable[i]) - 1):
+                if opTable[i][j] != 0:
+                    opTable[i][j] = -opTable[i][j]
+
+    return opTable
+
+def doSensitivityAnalysis(objFunc, constraints, isMin, absRule = False):
     # get list spots for later use =========================
 
     # objFunc, constraints, isMin = testInput()
@@ -74,7 +132,8 @@ def doSensitivityAnalysis(objFunc, constraints, isMin):
 
     # keep delta in the table
     deltaTab = copy.deepcopy(tableaus[0])
-    deltaTab = dualSimplex.DoFormulationOperation(objFunc, constraints)
+    # deltaTab = dualSimplex.DoFormulationOperation(objFunc, constraints)
+    deltaTab = DoFormulationOperation(objFunc, constraints, absRule)
 
     # get the spots of the basic variables
     basicVarSpots = []
@@ -111,8 +170,13 @@ def doSensitivityAnalysis(objFunc, constraints, isMin):
 
     cbv = []
     for i in range(len(basicVarSpots)):
-        cbv.append(copy.deepcopy(-tableaus[0][0][basicVarSpots[i]]))
+        # cbv.append(copy.deepcopy(-tableaus[0][0][basicVarSpots[i]]))
         # cbv.append(copy.deepcopy(tableaus[0][0][basicVarSpots[i]]))
+
+        if absRule:
+            cbv.append(copy.deepcopy(tableaus[0][0][basicVarSpots[i]]))
+        else:
+            cbv.append(copy.deepcopy(-tableaus[0][0][basicVarSpots[i]]))
 
     # print(cbv)
     print(basicVarSpots)
@@ -154,7 +218,11 @@ def doSensitivityAnalysis(objFunc, constraints, isMin):
             tLst.append(deltaTab[i][j])
         mmultCbvNegOneBCol = sp.Matrix(tLst).transpose() * matrixCbvNegOne
         matNegValue = (mmultCbvNegOneBCol[0, 0])
-        changingZRow.append(matNegValue - -deltaTab[0][j])
+        # changingZRow.append(matNegValue - -deltaTab[0][j])
+        if absRule:
+            changingZRow.append(matNegValue - deltaTab[0][j])
+        else:
+            changingZRow.append(matNegValue - -deltaTab[0][j])
 
     # get the rhs optimal value
     tRhsCol = []
@@ -249,6 +317,7 @@ def doGui():
     # simplex specific vars
 
     problemType = "Max"
+    absProblemType = "abs Off"
 
     # dual constraints
     amtOfObjVars = 2
@@ -266,6 +335,8 @@ def doGui():
     matB = []
     matBNegOne = []
     matCbvNegOne = []
+
+    absRule = False
 
     while 1:
         for event in pygame.event.get():
@@ -291,6 +362,14 @@ def doGui():
             problemType = "Min"
 
         imgui.text("Problem is: {}".format(problemType))
+
+        if imgui.radio_button("abs on", absProblemType == "abs On"):
+            absProblemType = "abs On"
+
+        if imgui.radio_button("abs off", absProblemType == "abs Off"):
+            absProblemType = "abs Off"
+
+        imgui.text("absolute rule is: {}".format(absProblemType))
 
         # obj vars ===========================================
         if imgui.button("decision variables +"):
@@ -380,9 +459,14 @@ def doGui():
         else:
             isMin = False
 
+        if absProblemType == "abs On":
+            absRule = True
+        else:
+            absRule = False
+
         if imgui.button("Solve"):
             try:
-                objFunc, constraints, isMin = testInput()
+                # objFunc, constraints, isMin = testInput()
 
                 # print(objFunc, constraints, isMin)
                 a = copy.deepcopy(objFunc)
@@ -419,7 +503,7 @@ def doGui():
                             pass
 
                 changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne = doSensitivityAnalysis(
-                    a, b, isMin)
+                    a, b, isMin, absRule)
 
                 matCbv = matrixCbv.tolist()
                 matB = matrixB.transpose().tolist()

@@ -1,4 +1,13 @@
 import sympy as sp
+
+import re
+
+import sys
+import pygame
+import OpenGL.GL as gl
+from imgui.integrations.pygame import PygameRenderer
+import imgui
+import os
 import copy
 
 import dualSimplex
@@ -9,7 +18,7 @@ d = sp.symbols('d')
 def testInput():
     objFunc = [60, 30, 20]
     constraints = [[8, 6, 1, 48, 0],
-                   [4, 2+d, 1.5, 20, 0],
+                   [4, 2, 1.5, 20, 0],
                    [2, 1.5, 0.5, 8, 0],
                    ]
 
@@ -40,10 +49,10 @@ def scrubDelta(lst):
     return cleaned_list
 
 
-def main():
+def doSensitivityAnalysis(objFunc, constraints, isMin):
     # get list spots for later use =========================
 
-    objFunc, constraints, isMin = testInput()
+    # objFunc, constraints, isMin = testInput()
 
     # make temporary copies of objFunc and constraints
     tObjFunc = copy.deepcopy(objFunc)
@@ -114,18 +123,22 @@ def main():
 
     matrixCbv = sp.Matrix(cbv)
 
+    print("cbv")
     print(matrixCbv)
 
     matrixB = sp.Matrix(matB)
 
+    print("B")
     print(matrixB)
 
     matrixBNegOne = matrixB.inv()
 
+    print("B^-1")
     print(matrixBNegOne)
 
     matrixCbvNegOne = matrixBNegOne * matrixCbv
 
+    print("cbvB^-1")
     print(matrixCbvNegOne)
     print()
 
@@ -147,11 +160,11 @@ def main():
     tRhsOptimal = (sp.Matrix(tRhsCol).transpose() * matrixCbvNegOne)
     changingOptmal = (tRhsOptimal[0, 0])
 
-    print(changingOptmal)
+    # print(changingOptmal)
 
-    print(changingZRow)
+    # print(changingZRow)
 
-    print()
+    # print()
 
     # get the b values of the new changing table
     tChangingBv = []
@@ -168,8 +181,8 @@ def main():
         for sublist2 in sublist1:
             changingBv.append(sublist2)
 
-    for i in range(len(changingBv)):
-        print(changingBv[i])
+    # for i in range(len(changingBv)):
+    #     print(changingBv[i])
 
     changingTable = copy.deepcopy(tableaus[-1])
 
@@ -179,19 +192,357 @@ def main():
 
     transposeChangingB = sp.Matrix(changingBv).transpose().tolist()
 
-    print()
-    for i in range(len(transposeChangingB)):
-        print(transposeChangingB[i])
+    # print()
+    # for i in range(len(transposeChangingB)):
+    #     print(transposeChangingB[i])
 
     for i in range(len(changingTable) - 1):
         for j in range(len(changingTable[i])):
             changingTable[i + 1][j] = transposeChangingB[i][j]
-            # print(changingTable[i][j])
+
+    for i in range(len(changingTable)):
+        for j in range(len(changingTable[i])):
+            value = changingTable[i][j]
+            try:
+                value = float(value)
+                changingTable[i][j] = float(value)
+            except (TypeError, ValueError):
+                pass
+
+    # print(changingTable)
 
     print()
     for i in range(len(changingTable)):
-        for j in range(len(changingTable[0])):
-            print(changingTable[i][j], end=" ")
+        for j in range(len(changingTable[i])):
+            print("{:15}".format(str(changingTable[i][j])), end=" ")
         print()
+
+    return changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne
+
+
+def doGui():
+    pygame.init()
+    size = 1920 / 2, 1080 / 2
+
+    os.system('cls' if os.name == 'nt' else 'clear')
+    # print("\nBrett's simplex prototype tool for dual simplex problems\n")
+
+    pygame.display.set_mode(size, pygame.DOUBLEBUF |
+                            pygame.OPENGL | pygame.RESIZABLE)
+
+    pygame.display.set_caption("dual Simplex Prototype")
+
+    icon = pygame.Surface((1, 1)).convert_alpha()
+    icon.fill((0, 0, 0, 1))
+    pygame.display.set_icon(icon)
+
+    imgui.create_context()
+    impl = PygameRenderer()
+
+    io = imgui.get_io()
+    io.display_size = size
+
+    # simplex specific vars
+
+    problemType = "Max"
+
+    # dual constraints
+    amtOfObjVars = 2
+    objFunc = [0.0, 0.0]
+
+    constraints = [[0.0, 0.0, 0.0, 0.0]]
+    signItems = ["<=", ">="]
+    signItemsChoices = [0]
+
+    amtOfConstraints = 1
+
+    changingTable = []
+
+    matCbv = []
+    matB = []
+    matBNegOne = []
+    matCbvNegOne = []
+
+    while 1:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+
+            impl.process_event(event)
+
+        imgui.new_frame()
+
+        window_size = pygame.display.get_window_size()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (window_size[0]), (window_size[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        if imgui.radio_button("Max", problemType == "Max"):
+            problemType = "Max"
+
+        if imgui.radio_button("Min", problemType == "Min"):
+            problemType = "Min"
+
+        imgui.text("Problem is: {}".format(problemType))
+
+        # obj vars ===========================================
+        if imgui.button("decision variables +"):
+            amtOfObjVars += 1
+            for i in range(len(constraints)):
+                constraints[i].append(0.0)
+            objFunc.append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("decision variables -"):
+            if amtOfObjVars != 2:
+                amtOfObjVars += -1
+                for i in range(len(constraints)):
+                    constraints[i].pop()
+                objFunc.pop()
+
+        imgui.spacing()
+
+        for i in range(len(objFunc)):
+            # value = objFunc[i]
+            value = str(objFunc[i])
+            imgui.set_next_item_width(50)
+            imgui.same_line()
+            # changed, objFunc[i] = imgui.input_float(
+            changed, objFunc[i] = imgui.input_text(
+                "objFunc {}".format(i + 1), value)
+
+            if changed:
+                pass
+
+        if imgui.button("Constraint +"):
+            amtOfConstraints += 1
+            constraints.append([0.0] * amtOfObjVars)
+            constraints[-1].append(0.0)  # add sign spot
+            constraints[-1].append(0.0)  # add rhs spot
+            signItemsChoices.append(0)
+
+        imgui.same_line()
+
+        if imgui.button("Constraint -"):
+            if amtOfConstraints != 1:
+                amtOfConstraints += -1
+                constraints.pop()
+                signItemsChoices.pop()
+
+        # spaceGui(6)
+        for i in range(amtOfConstraints):
+            imgui.spacing()
+            if len(constraints) <= i:
+                # Fill with default values if needed
+                constraints.append([0.0] * (amtOfObjVars + 2))
+
+            for j in range(amtOfObjVars):
+                # value = constraints[i][j]
+                value = str(constraints[i][j])
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                # changed, xValue = imgui.input_float(
+                changed, xValue = imgui.input_text(
+                    "xC{}{}".format(i, j), value)
+                if changed:
+                    constraints[i][j] = xValue
+
+            imgui.same_line()
+            imgui.push_item_width(50)
+            changed, selectedItemSign = imgui.combo(
+                "comboC{}{}".format(i, j), signItemsChoices[i], signItems)
+            if changed:
+                signItemsChoices[i] = selectedItemSign
+                constraints[i][-1] = signItemsChoices[i]
+
+            imgui.pop_item_width()
+            imgui.same_line()
+            imgui.set_next_item_width(50)
+            # rhsValue = constraints[i][-2]
+            rhsValue = str(constraints[i][-2])
+            # rhsChanged, rhs = imgui.input_float(
+            rhsChanged, rhs = imgui.input_text(
+                "RHSC{}{}".format(i, j), rhsValue)
+
+            if rhsChanged:
+                constraints[i][-2] = rhs
+
+        if problemType == "Min":
+            isMin = True
+        else:
+            isMin = False
+
+        if imgui.button("Solve"):
+            try:
+                # objFunc, constraints, isMin = testInput()
+
+                # print(objFunc, constraints, isMin)
+                a = copy.deepcopy(objFunc)
+                b = copy.deepcopy(constraints)
+
+                # convert obj func to numbers
+                for i in range(len(a)):
+                    try:
+                        a[i] = float(a[i])
+                    except Exception as e:
+                        pass
+
+                # obj func to expressions
+                for i in range(len(a)):
+                    try:
+                        a[i] = sp.parse_expr(a[i])
+                    except Exception as e:
+                        pass
+
+                # convert constraints to numbers
+                for i in range(len(b)):
+                    for j in range(len(b[i])):
+                        try:
+                            b[i][j] = float(b[i][j])
+                        except Exception as e:
+                            pass
+
+                # convert constraints to expressions
+                for i in range(len(b)):
+                    for j in range(len(b[i])):
+                        try:
+                            b[i][j] = sp.parse_expr(b[i][j])
+                        except Exception as e:
+                            pass
+
+                changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne = doSensitivityAnalysis(
+                    a, b, isMin)
+
+                matCbv = matrixCbv.tolist()
+                matB = matrixB.transpose().tolist()
+                matBNegOne = matrixBNegOne.transpose().tolist()
+                matCbvNegOne = matrixCbvNegOne.tolist()
+
+                # make matrix in to a 2d list
+                tMatCbv = []
+                tMatCbvNegOne = []
+                for i in range(len(matCbv)):
+                    tMatCbv.append(matCbv[i][0])
+                    tMatCbvNegOne.append(matCbvNegOne[i][0])
+                matCbv = tMatCbv
+                matCbvNegOne = tMatCbvNegOne
+
+            except Exception as e:
+                print("math error:", e)
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        try:
+            # cbv matrix
+            imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+            imgui.text("{:>30}".format("CBv"))
+            imgui.pop_style_color()
+            for i in range(len(matCbv)):
+                if type(matCbv[i]).__name__ == "Float":
+                    imgui.text("{:>15.3f}".format(float(matCbv[i])))
+                else:
+                    imgui.text("{:>15}".format(str(matCbv[i])))
+                imgui.same_line(0, 20)
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            # b matrix
+            imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+            imgui.text("{:>30}".format("B"))
+            imgui.pop_style_color()
+            for i in range(len(matB)):
+                for j in range(len(matB[i])):
+                    if type(matB[i][j]).__name__ == "Float":
+                        imgui.text("{:>15.3f}".format(float(matB[i][j])))
+                    else:
+                        imgui.text("{:>15}".format(str(matB[i][j])))
+                    imgui.same_line(0, 20)
+                imgui.spacing()
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            # b^-1 matrix
+            imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+            imgui.text("{:>30}".format("B^-1"))
+            imgui.pop_style_color()
+            for i in range(len(matBNegOne)):
+                for j in range(len(matBNegOne[i])):
+                    if type(matBNegOne[i][j]).__name__ == "Float":
+                        imgui.text("{:>15.3f}".format(float(matBNegOne[i][j])))
+                    else:
+                        imgui.text("{:>15}".format(str(matBNegOne[i][j])))
+                    imgui.same_line(0, 20)
+                imgui.spacing()
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            # cbv^-1 matrix
+            imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+            imgui.text("{:>35}".format("CbvB^-1 or q"))
+            imgui.pop_style_color()
+            for i in range(len(matCbvNegOne)):
+                if type(matCbvNegOne[i]).__name__ == "Float":
+                    imgui.text("{:>15.3f}".format(float(matCbvNegOne[i])))
+                else:
+                    imgui.text("{:>15}".format(str(matCbvNegOne[i])))
+                imgui.same_line(0, 20)
+
+        except Exception as e:
+            print("error:", e)
+            pass
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+        imgui.text("{:>35}".format("changing Table"))
+        imgui.pop_style_color()
+        for i in range(len(changingTable)):
+            for j in range(len(changingTable[i])):
+                if isinstance(changingTable[i][j], float):
+                    imgui.text("{:>15.3f}".format(changingTable[i][j]))
+                else:
+                    imgui.text("{:>15}".format(str(changingTable[i][j])))
+                if i < len(changingTable[i]) - 1:
+                    imgui.same_line(0, 20)
+            imgui.spacing()
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        imgui.end()
+
+        # gl stuff
+        gl.glClearColor(0, 0, 0, 1)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+        imgui.render()
+        impl.render(imgui.get_draw_data())
+
+        pygame.display.flip()
+
+
+def main():
+    doGui()
+
 
 main()

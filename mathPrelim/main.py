@@ -28,6 +28,12 @@ def testInput():
     #                [10, 4, 40, 0],
     #                ]
 
+    objFunc = [30, 28, 26, 30]
+    constraints = [[8, 8, 4, 4, 160, 0],
+                [1, 0, 0, 0, 5, 0],
+                [1, 0, 0, 0, 5, 1],
+                [1, 1, 1, 1, 20, 1],
+        ]
     isMin = False
     return objFunc, constraints, isMin
 
@@ -70,38 +76,34 @@ def doSensitivityAnalysis(objFunc, constraints, isMin):
     deltaTab = copy.deepcopy(tableaus[0])
     deltaTab = dualSimplex.DoFormulationOperation(objFunc, constraints)
 
-    print(deltaTab)
-
     # get the spots of the basic variables
     basicVarSpots = []
-    for k in range(len(tableaus[-1])):
+    for k in range(len(tableaus[-1][-1])):
         columnIndex = k
         tCVars = []
 
         for i in range(len(tableaus[-1])):
             columnValue = tableaus[-1][i][columnIndex]
             tCVars.append(columnValue)
-        if (sum(1 for num in tCVars if num != 0) == 1):
+
+        if (sum(tCVars) == 1):
             basicVarSpots.append(k)
 
     # get the columns of the basic variables
     basicVarCols = []
-    for i in range(len(tableaus[-1])):
+    for i in range(len(tableaus[-1][-1])):
         tLst = []
-        for j in range(len(tableaus[-1][i])):
-            if j in basicVarSpots:
-                tLst.append(tableaus[-1][i][j])
-        basicVarCols.append(tLst)
-
-    # remove dud col
-    del basicVarCols[0]
+        if i in basicVarSpots:
+            for j in range(len(tableaus[-1])):
+                tLst.append(tableaus[-1][j][i])
+            basicVarCols.append(tLst)
+        
 
     # sort the cbv according the basic var positions
     zippedCbv = list(zip(basicVarCols, basicVarSpots))
     sortedCbvZipped = sorted(
         zippedCbv, key=lambda x: x[0].index(1) if 1 in x[0] else len(x[0]))
     sortedBasicVars, basicVarSpots = zip(*sortedCbvZipped)
-    # print(sortedBasicVars)
 
     # populate matrixes ========================================================
 
@@ -110,8 +112,10 @@ def doSensitivityAnalysis(objFunc, constraints, isMin):
     cbv = []
     for i in range(len(basicVarSpots)):
         cbv.append(copy.deepcopy(-tableaus[0][0][basicVarSpots[i]]))
+        # cbv.append(copy.deepcopy(tableaus[0][0][basicVarSpots[i]]))
 
     # print(cbv)
+    print(basicVarSpots)
 
     matB = []
     for i in range(len(basicVarSpots)):
@@ -378,7 +382,7 @@ def doGui():
 
         if imgui.button("Solve"):
             try:
-                # objFunc, constraints, isMin = testInput()
+                objFunc, constraints, isMin = testInput()
 
                 # print(objFunc, constraints, isMin)
                 a = copy.deepcopy(objFunc)

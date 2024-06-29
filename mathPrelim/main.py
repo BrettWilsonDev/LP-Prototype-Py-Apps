@@ -13,7 +13,7 @@ import copy
 import dualSimplex
 
 d = sp.symbols('d')
-
+globalOptimalTab = []
 
 def testInput():
     objFunc = [60, 30, 20]
@@ -28,12 +28,12 @@ def testInput():
     #                [10, 4, 40, 0],
     #                ]
 
-    objFunc = [30, 28, 26, 30]
-    constraints = [[8, 8, 4, 4, 160, 0],
-                [1, 0, 0, 0, 5, 0],
-                [1, 0, 0, 0, 5, 1],
-                [1, 1, 1, 1, 20, 1],
-        ]
+    # objFunc = [30, 28, 26, 30]
+    # constraints = [[8, 8, 4, 4, 160, 0],
+    #             [1, 0, 0, 0, 5, 0],
+    #             [1, 0, 0, 0, 5, 1],
+    #             [1, 1, 1, 1, 20, 1],
+    #     ]
     isMin = False
     return objFunc, constraints, isMin
 
@@ -113,10 +113,12 @@ def DoFormulationOperation(objFunc, constraints, absRule = False):
 
     return opTable
 
-def doSensitivityAnalysis(objFunc, constraints, isMin, absRule = False):
+def doSensitivityAnalysis(objFunc, constraints, isMin, absRule = False, optTabLockState = False):
     # get list spots for later use =========================
 
     # objFunc, constraints, isMin = testInput()
+
+    global globalOptimalTab
 
     # make temporary copies of objFunc and constraints
     tObjFunc = copy.deepcopy(objFunc)
@@ -127,8 +129,15 @@ def doSensitivityAnalysis(objFunc, constraints, isMin, absRule = False):
         tConstraints[i] = scrubDelta(tConstraints[i])
 
     # tableaus, changingVars, optimalSolution = dualSimplex.DoDualSimplex(objFunc, constraints, isMin)
-    tableaus, changingVars, optimalSolution = dualSimplex.DoDualSimplex(
-        tObjFunc, tConstraints, isMin)
+    # tableaus, changingVars, optimalSolution = dualSimplex.DoDualSimplex(
+    #     tObjFunc, tConstraints, isMin)
+
+    if not optTabLockState:
+        tableaus, changingVars, optimalSolution = dualSimplex.DoDualSimplex(
+            tObjFunc, tConstraints, isMin)
+        globalOptimalTab = copy.deepcopy(tableaus)
+    else:
+        tableaus = globalOptimalTab
 
     # keep delta in the table
     deltaTab = copy.deepcopy(tableaus[0])
@@ -189,22 +198,23 @@ def doSensitivityAnalysis(objFunc, constraints, isMin, absRule = False):
             tLst.append(tableaus[0][j][basicVarSpots[i]])
         matB.append(tLst)
 
+        
     matrixCbv = sp.Matrix(cbv)
+
+    matrixB = sp.Matrix(matB)
+
+    matrixBNegOne = matrixB.inv()
+
+    matrixCbvNegOne = matrixBNegOne * matrixCbv
 
     print("cbv")
     print(matrixCbv)
 
-    matrixB = sp.Matrix(matB)
-
     print("B")
     print(matrixB)
 
-    matrixBNegOne = matrixB.inv()
-
     print("B^-1")
     print(matrixBNegOne)
-
-    matrixCbvNegOne = matrixBNegOne * matrixCbv
 
     print("cbvB^-1")
     print(matrixCbvNegOne)
@@ -283,13 +293,25 @@ def doSensitivityAnalysis(objFunc, constraints, isMin, absRule = False):
 
     # print(changingTable)
 
-    print()
+    print("\ninitial table\n")
+    for i in range(len(tableaus[0])):
+        for j in range(len(tableaus[0][i])):
+            print("{:15}".format(str(tableaus[0][i][j])), end=" ")
+        print()
+
+    print("\noptimal table\n")
+    for i in range(len(tableaus[-1])):
+        for j in range(len(tableaus[-1][i])):
+            print("{:15}".format(str(tableaus[-1][i][j])), end=" ")
+        print()
+
+    print("\noptimal changing table\n")
     for i in range(len(changingTable)):
         for j in range(len(changingTable[i])):
             print("{:15}".format(str(changingTable[i][j])), end=" ")
         print()
 
-    return changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne
+    return changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots
 
 
 def doGui():
@@ -337,6 +359,9 @@ def doGui():
     matCbvNegOne = []
 
     absRule = False
+
+    lockOptTab = "off"
+    optTabLockState = False
 
     while 1:
         for event in pygame.event.get():
@@ -454,6 +479,16 @@ def doGui():
             if rhsChanged:
                 constraints[i][-2] = rhs
 
+        if imgui.radio_button("lock optimal tab", lockOptTab == "on"):
+            lockOptTab = "on"
+
+        imgui.same_line(0, 20)
+
+        if imgui.radio_button("unlock optimal tab", lockOptTab == "off"):
+            lockOptTab = "off"
+
+        imgui.text("optimal tab lock: {}".format(lockOptTab))
+
         if problemType == "Min":
             isMin = True
         else:
@@ -464,6 +499,13 @@ def doGui():
         else:
             absRule = False
 
+        if lockOptTab == "on":
+            optTabLockState = True
+        else:
+            optTabLockState = False
+
+
+        # solve button run once ===========================
         if imgui.button("Solve"):
             try:
                 # objFunc, constraints, isMin = testInput()
@@ -501,9 +543,9 @@ def doGui():
                             b[i][j] = sp.parse_expr(b[i][j])
                         except Exception as e:
                             pass
-
-                changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne = doSensitivityAnalysis(
-                    a, b, isMin, absRule)
+                
+                changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = doSensitivityAnalysis(
+                    a, b, isMin, absRule, optTabLockState)
 
                 matCbv = matrixCbv.tolist()
                 matB = matrixB.transpose().tolist()
@@ -546,7 +588,7 @@ def doGui():
 
             # b matrix
             imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-            imgui.text("{:>30}".format("B"))
+            imgui.text("{:>29}".format("B"))
             imgui.pop_style_color()
             for i in range(len(matB)):
                 for j in range(len(matB[i])):
@@ -564,7 +606,7 @@ def doGui():
 
             # b^-1 matrix
             imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-            imgui.text("{:>30}".format("B^-1"))
+            imgui.text("{:>31}".format("B^-1"))
             imgui.pop_style_color()
             for i in range(len(matBNegOne)):
                 for j in range(len(matBNegOne[i])):
@@ -601,7 +643,7 @@ def doGui():
         imgui.spacing()
 
         imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-        imgui.text("{:>35}".format("changing Table"))
+        imgui.text("{:>40}".format("changing Optimal Table"))
         imgui.pop_style_color()
         for i in range(len(changingTable)):
             for j in range(len(changingTable[i])):

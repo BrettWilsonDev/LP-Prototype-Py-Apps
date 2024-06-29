@@ -302,7 +302,7 @@ def doGui():
     pygame.display.set_mode(size, pygame.DOUBLEBUF |
                             pygame.OPENGL | pygame.RESIZABLE)
 
-    pygame.display.set_caption("dual Simplex Prototype")
+    pygame.display.set_caption(" Simplex Prototype")
 
     icon = pygame.Surface((1, 1)).convert_alpha()
     icon.fill((0, 0, 0, 1))

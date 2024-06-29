@@ -31,7 +31,6 @@ def doGui():
     size = 1920 / 2, 1080 / 2
 
     os.system('cls' if os.name == 'nt' else 'clear')
-    # print("\nBrett's simplex prototype tool for dual simplex problems\n")
 
     pygame.display.set_mode(size, pygame.DOUBLEBUF |
                             pygame.OPENGL | pygame.RESIZABLE)

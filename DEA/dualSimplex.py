@@ -441,12 +441,11 @@ def DoGui():
     size = 1920 / 2, 1080 / 2
 
     os.system('cls' if os.name == 'nt' else 'clear')
-    # print("\nBrett's simplex prototype tool for dual simplex problems\n")
 
     pygame.display.set_mode(size, pygame.DOUBLEBUF |
                             pygame.OPENGL | pygame.RESIZABLE)
 
-    pygame.display.set_caption("dual Simplex Prototype")
+    pygame.display.set_caption("DEA Simplex Prototype")
 
     icon = pygame.Surface((1, 1)).convert_alpha()
     icon.fill((0, 0, 0, 1))

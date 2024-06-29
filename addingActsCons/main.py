@@ -347,6 +347,12 @@ def DoGui():
                 imgui.new_line()
                 changed, activity[i] = imgui.input_float(
                     "activity {}".format(i + 1), value)
+                if i == 0:
+                    imgui.same_line()
+                    imgui.text("x")
+                else:
+                    imgui.same_line()
+                    imgui.text("c{}".format(i))
         else:
             if imgui.button("aConstraint +"):
                 amtOfAddingConstraints += 1

@@ -413,6 +413,9 @@ def doGui():
                 objFunc.pop()
 
         imgui.spacing()
+        imgui.text("you can use +d to represent the delta variable ex: 60+d")
+        imgui.spacing()
+        imgui.spacing()
 
         for i in range(len(objFunc)):
             # value = objFunc[i]

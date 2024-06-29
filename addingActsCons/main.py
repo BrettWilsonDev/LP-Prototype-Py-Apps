@@ -23,7 +23,7 @@ def testInput():
                    [2, 1.5, 0.5, 8, 0],
                    ]
     
-    AddedConstraints = [
+    addedConstraints = [
         [0, 0, 1, 0, 5, 0],
     ]
 
@@ -35,12 +35,12 @@ def testInput():
                    ]
 
 
-    AddedConstraints = [
+    addedConstraints = [
         [1, -1, 0, 0, 0, 0],
         [-1, 1, 0, 0, 0, 1],
     ]
 
-    return objFunc, constraints, isMin, AddedConstraints
+    return objFunc, constraints, isMin, addedConstraints
 
 
 def GetMathPrelims(objFunc, constraints, isMin, absRule=False):
@@ -75,27 +75,27 @@ def DoAddActivity(objFunc, constraints, isMin, activity, absRule=False):
     return displayCol
 
 
-def DoAddConstraint(objFunc, constraints, isMin, AddedConstraints, absRule=False):
+def DoAddConstraint(objFunc, constraints, isMin, addedConstraints, absRule=False):
     changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = GetMathPrelims(
         objFunc, constraints, isMin=False, absRule=False)
 
     newTab = copy.deepcopy(changingTable)
 
-    for k in range(len(AddedConstraints)):
+    for k in range(len(addedConstraints)):
         for i in range(len(changingTable)):
             newTab[i].insert(-1, 0.0)
 
         newCon = []
-        for i in range(len(changingTable[0]) + len(AddedConstraints)):
+        for i in range(len(changingTable[0]) + len(addedConstraints)):
             newCon.append(0.0)
 
-        for i in range(len(AddedConstraints[k]) - 2):
-            newCon[i] = float(AddedConstraints[k][i])
+        for i in range(len(addedConstraints[k]) - 2):
+            newCon[i] = float(addedConstraints[k][i])
 
-        newCon[-1] = float(AddedConstraints[k][-2])
+        newCon[-1] = float(addedConstraints[k][-2])
 
-        slackSpot = ((len(newCon) - len(AddedConstraints)) - 1) + k
-        if AddedConstraints[k][-1] == 1:
+        slackSpot = ((len(newCon) - len(addedConstraints)) - 1) + k
+        if addedConstraints[k][-1] == 1:
             newCon[slackSpot] = -1.0
         else:
             newCon[slackSpot] = 1.0
@@ -111,15 +111,15 @@ def DoAddConstraint(objFunc, constraints, isMin, AddedConstraints, absRule=False
 
 
     displayTab = copy.deepcopy(newTab)
-    for k in range(len(AddedConstraints)):
+    for k in range(len(addedConstraints)):
         for i in range(len(newTab[0])):
             tLst = []
             for j in range(len(newTab)):
                 tLst.append(newTab[j][i])
             if i in basicVarSpots:
                 if tLst[-k-1] != 0:
-                    bottomRow = ((k) + len(newTab) - len(AddedConstraints))
-                    for spotsCtr in range(len(newTab) - len(AddedConstraints)):
+                    bottomRow = ((k) + len(newTab) - len(addedConstraints))
+                    for spotsCtr in range(len(newTab) - len(addedConstraints)):
                         if tLst[spotsCtr] == 1:
                             topRow = spotsCtr
                             tempNewRow = []
@@ -141,6 +141,8 @@ def DoAddConstraint(objFunc, constraints, isMin, AddedConstraints, absRule=False
             print(displayTab[i][j], end="     ")
         print()
 
+    return displayTab, newTab
+
 def DoGui():
     pygame.init()
     size = 1920 / 2, 1080 / 2
@@ -151,7 +153,7 @@ def DoGui():
     pygame.display.set_mode(size, pygame.DOUBLEBUF |
                             pygame.OPENGL | pygame.RESIZABLE)
 
-    pygame.display.set_caption("dual Simplex Prototype")
+    pygame.display.set_caption("adding activities/constraints Simplex Prototype")
 
     icon = pygame.Surface((1, 1)).convert_alpha()
     icon.fill((0, 0, 0, 1))
@@ -187,6 +189,15 @@ def DoGui():
     problemState = True
 
     actDisplayCol = []
+
+    amtOfAddingConstraints = 1
+
+    addingConstraints = []
+
+    addingSignItemsChoices = [0]
+
+    fixedTab = []
+    unfixedTab = []
 
     while 1:
         for event in pygame.event.get():
@@ -241,11 +252,9 @@ def DoGui():
         imgui.spacing()
 
         for i in range(len(objFunc)):
-            # value = objFunc[i]
-            value = float(objFunc[i])
+            value = objFunc[i]
             imgui.set_next_item_width(50)
             imgui.same_line()
-            # changed, objFunc[i] = imgui.input_float(
             changed, objFunc[i] = imgui.input_float(
                 "objFunc {}".format(i + 1), value)
 
@@ -259,7 +268,6 @@ def DoGui():
             constraints[-1].append(0.0)  # add rhs spot
             signItemsChoices.append(0)
 
-            # activity[-1].append(0.0 * len(constraints))
             activity.append(0.0)
 
         imgui.same_line()
@@ -272,7 +280,6 @@ def DoGui():
 
                 activity.pop()
 
-        # spaceGui(6)
         for i in range(amtOfConstraints):
             imgui.spacing()
             if len(constraints) <= i:
@@ -280,11 +287,9 @@ def DoGui():
                 constraints.append([0.0] * (amtOfObjVars + 2))
 
             for j in range(amtOfObjVars):
-                # value = constraints[i][j]
-                value = float(constraints[i][j])
+                value = constraints[i][j]
                 imgui.set_next_item_width(50)
                 imgui.same_line()
-                # changed, xValue = imgui.input_float(
                 changed, xValue = imgui.input_float(
                     "xC{}{}".format(i, j), value)
                 if changed:
@@ -301,9 +306,7 @@ def DoGui():
             imgui.pop_item_width()
             imgui.same_line()
             imgui.set_next_item_width(50)
-            # rhsValue = constraints[i][-2]
-            rhsValue = float(constraints[i][-2])
-            # rhsChanged, rhs = imgui.input_float(
+            rhsValue = constraints[i][-2]
             rhsChanged, rhs = imgui.input_float(
                 "RHSC{}{}".format(i, j), rhsValue)
 
@@ -337,33 +340,84 @@ def DoGui():
 
         if problemState:
             imgui.new_line()
-            # activity.append(0.0 * len(constraints))
             for i in range(len(constraints) + 1):
-                value = float(activity[i])
+                value = (activity[i])
                 imgui.set_next_item_width(50)
                 imgui.same_line()
-                # changed, objFunc[i] = imgui.input_float(
-                # for k in range(len(constraints)):
-                #     activity.append(0.0)
                 imgui.new_line()
                 changed, activity[i] = imgui.input_float(
                     "activity {}".format(i + 1), value)
+        else:
+            if imgui.button("aConstraint +"):
+                amtOfAddingConstraints += 1
+                addingConstraints.append([0.0] * amtOfObjVars)
+                addingConstraints[-1].append(0.0)  # add sign spot
+                addingConstraints[-1].append(0.0)  # add rhs spot
+                addingSignItemsChoices.append(0)
 
-        if not problemState:
-            pass
+            imgui.same_line()
+
+            if imgui.button("aConstraint -"):
+                if amtOfAddingConstraints != 1:
+                    amtOfAddingConstraints += -1
+                    addingConstraints.pop()
+                    addingSignItemsChoices.pop()
+
+            for i in range(amtOfAddingConstraints):
+                imgui.spacing()
+                if len(addingConstraints) <= i:
+                    # Fill with default values if needed
+                    addingConstraints.append([0.0] * (amtOfObjVars + 2))
+
+                for j in range(amtOfObjVars):
+                    # value = constraints[i][j]
+                    value = (addingConstraints[i][j])
+                    imgui.set_next_item_width(50)
+                    imgui.same_line()
+                    # changed, xValue = imgui.input_float(
+                    changed, xValue = imgui.input_float(
+                        "axC{}{}".format(i, j), value)
+                    if changed:
+                        addingConstraints[i][j] = xValue
+
+                imgui.same_line()
+                imgui.push_item_width(50)
+                changed, selectedItemSign = imgui.combo(
+                    "acomboC{}{}".format(i, j), addingSignItemsChoices[i], signItems)
+                if changed:
+                    addingSignItemsChoices[i] = selectedItemSign
+                    addingConstraints[i][-1] = addingSignItemsChoices[i]
+
+                imgui.pop_item_width()
+                imgui.same_line()
+                imgui.set_next_item_width(50)
+                # rhsValue = constraints[i][-2]
+                rhsValue = (addingConstraints[i][-2])
+                # rhsChanged, rhs = imgui.input_float(
+                rhsChanged, rhs = imgui.input_float(
+                    "aRHSC{}{}".format(i, j), rhsValue)
+
+                if rhsChanged:
+                    addingConstraints[i][-2] = rhs            
+
 
         imgui.spacing()
         imgui.spacing()
         if imgui.button("Solve"):
             try:
-                objFunc, constraints, isMin, AddedConstraints = testInput()
-                activity = [40.0, 5.0, 0.0, 0.0, 1.0]
-                # print(objFunc)
-                # print(constraints)
-                print(activity)
+                # objFunc, constraints, isMin, addingConstraints = testInput()
+                a = copy.deepcopy(objFunc)
+                b = copy.deepcopy(constraints)
+
+                c = copy.deepcopy(activity)
+                e = copy.deepcopy(addingConstraints)
 
                 if problemState:
-                    actDisplayCol = DoAddActivity(objFunc, constraints, isMin, activity, absRule)
+                    actDisplayCol = DoAddActivity(a, b, isMin, c, absRule)
+                else:
+                    addedConstraints = addingConstraints
+                    print(addingConstraints)
+                    fixedTab, unfixedTab = DoAddConstraint(a, b, isMin, e, absRule)
 
             except Exception as e:
                 print("math error:", e)
@@ -381,6 +435,32 @@ def DoGui():
                     imgui.text("Constraint {}".format(i))
                 imgui.same_line()
                 imgui.text("{:>15.3f}".format(float(actDisplayCol[i])))
+                imgui.new_line()
+        else:
+            imgui.text("unfixed Tab:")
+            for i in range(len(unfixedTab)):
+                for j in range(len(unfixedTab[i])):
+                    if i >= (len(unfixedTab) - len(addedConstraints)):
+                        imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+                    imgui.text("{:>9.3f}".format(float(unfixedTab[i][j])))
+                    if i >= (len(unfixedTab) - len(addedConstraints)):
+                        imgui.pop_style_color()
+                    imgui.same_line(0, 20)
+                imgui.new_line()
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            imgui.text("fixed Tab:")
+            for i in range(len(fixedTab)):
+                for j in range(len(fixedTab[i])):
+                    if i >= (len(unfixedTab) - len(addedConstraints)):
+                        imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+                    imgui.text("{:>9.3f}".format(float(fixedTab[i][j])))
+                    if i >= (len(unfixedTab) - len(addedConstraints)):
+                        imgui.pop_style_color()
+                    imgui.same_line(0, 20)
                 imgui.new_line()
 
         imgui.spacing()

@@ -15,6 +15,7 @@ import dualSimplex
 d = sp.symbols('d')
 globalOptimalTab = []
 
+
 def testInput():
     objFunc = [60, 30, 20]
     constraints = [[8, 6, 1, 48, 0],
@@ -54,7 +55,8 @@ def scrubDelta(lst):
 
     return cleaned_list
 
-def DoFormulationOperation(objFunc, constraints, absRule = False):
+
+def DoFormulationOperation(objFunc, constraints, absRule=False):
     excessCount = 0
     slackCount = 0
 
@@ -113,7 +115,8 @@ def DoFormulationOperation(objFunc, constraints, absRule = False):
 
     return opTable
 
-def doSensitivityAnalysis(objFunc, constraints, isMin, absRule = False, optTabLockState = False):
+
+def doSensitivityAnalysis(objFunc, constraints, isMin, absRule=False, optTabLockState=False):
     # get list spots for later use =========================
 
     # objFunc, constraints, isMin = testInput()
@@ -165,7 +168,6 @@ def doSensitivityAnalysis(objFunc, constraints, isMin, absRule = False, optTabLo
             for j in range(len(tableaus[-1])):
                 tLst.append(tableaus[-1][j][i])
             basicVarCols.append(tLst)
-        
 
     # sort the cbv according the basic var positions
     zippedCbv = list(zip(basicVarCols, basicVarSpots))
@@ -198,7 +200,6 @@ def doSensitivityAnalysis(objFunc, constraints, isMin, absRule = False, optTabLo
             tLst.append(tableaus[0][j][basicVarSpots[i]])
         matB.append(tLst)
 
-        
     matrixCbv = sp.Matrix(cbv)
 
     matrixB = sp.Matrix(matB)
@@ -363,6 +364,15 @@ def doGui():
     lockOptTab = "off"
     optTabLockState = False
 
+    newTableaus = []
+
+    IMPivotCols = []
+    IMPivotRows = []
+    IMHeaderRow = []
+
+    pivotCol = -1
+    pivotRow = -1
+
     while 1:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -507,11 +517,10 @@ def doGui():
         else:
             optTabLockState = False
 
-
         # solve button run once ===========================
         if imgui.button("Solve"):
             try:
-                # objFunc, constraints, isMin = testInput()
+                objFunc, constraints, isMin = testInput()
 
                 # print(objFunc, constraints, isMin)
                 a = copy.deepcopy(objFunc)
@@ -546,7 +555,7 @@ def doGui():
                             b[i][j] = sp.parse_expr(b[i][j])
                         except Exception as e:
                             pass
-                
+
                 changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = doSensitivityAnalysis(
                     a, b, isMin, absRule, optTabLockState)
 
@@ -656,6 +665,64 @@ def doGui():
                     imgui.text("{:>15}".format(str(changingTable[i][j])))
                 if i < len(changingTable[i]) - 1:
                     imgui.same_line(0, 20)
+            imgui.spacing()
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        if optTabLockState:
+            if imgui.button("Optimize again"):
+                try:
+                    newTableaus, changingVars, optimalSolution, IMPivotCols, IMPivotRows, IMHeaderRow = dualSimplex.DoDualSimplex([
+                    ], [], isMin, changingTable)
+                except Exception as e:
+                    print("math error in Optimize again:", e)
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            for i in range(len(newTableaus)):
+                if i < len(IMPivotCols):
+                    pivotCol = IMPivotCols[i]
+                    pivotRow = IMPivotRows[i]
+                else:
+                    pivotCol = -1
+                    pivotRow = -1
+                imgui.text("Tableau {}".format(i + 1))
+                imgui.text("t-" + str(i + 1))
+                imgui.same_line(0, 20)
+                for hCtr in range(len(IMHeaderRow)):
+                    imgui.text("{:>8}".format(str(IMHeaderRow[hCtr])))
+                    imgui.same_line(0, 20)
+                imgui.spacing()
+                for j in range(len(newTableaus[i])):
+                    if j == pivotRow and pivotRow != -1:
+                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    if j == 0:
+                        imgui.text("z  ")
+                    else:
+                        imgui.text("c " + str(j))
+                    imgui.same_line(0, 20)
+                    for k in range(len(newTableaus[i][j])):
+                        if k == pivotCol and pivotCol != -1:
+                            imgui.push_style_color(
+                                imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                        imgui.text("{:>8.3f}".format(newTableaus[i][j][k]))
+                        if k < len(newTableaus[i][j]) - 1:
+                            imgui.same_line(0, 20)
+                        if k == pivotCol and pivotCol != -1:
+                            imgui.pop_style_color()
+                    if j == pivotRow and pivotRow != -1:
+                        imgui.pop_style_color()
+                    imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
             imgui.spacing()
 
         imgui.spacing()

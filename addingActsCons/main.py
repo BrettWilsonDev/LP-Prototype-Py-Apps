@@ -58,7 +58,6 @@ def GetMathPrelims(objFunc, constraints, isMin, absRule=False):
 
 
 def DoAddActivity(objFunc, constraints, isMin, activity, absRule=False):
-    # changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = mathPrelims.doSensitivityAnalysis(objFunc, constraints, isMin, absRule)
     changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = GetMathPrelims(
         objFunc, constraints, isMin, absRule)
 
@@ -187,7 +186,6 @@ def DoGui():
     size = 1920 / 2, 1080 / 2
 
     os.system('cls' if os.name == 'nt' else 'clear')
-    # print("\nBrett's simplex prototype tool for dual simplex problems\n")
 
     pygame.display.set_mode(size, pygame.DOUBLEBUF |
                             pygame.OPENGL | pygame.RESIZABLE)
@@ -428,15 +426,12 @@ def DoGui():
             for i in range(amtOfAddingConstraints):
                 imgui.spacing()
                 if len(addingConstraints) <= i:
-                    # Fill with default values if needed
                     addingConstraints.append([0.0] * (amtOfObjVars + 2))
 
                 for j in range(amtOfObjVars):
-                    # value = constraints[i][j]
                     value = (addingConstraints[i][j])
                     imgui.set_next_item_width(50)
                     imgui.same_line()
-                    # changed, xValue = imgui.input_float(
                     changed, xValue = imgui.input_float(
                         "axC{}{}".format(i, j), value)
                     if changed:
@@ -453,9 +448,7 @@ def DoGui():
                 imgui.pop_item_width()
                 imgui.same_line()
                 imgui.set_next_item_width(50)
-                # rhsValue = constraints[i][-2]
                 rhsValue = (addingConstraints[i][-2])
-                # rhsChanged, rhs = imgui.input_float(
                 rhsChanged, rhs = imgui.input_float(
                     "aRHSC{}{}".format(i, j), rhsValue)
 
@@ -492,14 +485,12 @@ def DoGui():
             else:
                 negRuleState = False
 
-                
-
         imgui.spacing()
         imgui.spacing()
         # the solve button =================================================
         if imgui.button("Solve"):
             try:
-                objFunc, constraints, isMin, addingConstraints = testInput()
+                # objFunc, constraints, isMin, addingConstraints = testInput()
 
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)
@@ -579,13 +570,9 @@ def DoGui():
                     print()
 
                 try:
-                    # if len(IMHeaderRow) > 0:
-                    #     del IMHeaderRow[len(objFunc)]
-
                     newTableaus, changingVars, optimalSolution, IMPivotCols, IMPivotRows, IMHeaderRow = dualSimplex.DoDualSimplex([
                     ], [], isMin, tab)
 
-                    # IMHeaderRow.insert(len(objFunc), f"x{len(objFunc) + 1}")
                     IMHeaderRow.clear()
 
                     for i in range(len(newTableaus[-1][-1])):
@@ -595,10 +582,6 @@ def DoGui():
                             IMHeaderRow.append(f"rhs")
                         else:
                             IMHeaderRow.append(f"h{i+1}")
-
-                        # if i == len(newTableaus[-1][-1]):
-                        #     IMHeaderRow.append(f"h{i+1}")
-                        # else:
 
                     print()
                     for i in range(len(newTableaus[-1])):
@@ -696,16 +679,6 @@ def DoGui():
 
 
 def main():
-    # GetMathPrelims(testInput()[0], testInput()[1], testInput()[2])
-    # DoAddActivity(testInput()[0], testInput()[1], testInput()[2], True)
-
-    # DoAddConstraint(testInput()[0], testInput()[1], testInput()[2])
-
-    # DoAddActivity(testInput()[0], testInput()[1], testInput()[2], True)
-
-    # DoAddConstraint(testInput()[0], testInput()[1], testInput()[
-    #                 2], testInput()[3], absRule=False)
-
     DoGui()
 
 

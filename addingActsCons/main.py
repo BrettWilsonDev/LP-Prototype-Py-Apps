@@ -22,23 +22,31 @@ def testInput():
                    [4, 2, 1.5, 20, 0],
                    [2, 1.5, 0.5, 8, 0],
                    ]
-    
-    addedConstraints = [
-        [0, 0, 1, 0, 5, 0],
-    ]
-
-    objFunc = [30, 28, 26, 30]
-    constraints = [[8, 8, 4, 4, 160, 0],
-                   [1, 0, 0, 0, 5, 0],
-                   [1, 0, 0, 0, 5, 1],
-                   [1, 1, 1, 1, 20, 1],
-                   ]
-
 
     addedConstraints = [
-        [1, -1, 0, 0, 0, 0],
-        [-1, 1, 0, 0, 0, 1],
+        [1, 0, 0, 2, 1],
+        [0, 1, 0, 2, 1],
+        [0, 0, 1, 2, 1],
     ]
+
+    # addedConstraints = [
+    #     [1, 0, 0, 1, 1],
+    # ]
+
+    # # addedActivities = [15, 1, 1, 1]
+    # # addedActivities = []
+
+    # objFunc = [30, 28, 26, 30]
+    # constraints = [[8, 8, 4, 4, 160, 0],
+    #                [1, 0, 0, 0, 5, 0],
+    #                [1, 0, 0, 0, 5, 1],
+    #                [1, 1, 1, 1, 20, 1],
+    #                ]
+
+    # addedConstraints = [
+    #     [1, -1, 0, 0, 0, 0],
+    #     [-1, 1, 0, 0, 0, 1],
+    # ]
 
     return objFunc, constraints, isMin, addedConstraints
 
@@ -53,7 +61,7 @@ def DoAddActivity(objFunc, constraints, isMin, activity, absRule=False):
     # changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = mathPrelims.doSensitivityAnalysis(objFunc, constraints, isMin, absRule)
     changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = GetMathPrelims(
         objFunc, constraints, isMin, absRule)
-    
+
     matrixAct = sp.Matrix(activity[1:])
 
     c = matrixAct.transpose() * matrixCbvNegOne
@@ -72,10 +80,10 @@ def DoAddActivity(objFunc, constraints, isMin, activity, absRule=False):
 
     print(displayCol)
 
-    return displayCol
+    return displayCol, changingTable
 
 
-def DoAddConstraint(objFunc, constraints, isMin, addedConstraints, absRule=False):
+def DoAddConstraint(objFunc, constraints, isMin, addedConstraints, absRule=False, reverseRows=False, negRuleState=False):
     changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = GetMathPrelims(
         objFunc, constraints, isMin=False, absRule=False)
 
@@ -109,7 +117,6 @@ def DoAddConstraint(objFunc, constraints, isMin, addedConstraints, absRule=False
         print()
     print("\n\n")
 
-
     displayTab = copy.deepcopy(newTab)
     for k in range(len(addedConstraints)):
         for i in range(len(newTab[0])):
@@ -117,23 +124,54 @@ def DoAddConstraint(objFunc, constraints, isMin, addedConstraints, absRule=False
             for j in range(len(newTab)):
                 tLst.append(newTab[j][i])
             if i in basicVarSpots:
-                if tLst[-k-1] != 0:
+                if tLst[-(len(addedConstraints) - (k))] != 0:
+                    testLst = []
+
+                    for ojCtr in range(len(objFunc)):
+                        testLst.append([])
+
+                    for ntCtr in range(len(newTab)):
+                        for ojCtr in range(len(objFunc)):
+                            testLst[ojCtr].append(newTab[ntCtr][ojCtr])
+
+                    colIndex = testLst.index(tLst)
+
                     bottomRow = ((k) + len(newTab) - len(addedConstraints))
                     for spotsCtr in range(len(newTab) - len(addedConstraints)):
-                        if tLst[spotsCtr] == 1:
+                        if testLst[colIndex][spotsCtr] == 1:
                             topRow = spotsCtr
                             tempNewRow = []
-                            for newTabCrt in range(len(newTab[0])):
-                                if newTab[bottomRow][i] == -1:
-                                    tempNewRow.append(
-                                        newTab[bottomRow][newTabCrt] + newTab[topRow][newTabCrt])
-                                elif newTab[bottomRow][i] == 1:
-                                    tempNewRow.append(
-                                        newTab[bottomRow][newTabCrt] - newTab[topRow][newTabCrt])
+
+                            for newTabCtr in range(len(newTab[0])):
+                                if newTab[bottomRow][colIndex] == -1:
+                                    if reverseRows:
+                                        tempNewRow.append(
+                                            newTab[topRow][newTabCtr] + newTab[topRow][newTabCtr])
+                                    else:
+                                        tempNewRow.append(
+                                            newTab[bottomRow][newTabCtr] + newTab[topRow][newTabCtr])
+                                elif newTab[bottomRow][colIndex] == 1:
+                                    if reverseRows:
+                                        tempNewRow.append(
+                                            newTab[topRow][newTabCtr] - newTab[bottomRow][newTabCtr])
+                                    else:
+                                        tempNewRow.append(
+                                            newTab[bottomRow][newTabCtr] - newTab[topRow][newTabCtr])
                                 else:
-                                    print("do it by hand")
+                                    pass
 
                             displayTab[bottomRow] = tempNewRow
+
+    negRows = []
+    if negRuleState:
+        for i in range(len(changingTable), len(displayTab)):
+            for j in range(len(changingTable[-1]) - 1, len(displayTab[i]) - 1):
+                if displayTab[i][j] < 0:
+                    negRows.append(i)
+
+        for i in range(len(negRows)):
+            for j in range(len(displayTab[0])):
+                displayTab[negRows[i]][j] = -displayTab[negRows[i]][j]
 
     print("fixed tab")
     for i in range(len(displayTab)):
@@ -142,6 +180,7 @@ def DoAddConstraint(objFunc, constraints, isMin, addedConstraints, absRule=False
         print()
 
     return displayTab, newTab
+
 
 def DoGui():
     pygame.init()
@@ -153,7 +192,8 @@ def DoGui():
     pygame.display.set_mode(size, pygame.DOUBLEBUF |
                             pygame.OPENGL | pygame.RESIZABLE)
 
-    pygame.display.set_caption("adding activities/constraints Simplex Prototype")
+    pygame.display.set_caption(
+        "adding activities/constraints Simplex Prototype")
 
     icon = pygame.Surface((1, 1)).convert_alpha()
     icon.fill((0, 0, 0, 1))
@@ -199,6 +239,23 @@ def DoGui():
     fixedTab = []
     unfixedTab = []
 
+    changingTable = []
+
+    IMPivotCols = []
+    IMPivotRows = []
+    IMHeaderRow = []
+
+    pivotCol = -1
+    pivotRow = -1
+
+    newTableaus = []
+
+    reverseRowsState = False
+    rowsReversed = "off"
+
+    negRuleState = False
+    negRule = "off"
+
     while 1:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -231,7 +288,6 @@ def DoGui():
             absProblemType = "abs Off"
 
         imgui.text("absolute rule is: {}".format(absProblemType))
-
 
         # obj vars ===========================================
         if imgui.button("decision variables +"):
@@ -404,26 +460,60 @@ def DoGui():
                     "aRHSC{}{}".format(i, j), rhsValue)
 
                 if rhsChanged:
-                    addingConstraints[i][-2] = rhs            
+                    addingConstraints[i][-2] = rhs
 
+            if imgui.radio_button("reverse rows on", rowsReversed == "on"):
+                rowsReversed = "on"
+
+            imgui.same_line(0, 20)
+
+            if imgui.radio_button("reverse rows off", rowsReversed == "off"):
+                rowsReversed = "off"
+
+            imgui.text("reversing of rows is: {}".format(rowsReversed))
+
+            if rowsReversed == "on":
+                reverseRowsState = True
+            else:
+                reverseRowsState = False
+
+            if imgui.radio_button("keep slack basic on", negRule == "on"):
+                negRule = "on"
+
+            imgui.same_line(0, 20)
+
+            if imgui.radio_button("keep slack basic off", negRule == "off"):
+                negRule = "off"
+
+            imgui.text("keep slack basic is: {}".format(negRule))
+
+            if negRule == "on":
+                negRuleState = True
+            else:
+                negRuleState = False
+
+                
 
         imgui.spacing()
         imgui.spacing()
+        # the solve button =================================================
         if imgui.button("Solve"):
             try:
-                # objFunc, constraints, isMin, addingConstraints = testInput()
+                objFunc, constraints, isMin, addingConstraints = testInput()
+
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)
 
-                c = copy.deepcopy(activity)
-                e = copy.deepcopy(addingConstraints)
-
                 if problemState:
-                    actDisplayCol = DoAddActivity(a, b, isMin, c, absRule)
+                    c = copy.deepcopy(activity)
+                    actDisplayCol, changingTable = DoAddActivity(
+                        a, b, isMin, c, absRule)
                 else:
+                    e = copy.deepcopy(addingConstraints)
                     addedConstraints = addingConstraints
                     print(addingConstraints)
-                    fixedTab, unfixedTab = DoAddConstraint(a, b, isMin, e, absRule)
+                    fixedTab, unfixedTab = DoAddConstraint(
+                        a, b, isMin, e, absRule, reverseRowsState, negRuleState)
 
             except Exception as e:
                 print("math error:", e)
@@ -474,6 +564,126 @@ def DoGui():
         imgui.spacing()
         imgui.spacing()
 
+        if imgui.button("Optimize again"):
+            if problemState:
+                tab = copy.deepcopy(changingTable)
+
+                for i in range(len(tab)):
+                    tab[i].insert(len(objFunc), float(actDisplayCol[i]))
+                    print(float(actDisplayCol[i]))
+
+                print()
+                for i in range(len(tab)):
+                    for j in range(len(tab[i])):
+                        print(tab[i][j], end=" ")
+                    print()
+
+                try:
+                    # if len(IMHeaderRow) > 0:
+                    #     del IMHeaderRow[len(objFunc)]
+
+                    newTableaus, changingVars, optimalSolution, IMPivotCols, IMPivotRows, IMHeaderRow = dualSimplex.DoDualSimplex([
+                    ], [], isMin, tab)
+
+                    # IMHeaderRow.insert(len(objFunc), f"x{len(objFunc) + 1}")
+                    IMHeaderRow.clear()
+
+                    for i in range(len(newTableaus[-1][-1])):
+                        if i < (len(objFunc) + 1):
+                            IMHeaderRow.append(f"x{i+1}")
+                        elif i == (len(newTableaus[-1][-1]) - 1):
+                            IMHeaderRow.append(f"rhs")
+                        else:
+                            IMHeaderRow.append(f"h{i+1}")
+
+                        # if i == len(newTableaus[-1][-1]):
+                        #     IMHeaderRow.append(f"h{i+1}")
+                        # else:
+
+                    print()
+                    for i in range(len(newTableaus[-1])):
+                        for j in range(len(newTableaus[-1][i])):
+                            print(float(newTableaus[-1][i][j]), end=" ")
+                        print()
+
+                except Exception as e:
+                    print("math error in Optimize again:", e)
+            else:
+                print()
+                for i in range(len(fixedTab)):
+                    for j in range(len(fixedTab[i])):
+                        print(float(fixedTab[i][j]), end=" ")
+                    print()
+
+                tab = copy.deepcopy(fixedTab)
+
+                try:
+                    newTableaus, changingVars, optimalSolution, IMPivotCols, IMPivotRows, IMHeaderRow = dualSimplex.DoDualSimplex([
+                    ], [], isMin, tab)
+
+                    IMHeaderRow.clear()
+
+                    for i in range(len(newTableaus[-1][-1])):
+                        if i <= (len(objFunc) - 1):
+                            IMHeaderRow.append(f"x{i+1}")
+                        elif i == (len(newTableaus[-1][-1]) - 1):
+                            IMHeaderRow.append(f"rhs")
+                        else:
+                            IMHeaderRow.append(f"h{i+1}")
+
+                except Exception as e:
+                    print("math error in Optimize again:", e)
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        for i in range(len(newTableaus)):
+            if i < len(IMPivotCols):
+                pivotCol = IMPivotCols[i]
+                pivotRow = IMPivotRows[i]
+            else:
+                pivotCol = -1
+                pivotRow = -1
+            imgui.text("Tableau {}".format(i + 1))
+            imgui.text("t-" + str(i + 1))
+            imgui.same_line(0, 20)
+            for hCtr in range(len(IMHeaderRow)):
+                imgui.text("{:>8}".format(str(IMHeaderRow[hCtr])))
+                imgui.same_line(0, 20)
+            imgui.spacing()
+            for j in range(len(newTableaus[i])):
+                if j == pivotRow and pivotRow != -1:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                if j == 0:
+                    imgui.text("z  ")
+                else:
+                    imgui.text("c " + str(j))
+                imgui.same_line(0, 20)
+                for k in range(len(newTableaus[i][j])):
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    imgui.text("{:>8.3f}".format(newTableaus[i][j][k]))
+                    if k < len(newTableaus[i][j]) - 1:
+                        imgui.same_line(0, 20)
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.pop_style_color()
+                if j == pivotRow and pivotRow != -1:
+                    imgui.pop_style_color()
+                imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+        imgui.spacing()
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
         imgui.end()
 
         # gl stuff
@@ -497,5 +707,6 @@ def main():
     #                 2], testInput()[3], absRule=False)
 
     DoGui()
+
 
 main()

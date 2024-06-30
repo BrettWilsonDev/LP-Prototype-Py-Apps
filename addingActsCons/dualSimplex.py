@@ -106,18 +106,6 @@ def DoFormulationOperation(objFunc, constraints):
         for j in range(len(objFunc), len(opTable[i]) - 1):
             opTable[i][i + 1 * len(objFunc) - 1] = 1
 
-    # o = copy.deepcopy(opTable)
-    # for i in range(len(opTable[0])):
-    #     o[0][i] = -opTable[0][i]
-
-    # for i in range(len(objFunc)):
-    #     opTable[0][i] = -opTable[0][i]
-
-    # print(len(opTable[-1]))
-    # for i in range(len(opTable[-1])):
-    #     opTable[i][-1] = -opTable[i][-1]
-
-
     return opTable
 
 
@@ -293,7 +281,7 @@ def GetInput(objFunc, constrants, isMin):
     return tab, isMin, amtOfE, amtOfS, len(objFunc)
 
 
-def DoDualSimplex(objFunc, constraints, isMin):
+def DoDualSimplex(objFunc, constraints, isMin, tabOverride=None):
     # print()
 
     thetaCols = []
@@ -301,6 +289,16 @@ def DoDualSimplex(objFunc, constraints, isMin):
 
     tab, isMin, amtOfE, amtOfS, lenObj = GetInput(objFunc, constraints, isMin)
     # print()
+
+    if tabOverride is not None:
+        tab = tabOverride
+        global IMPivotCols
+        global IMPivotRows
+        global IMHeaderRow
+
+        IMPivotCols = []
+        IMPivotRows = []
+        del IMHeaderRow[-1]
 
     tableaus.append(tab)
 
@@ -449,7 +447,10 @@ def DoDualSimplex(objFunc, constraints, isMin):
     optimalSolution = tableaus[-1][0][-1]
     # print(optimalSolution)
 
-    return tableaus, changingVars, optimalSolution
+    if tabOverride is None:
+        return tableaus, changingVars, optimalSolution
+    else:
+        return tableaus, changingVars, optimalSolution, IMPivotCols, IMPivotRows, IMHeaderRow
 
 
 def DoGui():

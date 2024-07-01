@@ -388,6 +388,7 @@ def DoPreemptive(goals, constraints):
         
         # print(currentZRow)
 
+# TODO add all true break condition
         for i in range(len(metGoals)):
             if metGoals[i]:
                 # Update highest_true_index to the current index

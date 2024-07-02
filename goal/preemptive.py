@@ -13,24 +13,35 @@ def testInput():
     constraints = [
     ]
 
-    goals = [
-        # <= is 0 and >= is 1
-        [12, 9, 15, 125, 1],
-        [5, 3, 4, 40, 2],
-        [5, 7, 8, 55, 0],
-    ]
+    # goals = [
+    #     # <= is 0 and >= is 1
+    #     [12, 9, 15, 125, 1],
+    #     [5, 3, 4, 40, 2],
+    #     [5, 7, 8, 55, 0],
+    # ]
 
-    constraints = [
-    ]
+    # constraints = [
+    # ]
+
+    # goals = [
+    #     # <= is 0 and >= is 1 and == is 2
+    #     [40, 30, 20, 100, 0],
+    #     [2, 4, 3, 10, 2],
+    #     [5, 8, 4, 30, 1],
+    # ]
+
+    # constraints = [
+    # ]
 
     goals = [
         # <= is 0 and >= is 1 and == is 2
-        [40, 30, 20, 100, 0],
-        [2, 4, 3, 10, 2],
-        [5, 8, 4, 30, 1],
+        [7, 3, 40, 1],
+        [10, 5, 60, 1],
+        [5, 4, 35, 1],
     ]
 
     constraints = [
+        [100, 60, 600, 0],
     ]
 
     return goals, constraints
@@ -104,11 +115,20 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
             tab[i][-1] = goalConstraints[i - penlites][-2]
             tab[i][j] = goalConstraints[i - penlites][j - 1]
 
+    # TODO Test if this is working in equal constraints
     # put in normal constraints
     for i in range(tabSizeH - len(constraints), tabSizeH):
         for j in range(1, (len(constraints[-1]) - 2) + 1):
             tab[i][-1] = constraints[i - (tabSizeH - len(constraints))][-2]
             tab[i][j] = constraints[i - (tabSizeH - len(constraints))][j - 1]
+
+
+    # put in the slacks
+    for i in range(len(constraints)):
+        if constraints[i][-1] == 0:
+            tab[tabSizeH - i - 1][-(i+2)] = 1
+        elif constraints[i][-1] == 1:
+            tab[tabSizeH - i - 1][-(i+2)] = -1
 
     # put the 1 -1 for goal constraints in
     onesCtr = amtOfObjVars + 1
@@ -129,7 +149,7 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
                 newTab[i][j] = tab[i + penlites][j] + tab[i][j]
         gCtr += 1
 
-
+    # fix the 2's aka the equalities
     gNegCtr = 0
     for i in range(len(tempGoals)):
         if tempGoals[i][-1] == 2:
@@ -146,9 +166,14 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
 
             del newTab[-(i + 1)]
             del tab[-(i + 1)]
-
         gNegCtr += 1
-                   
+
+    # for j in range(len(tab)):
+    #     for k in range(len(tab[j])):
+    #         print("{:10.3f}".format(tab[j][k]), end=" ")
+    #     print()
+    # print()
+    
     return tab, newTab, penlites
 
 
@@ -277,7 +302,7 @@ def DoPreemptive(goals, constraints):
     ctr = 0
     while ctr != 100 and isLoopRunning:
         basicVarLst = []
-        for k in range(lenObj + 1, len(tableaus[-1][-1]) - 1):
+        for k in range(lenObj + 1, (len(tableaus[-1][-1]) - 1) - len(constraints)):
             columnIndex = k
             tempLst = []
 
@@ -416,12 +441,12 @@ def DoPreemptive(goals, constraints):
         if all(metGoals):
             isLoopRunning = False
 
+
         metGoals = copy.deepcopy(tempMetGoals)
 
         newTab, zRhs = DoPivotOperations(tableaus[-1], conStartRow, currentZRow, 1)
         tableaus.append(newTab)
 
-        print()
 
         ctr += 1
 

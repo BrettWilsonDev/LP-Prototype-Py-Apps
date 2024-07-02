@@ -13,6 +13,31 @@ def testInput():
     constraints = [
     ]
 
+    goals = [
+        # <= is 0 and >= is 1
+        [12, 9, 15, 125, 1],
+        # [5, 3, 4, 40, 0],
+        # [5, 3, 4, 40, 1],
+        # [5, 7, 8, 55, 0],
+
+        [5, 3, 4, 40, 2],
+
+        [5, 7, 8, 55, 0],
+    ]
+
+    constraints = [
+    ]
+
+    goals = [
+        # <= is 0 and >= is 1 and == is 2
+        [40, 30, 20, 100, 0],
+        [2, 4, 3, 10, 2],
+        [5, 8, 4, 30, 1],
+    ]
+
+    constraints = [
+    ]
+
     return goals, constraints
 
 
@@ -26,6 +51,44 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
     amtOfObjVars = (len(goalConstraints[-1]) - 2)
 
     tab = []
+
+    tempGoalConstraints = []
+    equalPositions = []
+    for i in range(len(goalConstraints)):
+        if goalConstraints[i][-1] == 2:
+            tempGoalConstraints.append(goalConstraints[i])
+            equalPositions.append(i)
+            tabSizeH += 2
+            tabSizeW += 2
+            penlites += 1
+            
+
+    # print(tempGoalConstraints)
+
+    # print(tabSizeH)
+    # print(tabSizeW)
+    # print(penlites)
+
+    tempGoals = copy.deepcopy(goalConstraints)
+
+    fixedEqualGoals = []
+    for lst in tempGoalConstraints:
+        # Copy the 1D list twice
+        listCopy1 = lst[:]
+        listCopy2 = lst[:]
+        
+        listCopy1[-1] = 0
+        listCopy2[-1] = 1
+        
+        fixedEqualGoals.append(listCopy1)
+        fixedEqualGoals.append(listCopy2)
+
+    for i in range(len(equalPositions)):
+        del goalConstraints[equalPositions[i]]
+        goalConstraints.insert(equalPositions[i], fixedEqualGoals[i+1])
+        goalConstraints.insert(equalPositions[i], fixedEqualGoals[i])
+
+    # print(goalConstraints)
 
     # initialize table with empty rows
     for i in range(tabSizeH):
@@ -47,9 +110,20 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
     for i in range(len(goalConstraints)):
         if goalConstraints[i][-1] == 0:
             tab[i][gCtr + 1] = -1
-        else:
+        elif goalConstraints[i][-1] == 1:
             tab[i][gCtr] = -1
+        # elif goalConstraints[i][-1] == 2:
+        #     tab[i][gCtr] = -1
+        #     tab[i][gCtr + 1] = -1
         gCtr += 2
+
+
+
+    # for j in range(len(tab)):
+    #     for k in range(len(tab[j])):
+    #         print("{:10.3f}".format(tab[j][k]), end=" ")
+    #     print()
+    # print()
 
     # put in goal constraints
     for i in range(penlites, tabSizeH - len(constraints)):
@@ -97,6 +171,70 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
     # global gTab
     # gTab.append(copy.deepcopy(tab))
     # gTab.append(copy.deepcopy(newTab))
+
+    # for j in range(len(tab)):
+    #     for k in range(len(tab[j])):
+    #         print("{:10.3f}".format(tab[j][k]), end=" ")
+    #     print()
+    # print()
+
+    # print(newTab[-2])
+
+    print(tempGoals)
+
+    # print(len(tempGoals) * 2)
+
+    # print(amtOfObjVars + 1)
+
+    gNegCtr = 0
+    for i in range(len(tempGoals)):
+        # print(i + amtOfObjVars + 1 + gNegCtr)
+        # print(-(i + 2 + gNegCtr))
+        # print(-(i + 3 + gNegCtr))
+
+        if tempGoals[i][-1] == 2:
+            for k in range(len(newTab)):
+                del newTab[k][-(i + 3 + gNegCtr)]
+                del newTab[k][-(i + 2 + gNegCtr)]
+
+                del tab[k][-(i + 3 + gNegCtr)]
+                del tab[k][-(i + 2 + gNegCtr)]
+                # pass
+
+            newTab[i+1][-(i + 2 + gNegCtr)] = -1
+
+            tab[i+1][-(i + 3 + gNegCtr)] = -1
+
+
+            del newTab[-(i + 1)]
+            del tab[-(i + 1)]
+
+        gNegCtr += 1
+                   
+
+    # for i in range(2, (len(tempGoals) * 2) + 2):
+
+    #     print(-(i))
+
+    # for i in range(len(newTab)):
+    #     del newTab[i][-5]
+    #     del newTab[i][-4]
+
+    # newTab[2][-4] = -1
+
+    # del newTab[-2]
+
+    # for j in range(len(newTab)):
+    #     for k in range(len(newTab[j])):
+    #         print("{:10.3f}".format(newTab[j][k]), end=" ")
+    #     print()
+    # print()
+
+    # penlites -= 1
+
+    # goalConstraints = copy.deepcopy(tempGoals)
+    # goalConstraints = []
+    # print(goalConstraints)
 
     return tab, newTab, penlites
 
@@ -208,11 +346,33 @@ def DoPivotOperations(tab, conStartRow, zRow, tabNum=1):
 
 
 def DoPreemptive(goals, constraints):
+    a = copy.deepcopy(goals)
+    b = copy.deepcopy(constraints)
+    originalGoals = copy.deepcopy(goals)
     tableaus = []
+    # firstTab, FormulatedTab, conStartRow = BuildFirstPreemptiveTableau(
+    #     goals, constraints)
     firstTab, FormulatedTab, conStartRow = BuildFirstPreemptiveTableau(
-        goals, constraints)
+        a, b)
     tableaus.append(firstTab)
     tableaus.append(FormulatedTab)
+
+    # tempGoalLst = []
+    # for i in range(len(goals)):
+    #     if goals[i][-1] == 2:
+    #         # print(goals[-1])
+    #         goals.insert(i, goals[i])
+
+    tempGoalLst = []
+    for goal in goals:
+        tempGoalLst.append(goal)
+        if goal[-1] == 2:
+            tempGoalLst.append(goal)
+
+    # If you want to update the original goals list, you can do:
+    goals = tempGoalLst
+
+    # print(goals)
 
     zRhs = []
     currentZRow = 0
@@ -247,10 +407,15 @@ def DoPreemptive(goals, constraints):
 
     isLoopRunning = True
 
+    # currentHighest = -1
+
+    currentTrueIndex = -1
+
     ctr = 0
     while ctr != 100 and isLoopRunning:
         # print(f"\nloop: {ctr + 1}\n")
         # get the basic variables
+
         basicVarLst = []
         for k in range(lenObj + 1, len(tableaus[-1][-1]) - 1):
             columnIndex = k
@@ -259,6 +424,7 @@ def DoPreemptive(goals, constraints):
             for i in range(conStartRow, len(tableaus[-1])):
                 columnValue = tableaus[-1][i][columnIndex]
                 tempLst.append(columnValue)
+                # print(tempLst)
             if (sum(tempLst) == 1):
                 basicVarLst.append(tempLst)
             else:
@@ -285,6 +451,19 @@ def DoPreemptive(goals, constraints):
                             goalRhs[j] = (-tableaus[-1][j + conStartRow][-1])
                             # goalRhs.append(-tableaus[-1][j + conStartRow][-1])
                             # print(-tableaus[-1][j][-1])
+
+
+        # for i in range(len(originalGoals)):
+        #     if originalGoals[i][-1] == 2:
+        #         # print(goalRhs[i])
+        #         goalRhs.insert(i, -goalRhs[i])
+        #         goalRhs.pop()
+        
+
+
+        # originalGoals = copy.deepcopy(goals)
+
+        # print(goalRhs)
 
         # print("sort")
         sortedLst = []
@@ -349,8 +528,18 @@ def DoPreemptive(goals, constraints):
         for i in range(len(goalRhs)):
             if goalRhs[i] == -0.0:
                 goalRhs[i] = 0.0
+
+        for i in range(len(originalGoals)):
+            if originalGoals[i][-1] == 2:
+                # print(goalRhs[i])
+                if goalRhs[i] is not None:
+                    goalRhs.insert(i, -goalRhs[i])
+                else:
+                    goalRhs.insert(i, goalRhs[i])
+                goalRhs.pop()       
                 
         # print(goalRhs)
+        # print(goals)
 
         for i in range(len(goalRhs)):
             # I hope dearly that this mathematical algorithm acquaints for both non-basic columns being optimal.
@@ -358,7 +547,10 @@ def DoPreemptive(goals, constraints):
                 # print("Goal {} met".format(i + 1))
                 metGoals[i] = True
                 continue
-                
+            
+            # print(i)
+            # print(f"ahhhhhh {goals[i]}")
+
             # check if goal is met based on constraints conditions
             if goals[i][-1] == 0:
                 if (goalRhs[i] + goals[i][-2]) <= goals[i][-2]:
@@ -367,13 +559,25 @@ def DoPreemptive(goals, constraints):
                 else:
                     # print("Goal {} not met".format(i + 1))
                     metGoals[i] = False
-            else:
+            elif goals[i][-1] == 1:
                 if (goalRhs[i] + goals[i][-2]) >= goals[i][-2]:
                     # print("Goal {} met".format(i + 1))
                     metGoals[i] = True
                 else:
                     # print("Goal {} not met".format(i + 1))
                     metGoals[i] = False
+            elif goals[i][-1] == 2:
+                # print(goalRhs[i])
+                # print(f"{goalRhs[i]} == {goals[i][-2]} and {goalRhs[i + 1]} == {goals[i + 1][-2]}")
+                if (goalRhs[i] == goals[i][-2]):
+                    # print("Goal {} met".format(i + 1))
+                    metGoals[i] = True
+                    # metGoals[i + 1] = True
+                else:
+                    # print("Goal {} not met".format(i + 1))
+                    metGoals[i] = False
+                    # metGoals[i + 1] = False
+
         
         # 0 in top rhs means goal met regardless of bottom rhs
         for i in range(len(zRhs)):
@@ -382,29 +586,85 @@ def DoPreemptive(goals, constraints):
 
         # print(metGoals)
 
+
         for i in range(len(metGoals)):
             if metGoals[i] == False:
                 currentZRow = i
+                break
         
         # print(currentZRow)
 
-# TODO add all true break condition
-        for i in range(len(metGoals)):
-            if metGoals[i]:
-                # Update highest_true_index to the current index
-                highestTrueIndex = i
-            elif not metGoals[i]:
-                # Check if there are any True values above the current index
-                if highestTrueIndex > i:
-                    # Perform some action here (e.g., print a message)
-                    # print(f"Action triggered at index {i}")
-                    isLoopRunning = False
-                # Reset highest_true_index since we encountered a False
-                highestTrueIndex = -1
+        tempMetGoals = copy.deepcopy(metGoals)
+        for i in range(len(originalGoals)):
+            if originalGoals[i][-1] == 2:
 
+                # print(metGoals[i], metGoals[i+1])
+                if not ((metGoals[i]) and (metGoals[i+1])):
+                    # print("Goal {} not met".format(i + 1))
+                    metGoals[i] = False
+                    metGoals[i+1] = False
+                else:
+                    # print("Goal {} met".format(i + 1))
+                    metGoals[i] = True
+                    metGoals[i+1] = True  
+
+        # print(metGoals)
+
+        # highestTrueIndex = -1
+
+        # for i in range(len(metGoals)):
+        #     if metGoals[i]:
+        #         # print(metGoals[i])
+        #         # Update highest_true_index to the current index
+        #         highestTrueIndex = i
+        #         # print(f"not breaking why {highestTrueIndex} > {i}")
+        #     elif not metGoals[i]:
+        #         # print(metGoals[i])
+        #         # Check if there are any True values above the current index
+        #         if highestTrueIndex > i:
+        #             # Perform some action here (e.g., print a message)
+        #             # print(f"Action triggered at index {i}")
+        #             # print(f"breaking why {highestTrueIndex} > {i}")
+        #             isLoopRunning = False
+        #         # Reset highest_true_index since we encountered a False
+        #         # highestTrueIndex = -1
+
+        # goals = get_metgoals()  # assuming this function returns the updated list
+        # rightmost = metGoals[0]
+        # if previous_rightmost == True and rightmost == False:
+        #     break
+        # previous_rightmost = rightmost
+
+        for i in range(len(metGoals)):
+            if not metGoals[i]:
+                currentTrueIndex = i
+                break
+
+        # if currentTrueIndex > highestTrueIndex:
+        #     highestTrueIndex = currentTrueIndex
+
+        # if (highestTrueIndex > currentTrueIndex):
+        #     break
+
+        if currentTrueIndex > highestTrueIndex:
+            highestTrueIndex = currentTrueIndex
+        else:
+            if highestTrueIndex > currentTrueIndex:
+                break
+
+        # print(currentHighest)
+
+        if all(metGoals):
+            isLoopRunning = False
+
+        metGoals = copy.deepcopy(tempMetGoals)
+
+        # print(metGoals)
 
         newTab, zRhs = DoPivotOperations(tableaus[-1], conStartRow, currentZRow, 1)
         tableaus.append(newTab)
+
+        print()
 
         ctr += 1
 

@@ -58,165 +58,26 @@ def testInput():
 
 
 def BuildFirstPreemptiveTableau(goalConstraints, constraints):
-    # tabSizeH = len(constraints) + len(goalConstraints) * 2
-    # tabSizeW = 1 + 1 + (len(goalConstraints) * 2) + \
-    #     len(constraints) + (len(goalConstraints[-1]) - 2)
-
-    # penlites = len(goalConstraints)
-
-    # amtOfObjVars = (len(goalConstraints[-1]) - 2)
-
-    # tab = []
-
-    # tempGoalConstraints = []
-    # equalPositions = []
-    # for i in range(len(goalConstraints)):
-    #     if goalConstraints[i][-1] == 2:
-    #         tempGoalConstraints.append(goalConstraints[i])
-    #         equalPositions.append(i)
-    #         tabSizeH += 2
-    #         tabSizeW += 2
-    #         penlites += 1
-            
-    # tempGoals = copy.deepcopy(goalConstraints)
-
-    # fixedEqualGoals = []
-    # for lst in tempGoalConstraints:
-    #     # Copy the 1D list twice
-    #     listCopy1 = lst[:]
-    #     listCopy2 = lst[:]
-        
-    #     listCopy1[-1] = 0
-    #     listCopy2[-1] = 1
-        
-    #     fixedEqualGoals.append(listCopy1)
-    #     fixedEqualGoals.append(listCopy2)
-
-    # for i in range(len(equalPositions)):
-    #     del goalConstraints[equalPositions[i]]
-    #     goalConstraints.insert(equalPositions[i], fixedEqualGoals[i+1])
-    #     goalConstraints.insert(equalPositions[i], fixedEqualGoals[i])
-
-    # # initialize table with empty rows
-    # for i in range(tabSizeH):
-    #     tab.append([])
-
-    # # initialize table with zeros
-    # for i in range(tabSizeH):
-    #     for j in range(tabSizeW):
-    #         tab[i].append(0)
-
-    # # put in lhs in the z col
-    # for i in range(penlites):
-    #     tab[i][0] = 1
-
-    # # put in penlites
-    # gCtr = amtOfObjVars + 1
-    # for i in range(len(goalConstraints)):
-    #     if goalConstraints[i][-1] == 0:
-    #         tab[i][gCtr + 1] = -1
-    #     elif goalConstraints[i][-1] == 1:
-    #         tab[i][gCtr] = -1
-    #     gCtr += 2
-
-    # # put in goal constraints
-    # for i in range(penlites, tabSizeH - len(constraints)):
-    #     for j in range(1, amtOfObjVars + 1):
-    #         tab[i][-1] = goalConstraints[i - penlites][-2]
-    #         tab[i][j] = goalConstraints[i - penlites][j - 1]
-
-    # # TODO Test if this is working in equal constraints
-    # # put in normal constraints
-    # for i in range(tabSizeH - len(constraints), tabSizeH):
-    #     for j in range(1, (len(constraints[-1]) - 2) + 1):
-    #         tab[i][-1] = constraints[i - (tabSizeH - len(constraints))][-2]
-    #         tab[i][j] = constraints[i - (tabSizeH - len(constraints))][j - 1]
-
-
-    # # put in the slacks
-    # for i in range(len(constraints)):
-    #     if constraints[i][-1] == 0:
-    #         tab[tabSizeH - i - 1][-(i+2)] = 1
-    #     elif constraints[i][-1] == 1:
-    #         tab[tabSizeH - i - 1][-(i+2)] = -1
-
-    # # put the 1 -1 for goal constraints in
-    # onesCtr = amtOfObjVars + 1
-    # for i in range(penlites, tabSizeH - len(constraints)):
-    #     tab[i][onesCtr] = 1
-    #     tab[i][onesCtr + 1] = -1
-    #     onesCtr += 2
-
-    # # make new tab
-    # newTab = copy.deepcopy(tab)
-
-    # gCtr = len(goalConstraints)
-    # for i in range(penlites):
-    #     for j in range(len(tab[i])):
-    #         if goalConstraints[i][-1] == 0:
-    #             newTab[i][j] = tab[i + penlites][j] - tab[i][j]
-    #         elif goalConstraints[i][-1] == 1:
-    #             newTab[i][j] = tab[i + penlites][j] + tab[i][j]
-    #     gCtr += 1
-
-    # # fix the 2's aka the equalities
-    # gNegCtr = 0
-    # for i in range(len(tempGoals)):
-    #     if tempGoals[i][-1] == 2:
-    #         for k in range(len(newTab)):
-    #             del newTab[k][-(i + 3 + gNegCtr)]
-    #             del newTab[k][-(i + 2 + gNegCtr)]
-
-    #             del tab[k][-(i + 3 + gNegCtr)]
-    #             del tab[k][-(i + 2 + gNegCtr)]
-
-    #         newTab[i+1][-(i + 2 + gNegCtr)] = -1
-
-    #         tab[i+1][-(i + 3 + gNegCtr)] = -1
-
-    #         del newTab[-(i + 1)]
-    #         del tab[-(i + 1)]
-    #     gNegCtr += 1
-
-    # # for j in range(len(tab)):
-    # #     for k in range(len(tab[j])):
-    # #         print("{:10.3f}".format(tab[j][k]), end=" ")
-    # #     print()
-    # # print()
-    
-    # return tab, newTab, penlites
-
     oldTab = []
     newTab = []
     conStart = 0
-
-
-    # print(penlites)
-    # print(goalConstraints)
-    # print(constraints)
 
     # hight = (goals + goalConstraints) = goals * 2 + constraints
     tabSizeH = (len(goalConstraints) * 2) + len(constraints)
 
     # width = z + rhs + x + (g+,-) * 2 + slack
-    tabSizeW = 1 + 1 + (len(goalConstraints[-1]) - 2) + (len(goalConstraints) * 2) + len(constraints)
+    tabSizeW = 1 + 1 + \
+        (len(goalConstraints[-1]) - 2) + \
+        (len(goalConstraints) * 2) + len(constraints)
 
     amtOfObjVars = (len(goalConstraints[-1]) - 2)
     amtOfGoals = len(goalConstraints)
-    
+
     # fix the equalities constraints sizes
     for i in range(len(goalConstraints)):
         if goalConstraints[i][-1] == 2:
             tabSizeH += 1
             amtOfGoals += 1
-
-    # print(tabSizeH)
-    # print(tabSizeW)
-
-
-
-    # print(amtOfObjVars)
-    # print(amtOfGoals)
 
     # initialize table with empty rows
     for i in range(tabSizeH):
@@ -231,8 +92,7 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
     for i in range(amtOfGoals):
         oldTab[i][0] = 1
 
-    # TODO keep an eye on the placement of the penalties for goal 2+ 2-
-    # put in penlites spots
+    # put in -1s in
     gCtr = amtOfObjVars + 1
     ExtraCtr = 0
     for i in range(len(goalConstraints)):
@@ -245,13 +105,6 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
             oldTab[i + 1][gCtr + 1] = -1
             ExtraCtr += 1
         gCtr += 2
-
-    # put in penlites values or leave as -1
-    # if len(penlites) != 0:
-    #     for i in range(len(oldTab)):
-    #         for j in range(len(oldTab[i])):
-    #             if oldTab[i][j] == -1:
-    #                 oldTab[i][j] = -penlites[i]
 
     # put in the slacks
     for i in range(len(constraints)):
@@ -270,26 +123,25 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
     # put in goal constraints
     for i in range(len(goalConstraints)):
         for j in range(amtOfObjVars):
-            oldTab[i + amtOfGoals][j + 1] = goalConstraints[i][j] # lhs
-            oldTab[i + amtOfGoals][-1] = goalConstraints[i][-2] # rhs
+            oldTab[i + amtOfGoals][j + 1] = goalConstraints[i][j]  # lhs
+            oldTab[i + amtOfGoals][-1] = goalConstraints[i][-2]  # rhs
 
     # put in constraints
     for i in range(len(constraints)):
         for j in range(amtOfObjVars):
-            oldTab[i + amtOfGoals + len(goalConstraints)][j + 1] = constraints[i][j] # lhs
-            oldTab[i + amtOfGoals + len(goalConstraints)][-1] = constraints[i][-2] # rhs
+            oldTab[i + amtOfGoals +
+                   len(goalConstraints)][j + 1] = constraints[i][j]  # lhs
+            oldTab[i + amtOfGoals +
+                   len(goalConstraints)][-1] = constraints[i][-2]  # rhs
 
-
-    for j in range(len(oldTab)):
-        for k in range(len(oldTab[j])):
-            print("{:10.3f}".format(oldTab[j][k]), end=" ")
-        print()
-    print()
-
+    # for j in range(len(oldTab)):
+    #     for k in range(len(oldTab[j])):
+    #         print("{:10.3f}".format(oldTab[j][k]), end=" ")
+    #     print()
+    # print()
 
     # first tab done move on to second tab
     newTab = copy.deepcopy(oldTab)
-
 
     # rows at the top of the old table are the goals
     topRows = []
@@ -298,8 +150,6 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
         for j in range(len(oldTab[i])):
             topRows[i].append(oldTab[i][j])
 
-    # print(topRows)
-
     # rows at the bottom of the old table are the goal constraints
     bottomRows = []
     for i in range(len(goalConstraints)):
@@ -307,14 +157,12 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
         for j in range(len(oldTab[i])):
             bottomRows[i].append(oldTab[i + amtOfGoals][j])
 
-    # print(bottomRows)
-
     # fix the equalities issues by duplicating the goal constraint rows that belong to the equalities
     tempBottomRows = []
     for i in range(len(goalConstraints)):
         if goalConstraints[i][-1] == 2:
             listCopy = bottomRows[i][:]
-            
+
             tempBottomRows.append(listCopy)
             tempBottomRows.append(listCopy)
         else:
@@ -329,10 +177,10 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
         if goal[-1] == 2:
             listCopy1 = goal[:]
             listCopy2 = goal[:]
-            
+
             listCopy1[-1] = 0
             listCopy2[-1] = 1
-            
+
             tempGoals.append(listCopy2)
             tempGoals.append(listCopy1)
         else:
@@ -340,7 +188,7 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
 
     goalConstraints = tempGoals
 
-    # keep in mind this is penalties initial tab calculations
+    # keep in mind this is preemptive initial tab calculations
 
     # calculate the new table goal rows
     for i in range(len(goalConstraints)):
@@ -360,13 +208,13 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
             newTab[i + 1 + equalCtr] = tempRow
 
             equalCtr += 1
-            
-    print()
-    for j in range(len(newTab)):
-        for k in range(len(newTab[j])):
-            print("{:10.3f}".format(newTab[j][k]), end=" ")
-        print()
-    print()
+
+    # print()
+    # for j in range(len(newTab)):
+    #     for k in range(len(newTab[j])):
+    #         print("{:10.3f}".format(newTab[j][k]), end=" ")
+    #     print()
+    # print()
 
     conStart = amtOfGoals
     return oldTab, newTab, conStart
@@ -401,7 +249,6 @@ def DoPivotOperations(tab, conStartRow, zRow, tabNum=1):
 
             if (tab[i][-1] / tab[i][pivotCol]) == 0 and ((tab[i][pivotCol]) == abs(tab[i][pivotCol])):
                 useZero = True
-
 
     if useZero:
         positiveRatios = [ratio for ratio in ratios if ratio >= 0]
@@ -513,7 +360,6 @@ def DoPreemptive(goals, constraints):
         for i in range(len(goals)):
             goalRhs.append(None)
 
-
         # get the rhs from basic cols
         for i in range(len(basicVarLst)):
             if basicVarLst[i] is not None:
@@ -540,7 +386,6 @@ def DoPreemptive(goals, constraints):
                         sortedLst.append(basicVarLst[k + 1])
             sortCtr += 1
 
-    
         tempLst = []
         for i in range(len(goalRhs)):
             tempLst.append(None)
@@ -564,14 +409,14 @@ def DoPreemptive(goals, constraints):
                     goalRhs.insert(i, -goalRhs[i])
                 else:
                     goalRhs.insert(i, goalRhs[i])
-                goalRhs.pop()       
-                
+                goalRhs.pop()
+
         for i in range(len(goalRhs)):
             # I hope dearly that this mathematical algorithm acquaints for both non-basic columns being optimal.
             if goalRhs[i] == None:
                 metGoals[i] = True
                 continue
-                
+
             # TODO display the met state in gui
             # check if goal is met based on constraints conditions
             if goals[i][-1] == 0:
@@ -597,7 +442,6 @@ def DoPreemptive(goals, constraints):
                     # print("Goal {} not met".format(i + 1))
                     metGoals[i] = False
 
-        
         # 0 in top rhs means goal met regardless of bottom rhs
         for i in range(len(zRhs)):
             if zRhs[i] == 0.0:
@@ -607,11 +451,11 @@ def DoPreemptive(goals, constraints):
             if metGoals[i] == False:
                 currentZRow = i
                 break
-        
+
         tempMetGoals = copy.deepcopy(metGoals)
         for i in range(len(originalGoals)):
             if originalGoals[i][-1] == 2:
-                
+
                 # TODO display the met state in gui
                 if not ((metGoals[i]) and (metGoals[i+1])):
                     # print("Goal {} not met".format(i + 1))
@@ -620,7 +464,7 @@ def DoPreemptive(goals, constraints):
                 else:
                     # print("Goal {} met".format(i + 1))
                     metGoals[i] = True
-                    metGoals[i+1] = True  
+                    metGoals[i+1] = True
 
         for i in range(len(metGoals)):
             if not metGoals[i]:
@@ -636,12 +480,11 @@ def DoPreemptive(goals, constraints):
         if all(metGoals):
             isLoopRunning = False
 
-
         metGoals = copy.deepcopy(tempMetGoals)
 
-        newTab, zRhs = DoPivotOperations(tableaus[-1], conStartRow, currentZRow, 1)
+        newTab, zRhs = DoPivotOperations(
+            tableaus[-1], conStartRow, currentZRow, 1)
         tableaus.append(newTab)
-
 
         ctr += 1
 
@@ -658,5 +501,6 @@ def main():
     goals, constraints = testInput()
 
     DoPreemptive(goals, constraints)
+
 
 main()

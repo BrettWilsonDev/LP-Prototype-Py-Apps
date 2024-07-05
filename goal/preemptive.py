@@ -57,7 +57,7 @@ def testInput():
     return goals, constraints
 
 
-def BuildFirstPreemptiveTableau(goalConstraints, constraints):
+def BuildFirstPreemptiveTableau(goalConstraints, constraints, orderOverride=[]):
     oldTab = []
     newTab = []
     conStart = 0
@@ -209,6 +209,28 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints):
 
             equalCtr += 1
 
+    # reorder the goals according to user input
+    if orderOverride != []:
+        expandedOrder = []
+        for i in orderOverride:
+            if backUpGoals[i][-1] == 2:
+                expandedOrder.extend([orderOverride[i], orderOverride[i] + 1])
+            else:
+                if i > 1:
+                    i += 1
+                expandedOrder.append(i)
+
+        print(expandedOrder)
+        orderOverride = expandedOrder
+
+        tempNewTab = []
+        for i in range(len(orderOverride)):
+            tempRow = newTab[orderOverride[i]]
+            tempNewTab.append(tempRow)
+
+        for i in range(len(tempNewTab)):
+            newTab[i] = tempNewTab[i]
+
     # print()
     # for j in range(len(newTab)):
     #     for k in range(len(newTab[j])):
@@ -305,7 +327,7 @@ def DoPreemptive(goals, constraints):
     originalGoals = copy.deepcopy(goals)
     tableaus = []
     firstTab, FormulatedTab, conStartRow = BuildFirstPreemptiveTableau(
-        a, b)
+        a, b, [])
     tableaus.append(firstTab)
     tableaus.append(FormulatedTab)
 

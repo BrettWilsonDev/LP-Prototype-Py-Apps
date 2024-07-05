@@ -213,7 +213,7 @@ def BuildFirstPenlitesTableau(goalConstraints, constraints, penlites, orderOverr
             if backUpGoals[i][-1] == 2:
                 expandedOrder.extend([orderOverride[i], orderOverride[i] + 1])
             else:
-                if i > 1:
+                if i > 1: # TODO 1 is hard coded make this dynamic based equal positions
                     i += 1
                 expandedOrder.append(i)
 

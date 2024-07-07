@@ -42,19 +42,19 @@ def testInput():
 
     # penalties = [200, 100, 50]
 
-    # goals = [
-    #     # <= is 0 and >= is 1 and == is 2
-    #     [12, 9, 15, 125, 1],
-    #     [5, 3, 4, 40, 2],
-    #     [5, 7, 8, 55, 0],
-    # ]
+    goals = [
+        # <= is 0 and >= is 1 and == is 2
+        [12, 9, 15, 125, 1],
+        [5, 3, 4, 40, 2],
+        [5, 7, 8, 55, 0],
+    ]
 
-    # constraints = [
-    # ]
+    constraints = [
+    ]
 
-    # penalties = [5, 2, 4, 3]
+    penalties = [5, 2, 4, 3]
 
-    # orderOverride = []
+    orderOverride = []
 
     return goals, constraints, penalties, orderOverride
 
@@ -552,14 +552,9 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
 
             zRhs = copy.deepcopy(tempZRhs)
 
-        # penalties specific used to get the total penalties for each tableau
-        tempPenaltiesTotal = 0
-        for i in range(len(metGoals)):
-            if not metGoals[i]:
-                # print(zRhs[i])
-                tempPenaltiesTotal += abs(zRhs[i])
+        
 
-        penaltiesTotals.append(tempPenaltiesTotal)
+
 
         # 0 in top rhs means goal met regardless of bottom rhs
         for i in range(len(zRhs)):
@@ -582,6 +577,16 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                     metGoals[abs(EqualitySigns[i])] = True
                 else:
                     metGoals[EqualitySigns[i]] = False
+
+        # print(metGoals)
+        # penalties specific used to get the total penalties for each tableau
+        tempPenaltiesTotal = 0
+        for i in range(len(metGoals)):
+            if not metGoals[i]:
+                # print(zRhs[i])
+                tempPenaltiesTotal += abs(zRhs[i])
+
+        penaltiesTotals.append(tempPenaltiesTotal)
 
         # swap to the row of the current goal being worked on
         for i in range(len(metGoals)):
@@ -665,12 +670,17 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
 
     goalMetStrings = sortedGoalMetStrings
 
-    print(min(penaltiesTotals))
+    penaltiesTotals.insert(0, float('inf'))
+    goalMetStrings.insert(0, " ")
+    print(penaltiesTotals)
 
     for i in range(len(tableaus)):
-        print(f"Penalty: {penaltiesTotals[i]}")
-        for l in range(len(goalMetStrings[i])):
-            print(f"Goal {l+1} {goalMetStrings[i][l]}")
+        try:
+            print(f"Penalty: {penaltiesTotals[i]}")
+            for l in range(len(goalMetStrings[i])):
+                print(f"Goal {l+1} {goalMetStrings[i][l]}")
+        except Exception as e:
+            pass
         print("Tableau {}".format(i + 1))
         for j in range(len(tableaus[i])):
             for k in range(len(tableaus[i][j])):

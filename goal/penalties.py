@@ -22,7 +22,7 @@ def testInput():
     orderOverride = [2, 1, 0]
     # orderOverride = [3, 1, 2, 0]
     # orderOverride = []
-    
+
     # penalties = [5, 8, 12, 15, 8, 12]
     # penalties = [5, 8, 12, 8, 12, 15]
     # penalties = [5, 8, 12, 15, 8, 12,]
@@ -42,19 +42,19 @@ def testInput():
 
     # penalties = [200, 100, 50]
 
-    goals = [
-        # <= is 0 and >= is 1 and == is 2
-        [12, 9, 15, 125, 1],
-        [5, 3, 4, 40, 2],
-        [5, 7, 8, 55, 0],
-    ]
+    # goals = [
+    #     # <= is 0 and >= is 1 and == is 2
+    #     [12, 9, 15, 125, 1],
+    #     [5, 3, 4, 40, 2],
+    #     [5, 7, 8, 55, 0],
+    # ]
 
-    constraints = [
-    ]
+    # constraints = [
+    # ]
 
-    penalties = [5, 2, 4, 3]
+    # penalties = [5, 2, 4, 3]
 
-    orderOverride = []
+    # orderOverride = []
 
     return goals, constraints, penalties, orderOverride
 
@@ -110,7 +110,6 @@ def BuildFirstPenlitesTableau(goalConstraints, constraints, penlites, orderOverr
             oldTab[i + 1 + ExtraCtr][gCtr + 1] = -1
             ExtraCtr += 1
         gCtr += 2
-
 
     # put in penlites values or leave as -1
     if len(penlites) != 0:
@@ -334,7 +333,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
 
     expandedOrder = copy.deepcopy(orderOverride)
 
-
     # account for the equalities
     if orderOverride != []:
         # order goals according to the override order
@@ -345,14 +343,14 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
         expandedOrder = copy.deepcopy(orderOverride)
         for i in orderOverride:
             if overrideGoals[i][-1] == 2:
-                expandedOrder.insert(i + 1, orderOverride[i] + 1)   
-    
+                expandedOrder.insert(i + 1, orderOverride[i] + 1)
+
     # fix the order from dupes made due to equalities
     seen = set()
     for i in range(len(expandedOrder)):
         if expandedOrder[i] in seen or expandedOrder[i] in expandedOrder[i+1:]:
             expandedOrder[i] += 1
-            print(expandedOrder[i+1:])
+            # print(expandedOrder[i+1:])
         seen.add(expandedOrder[i])
 
     # print(expandedOrder)
@@ -396,6 +394,8 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
 
     goalMetStrings = []
 
+    penaltiesTotals = []
+
     ctr = 0
     while ctr != 100 and isLoopRunning:
         basicVarLst = []
@@ -414,7 +414,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
         goalRhs = []
         for i in range(len(goals)):
             goalRhs.append(None)
-
 
         # print(basicVarLst)
 
@@ -478,7 +477,7 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                 else:
                     goalRhs.insert(i, goalRhs[i])
                 goalRhs.pop()
-    
+
         goalMetString = []
 
         # check if goal is met based on constraints conditions
@@ -488,7 +487,7 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                 metGoals[i] = True
                 if goals[i][-1] != 2:
                     # print(f"Goal {i + 1} met by {goalRhs[i]}")
-                    goalMetString.append(f"Goal {i + 1} met exactly")
+                    goalMetString.append(f"{i + 1} met: exactly")
                 continue
 
             # TODO display the met state in gui
@@ -498,32 +497,40 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                     # print("Goal {} met".format(i + 1))
                     # print(f"Goal {i + 1} met by {goalRhs[i]}")
                     if goalRhs[i] > 0:
-                        goalMetString.append(f"Goal {i + 1} met over by {abs(goalRhs[i])}")
+                        goalMetString.append(
+                            f"{i + 1} met: over by {abs(goalRhs[i])}")
                     else:
-                        goalMetString.append(f"Goal {i + 1} met under by {abs(goalRhs[i])}")
+                        goalMetString.append(
+                            f"{i + 1} met: under by {abs(goalRhs[i])}")
                     metGoals[i] = True
                 else:
                     # print(f"Goal {i + 1} not met by {goalRhs[i]}")
                     # print(f"Goal {i + 1} not met by {goalRhs[i]}")
                     if goalRhs[i] > 0:
-                        goalMetString.append(f"Goal {i + 1} not met over by {abs(goalRhs[i])}")
+                        goalMetString.append(
+                            f"{i + 1} not met: over by {abs(goalRhs[i])}")
                     else:
-                        goalMetString.append(f"Goal {i + 1} not met under by {abs(goalRhs[i])}")
+                        goalMetString.append(
+                            f"{i + 1} not met: under by {abs(goalRhs[i])}")
                     metGoals[i] = False
             elif goals[i][-1] == 1:
                 if (goalRhs[i] + goals[i][-2]) >= goals[i][-2]:
                     # print(f"Goal {i + 1} met by {goalRhs[i]}")
                     if goalRhs[i] > 0:
-                        goalMetString.append(f"Goal {i + 1} met over by {abs(goalRhs[i])}")
+                        goalMetString.append(
+                            f"{i + 1} met: over by {abs(goalRhs[i])}")
                     else:
-                        goalMetString.append(f"Goal {i + 1} met under by {abs(goalRhs[i])}")
+                        goalMetString.append(
+                            f"{i + 1} met: under by {abs(goalRhs[i])}")
                     metGoals[i] = True
                 else:
                     # print(f"Goal {i + 1} not met by {goalRhs[i]}")
                     if goalRhs[i] > 0:
-                        goalMetString.append(f"Goal {i + 1} not met over by {abs(goalRhs[i])}")
+                        goalMetString.append(
+                            f"{i + 1} not met: over by {abs(goalRhs[i])}")
                     else:
-                        goalMetString.append(f"Goal {i + 1} not met under by {abs(goalRhs[i])}")
+                        goalMetString.append(
+                            f"{i + 1} not met: under by {abs(goalRhs[i])}")
                     metGoals[i] = False
             elif goals[i][-1] == 2:
                 # TODO display the met state in gui but not from here from below for equalities
@@ -533,7 +540,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                 else:
                     # print(f"Goal {i + 1} not met by {goalRhs[i]}")
                     metGoals[i] = False
-
 
         # print(metGoals)
 
@@ -546,12 +552,15 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
 
             zRhs = copy.deepcopy(tempZRhs)
 
-        # TODO get the penalties total
+        # penalties specific used to get the total penalties for each tableau
+        tempPenaltiesTotal = 0
         for i in range(len(metGoals)):
             if not metGoals[i]:
                 # print(zRhs[i])
-                pass
-                
+                tempPenaltiesTotal += abs(zRhs[i])
+
+        penaltiesTotals.append(tempPenaltiesTotal)
+
         # 0 in top rhs means goal met regardless of bottom rhs
         for i in range(len(zRhs)):
             if zRhs[i] == 0.0:
@@ -574,31 +583,40 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                 else:
                     metGoals[EqualitySigns[i]] = False
 
+        # swap to the row of the current goal being worked on
         for i in range(len(metGoals)):
             if metGoals[i] == False:
                 currentZRow = i
                 break
 
-        # print(goalRhs)
         tempMetGoals = copy.deepcopy(metGoals)
         for i in range(len(originalGoals)):
             if originalGoals[i][-1] == 2:
-                
-                # print(metGoals)
-                # print(goalRhs)
-                # print(basicVarLst)
+
                 # TODO display the met state in gui
                 if not ((metGoals[i]) and (metGoals[i+1])):
                     if not metGoals[i]:
                         # print(f"Goal {i + 1} not met by {goalRhs[i]}")
-                        pass
+                        if goalRhs[i] > 0:
+                            goalMetString.append(
+                                f"{i + 1} not met: over by {abs(goalRhs[i])}")
+                        else:
+                            goalMetString.append(
+                                f"{i + 1} not met: under by {abs(goalRhs[i])}")
                     elif not metGoals[i+1]:
                         # print(f"Goal {i + 1} not met by {goalRhs[i + 1]}")
+                        if goalRhs[i+1] > 0:
+                            goalMetString.append(
+                                f"{i + 1} not met: over by {abs(goalRhs[i+1])}")
+                        else:
+                            goalMetString.append(
+                                f"{i + 1} not met: under by {abs(goalRhs[i+1])}")
                         pass
                     metGoals[i] = False
                     metGoals[i+1] = False
                 else:
                     # print(f"Goal {i + 1} met by exactly")
+                    goalMetString.append(f"{i + 1} met: exactly")
                     metGoals[i] = True
                     metGoals[i+1] = True
 
@@ -619,7 +637,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
             isLoopRunning = False
 
         # print(metGoals)
-        
 
         metGoals = copy.deepcopy(tempMetGoals)
 
@@ -630,28 +647,49 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                 tableaus[-1], conStartRow, currentZRow, 1)
             tableaus.append(newTab)
         except Exception as e:
-            print("Exception: {}".format(e))
+            # print("Exception: {}".format(e))
             # table before is most likely optimal
+            goalMetStrings.append("0")
+            penaltiesTotals.append(float('inf'))
             break
 
-        # for i in range(len(metGoals)):
-        #     if metGoals[i]:
-        #         print(f"Goal {i + 1} met by {goalRhs[i]}")
-        #     else:
-        #         print(f"Goal {i + 1} not met by {goalRhs[i]}")
-        
-        print()
         ctr += 1
 
-    print(goalMetStrings)
+    sortedGoalMetStrings = [sorted(sublist, key=lambda item: int(
+        item.split()[0])) for sublist in goalMetStrings]
+
+    for i in range(len(sortedGoalMetStrings)):
+        for j in range(len(sortedGoalMetStrings[i])):
+            sortedGoalMetStrings[i][j] = ' '.join(
+                sortedGoalMetStrings[i][j].split()[1:])
+
+    goalMetStrings = sortedGoalMetStrings
+
+    print(min(penaltiesTotals))
 
     for i in range(len(tableaus)):
+        print(f"Penalty: {penaltiesTotals[i]}")
+        for l in range(len(goalMetStrings[i])):
+            print(f"Goal {l+1} {goalMetStrings[i][l]}")
         print("Tableau {}".format(i + 1))
         for j in range(len(tableaus[i])):
             for k in range(len(tableaus[i][j])):
                 print("{:10.3f}".format(tableaus[i][j][k]), end=" ")
             print()
         print()
+
+    print("\noptimal Tableau:\n")
+
+    opTable = penaltiesTotals.index(min(penaltiesTotals))
+    print(f"Penalty: {penaltiesTotals[opTable]}")
+    for l in range(len(goalMetStrings[opTable])):
+        print(f"Goal {l+1} {goalMetStrings[opTable][l]}")
+    print("Tableau {}".format(opTable + 1))
+    for j in range(len(tableaus[opTable])):
+        for k in range(len(tableaus[opTable][j])):
+            print("{:10.3f}".format(tableaus[opTable][j][k]), end=" ")
+        print()
+    print()
 
 
 def main():

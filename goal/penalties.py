@@ -20,8 +20,10 @@ def testInput():
     penalties = [5, 8, 12, 15]
 
     orderOverride = [2, 1, 0]
+    # orderOverride = [3, 1, 2, 0]
     # orderOverride = []
     
+    # penalties = [5, 8, 12, 15, 8, 12]
     # penalties = [5, 8, 12, 8, 12, 15]
     # penalties = [5, 8, 12, 15, 8, 12,]
     # penalties = [8, 12, 8, 12]
@@ -48,7 +50,7 @@ def BuildFirstPenlitesTableau(goalConstraints, constraints, penlites, orderOverr
     newTab = []
     conStart = 0
 
-    print(penlites, goalConstraints, constraints)
+    # print(penlites, goalConstraints, constraints)
 
     # hight = (goals + goalConstraints) = goals * 2 + constraints
     tabSizeH = (len(goalConstraints) * 2) + len(constraints)
@@ -130,11 +132,11 @@ def BuildFirstPenlitesTableau(goalConstraints, constraints, penlites, orderOverr
             oldTab[i + amtOfGoals +
                    len(goalConstraints)][-1] = constraints[i][-2]  # rhs
 
-    for j in range(len(oldTab)):
-        for k in range(len(oldTab[j])):
-            print("{:10.3f}".format(oldTab[j][k]), end=" ")
-        print()
-    print()
+    # for j in range(len(oldTab)):
+    #     for k in range(len(oldTab[j])):
+    #         print("{:10.3f}".format(oldTab[j][k]), end=" ")
+    #     print()
+    # print()
 
     # first tab done move on to second tab
     newTab = copy.deepcopy(oldTab)
@@ -208,18 +210,6 @@ def BuildFirstPenlitesTableau(goalConstraints, constraints, penlites, orderOverr
 
     # reorder the goals according to user input
     if orderOverride != []:
-        expandedOrder = []
-        for i in orderOverride:
-            if backUpGoals[i][-1] == 2:
-                expandedOrder.extend([orderOverride[i], orderOverride[i] + 1])
-            else:
-                if i > 1:
-                    i += 1
-                expandedOrder.append(i)
-
-        print(expandedOrder)
-        orderOverride = expandedOrder
-
         tempNewTab = []
         for i in range(len(orderOverride)):
             tempRow = newTab[orderOverride[i]]
@@ -228,12 +218,12 @@ def BuildFirstPenlitesTableau(goalConstraints, constraints, penlites, orderOverr
         for i in range(len(tempNewTab)):
             newTab[i] = tempNewTab[i]
 
-    print()
-    for j in range(len(newTab)):
-        for k in range(len(newTab[j])):
-            print("{:10.3f}".format(newTab[j][k]), end=" ")
-        print()
-    print()
+    # print()
+    # for j in range(len(newTab)):
+    #     for k in range(len(newTab[j])):
+    #         print("{:10.3f}".format(newTab[j][k]), end=" ")
+    #     print()
+    # print()
 
     conStart = amtOfGoals
     return oldTab, newTab, conStart
@@ -326,25 +316,35 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
     c = copy.deepcopy(penalties)
     originalGoals = copy.deepcopy(goals)
     tableaus = []
-    firstTab, FormulatedTab, conStartRow = BuildFirstPenlitesTableau(
-        a, b, c, orderOverride)
-    tableaus.append(firstTab)
-    tableaus.append(FormulatedTab)
 
-
-    # get the expanded order list
     expandedOrder = copy.deepcopy(orderOverride)
+
+    # order goals according to the override order
+    overrideGoals = []
+    for i in range(len(originalGoals)):
+        overrideGoals.append(originalGoals[orderOverride[i]])
+
+    # account for the equalities
     if orderOverride != []:
-        expandedOrder = []
+        expandedOrder = copy.deepcopy(orderOverride)
         for i in orderOverride:
-            if originalGoals[i][-1] == 2:
-                expandedOrder.extend([orderOverride[i], orderOverride[i] + 1])
-            else:
-                if i > 1:
-                    i += 1
-                expandedOrder.append(i)
+            if overrideGoals[i][-1] == 2:
+                expandedOrder.insert(i + 1, orderOverride[i] + 1)   
+    
+    # fix the order from dupes made due to equalities
+    seen = set()
+    for i in range(len(expandedOrder)):
+        if expandedOrder[i] in seen or expandedOrder[i] in expandedOrder[i+1:]:
+            expandedOrder[i] += 1
+            print(expandedOrder[i+1:])
+        seen.add(expandedOrder[i])
 
     # print(expandedOrder)
+
+    firstTab, FormulatedTab, conStartRow = BuildFirstPenlitesTableau(
+        a, b, c, expandedOrder)
+    tableaus.append(firstTab)
+    tableaus.append(FormulatedTab)
 
     tempGoalLst = []
     for goal in goals:
@@ -480,12 +480,15 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                     # print("Goal {} not met".format(i + 1))
                     metGoals[i] = False
 
-        zRhsBackUp = copy.deepcopy(zRhs)
-        tempZRhs = []
-        for i in range(len(zRhs)):
-            tempZRhs.append(zRhs[expandedOrder[i]])
 
-        zRhs = copy.deepcopy(tempZRhs)
+        zRhsBackUp = copy.deepcopy(zRhs)
+        if expandedOrder != []:
+            tempZRhs = []
+
+            for i in range(len(zRhs)):
+                tempZRhs.append(zRhs[expandedOrder[i]])
+
+            zRhs = copy.deepcopy(tempZRhs)
 
         # TODO get the penalties total
         for i in range(len(metGoals)):
@@ -499,11 +502,12 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
 
         zRhs = copy.deepcopy(zRhsBackUp)
 
-        tempMet = []
-        for i in range(len(metGoals)):
-            tempMet.append(metGoals[expandedOrder[i]])
+        if expandedOrder != []:
+            tempMet = []
+            for i in range(len(metGoals)):
+                tempMet.append(metGoals[expandedOrder[i]])
 
-        metGoals = tempMet
+            metGoals = tempMet
         print(metGoals)
 
         for i in range(len(metGoals)):

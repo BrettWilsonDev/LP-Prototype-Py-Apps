@@ -4,34 +4,22 @@ import math
 
 def testInput():
     goals = [
-        # <= is 0 and >= is 1
-        [300, 200, 20000, 0],
-        [150, 100, 11000, 1],
-        [3, 1, 200, 0],
+        # <= is 0 and >= is 1 and == is 2
+        # [40, 30, 20, 100, 0],
+        # [2, 4, 3, 10, 2],
+        # [5, 8, 4, 30, 1],
+        [40, 30, 20, 100, 0],
+        [2, 4, 3, 10, 2],
+        [5, 8, 4, 30, 1],
+        # [2, 4, 3, 10, 2],
     ]
 
     constraints = [
     ]
 
-    goals = [
-        # <= is 0 and >= is 1
-        [12, 9, 15, 125, 1],
-        [5, 3, 4, 40, 2],
-        [5, 7, 8, 55, 0],
-    ]
-
-    constraints = [
-    ]
-
-    # goals = [
-    #     # <= is 0 and >= is 1 and == is 2
-    #     [40, 30, 20, 100, 0],
-    #     [2, 4, 3, 10, 2],
-    #     [5, 8, 4, 30, 1],
-    # ]
-
-    # constraints = [
-    # ]
+    orderOverride = [2, 1, 0]
+    # orderOverride = [3, 1, 2, 0]
+    # orderOverride = []
 
     # goals = [
     #     # <= is 0 and >= is 1 and == is 2
@@ -41,26 +29,30 @@ def testInput():
     # ]
 
     # constraints = [
-    #     [100, 60, 600, 0],
+    #     [100, 60, 600, 0]
     # ]
 
     # goals = [
-    #     # <= is 0 and >= is 1
-    #     [3, 1, 200, 2],
-    #     [300, 200, 20000, 0],
-    #     [150, 100, 11000, 1],
+    #     # <= is 0 and >= is 1 and == is 2
+    #     [12, 9, 15, 125, 1],
+    #     [5, 3, 4, 40, 2],
+    #     [5, 7, 8, 55, 0],
     # ]
 
     # constraints = [
     # ]
 
-    return goals, constraints
+    orderOverride = []
+
+    return goals, constraints, orderOverride
 
 
 def BuildFirstPreemptiveTableau(goalConstraints, constraints, orderOverride=[]):
     oldTab = []
     newTab = []
     conStart = 0
+
+    # print(goalConstraints, constraints)
 
     # hight = (goals + goalConstraints) = goals * 2 + constraints
     tabSizeH = (len(goalConstraints) * 2) + len(constraints)
@@ -92,7 +84,7 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints, orderOverride=[]):
     for i in range(amtOfGoals):
         oldTab[i][0] = 1
 
-    # put in -1s in
+    # put in neg 1s in their spots
     gCtr = amtOfObjVars + 1
     ExtraCtr = 0
     for i in range(len(goalConstraints)):
@@ -101,8 +93,8 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints, orderOverride=[]):
         elif goalConstraints[i][-1] == 1:
             oldTab[i + ExtraCtr][gCtr] = -1
         elif goalConstraints[i][-1] == 2:
-            oldTab[i][gCtr] = -1
-            oldTab[i + 1][gCtr + 1] = -1
+            oldTab[i + ExtraCtr][gCtr] = -1
+            oldTab[i + 1 + ExtraCtr][gCtr + 1] = -1
             ExtraCtr += 1
         gCtr += 2
 
@@ -194,10 +186,11 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints, orderOverride=[]):
     for i in range(len(goalConstraints)):
         for j in range(len(newTab[i])):
             if goalConstraints[i][-1] == 0:
-                # newTab[i][j] = -1 * (topRows[i][j] - (bottomRows[i][j] * penlites[i]))
-                newTab[i][j] = -1 * (topRows[i][j] - (bottomRows[i][j]))
+                newTab[i][j] = -1 * \
+                    (topRows[i][j] - (bottomRows[i][j]))
             elif goalConstraints[i][-1] == 1:
-                newTab[i][j] = (topRows[i][j] + (bottomRows[i][j]))
+                newTab[i][j] = (
+                    topRows[i][j] + (bottomRows[i][j]))
 
     # fix the order of the equalities
     equalCtr = 0
@@ -211,18 +204,6 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints, orderOverride=[]):
 
     # reorder the goals according to user input
     if orderOverride != []:
-        expandedOrder = []
-        for i in orderOverride:
-            if backUpGoals[i][-1] == 2:
-                expandedOrder.extend([orderOverride[i], orderOverride[i] + 1])
-            else:
-                if i > 1:
-                    i += 1
-                expandedOrder.append(i)
-
-        print(expandedOrder)
-        orderOverride = expandedOrder
-
         tempNewTab = []
         for i in range(len(orderOverride)):
             tempRow = newTab[orderOverride[i]]
@@ -243,6 +224,7 @@ def BuildFirstPreemptiveTableau(goalConstraints, constraints, orderOverride=[]):
 
 
 def DoPivotOperations(tab, conStartRow, zRow, tabNum=1):
+    # print(zRow)
     oldTab = copy.deepcopy(tab)
     newTab = []
 
@@ -277,6 +259,7 @@ def DoPivotOperations(tab, conStartRow, zRow, tabNum=1):
     else:
         positiveRatios = [ratio for ratio in ratios if ratio > 0]
 
+    # print(positiveRatios)
     for i in range(len(positiveRatios)):
         if positiveRatios[i] == float('inf'):
             del positiveRatios[i]
@@ -316,18 +299,43 @@ def DoPivotOperations(tab, conStartRow, zRow, tabNum=1):
         zRhs.append(newTab[i][-1])
 
     # print(f"pivoting on table {tabNum}\nIn row {
-    #       pivotRow + 1} and col {pivotCol + 1 - 1}\n")
+        #   pivotRow + 1} and col {pivotCol + 1}\n")
 
     return newTab, zRhs
 
 
-def DoPreemptive(goals, constraints):
+def DoPreemptive(goals, constraints, orderOverride=[]):
     a = copy.deepcopy(goals)
     b = copy.deepcopy(constraints)
     originalGoals = copy.deepcopy(goals)
     tableaus = []
+
+    expandedOrder = copy.deepcopy(orderOverride)
+
+    # account for the equalities
+    if orderOverride != []:
+        # order goals according to the override order
+        overrideGoals = []
+        for i in range(len(originalGoals)):
+            overrideGoals.append(originalGoals[orderOverride[i]])
+
+        expandedOrder = copy.deepcopy(orderOverride)
+        for i in orderOverride:
+            if overrideGoals[i][-1] == 2:
+                expandedOrder.insert(i + 1, orderOverride[i] + 1)
+
+    # fix the order from dupes made due to equalities
+    seen = set()
+    for i in range(len(expandedOrder)):
+        if expandedOrder[i] in seen or expandedOrder[i] in expandedOrder[i+1:]:
+            expandedOrder[i] += 1
+            # print(expandedOrder[i+1:])
+        seen.add(expandedOrder[i])
+
+    # print(expandedOrder)
+
     firstTab, FormulatedTab, conStartRow = BuildFirstPreemptiveTableau(
-        a, b, [])
+        a, b, expandedOrder)
     tableaus.append(firstTab)
     tableaus.append(FormulatedTab)
 
@@ -363,6 +371,8 @@ def DoPreemptive(goals, constraints):
 
     isLoopRunning = True
 
+    goalMetStrings = []
+
     ctr = 0
     while ctr != 100 and isLoopRunning:
         basicVarLst = []
@@ -381,6 +391,8 @@ def DoPreemptive(goals, constraints):
         goalRhs = []
         for i in range(len(goals)):
             goalRhs.append(None)
+
+        # print(basicVarLst)
 
         # get the rhs from basic cols
         for i in range(len(basicVarLst)):
@@ -424,19 +436,35 @@ def DoPreemptive(goals, constraints):
             if goalRhs[i] == -0.0:
                 goalRhs[i] = 0.0
 
+        EqualitySigns = []
+        EqualitySigns = []
+        # handle the equalities by duplicating goals 1 positive and 1 negative according to the pos neg oder ex: col g2+ g2-
         for i in range(len(originalGoals)):
             if originalGoals[i][-1] == 2:
-                # print(goalRhs[i])
                 if goalRhs[i] is not None:
-                    goalRhs.insert(i, -goalRhs[i])
+                    if goalRhs[i] > 0:
+                        EqualitySigns.append(i)
+                        EqualitySigns.append(-(i+1))
+                    else:
+                        EqualitySigns.append(-i)
+                        EqualitySigns.append(i+1)
+                    goalRhs.insert(i, abs(goalRhs[i]))
+                    goalRhs[i + 1] = -abs(goalRhs[i + 1])
+                    # goalRhs.insert(i, -goalRhs[i])
                 else:
                     goalRhs.insert(i, goalRhs[i])
                 goalRhs.pop()
 
+        goalMetString = []
+
+        # check if goal is met based on constraints conditions
         for i in range(len(goalRhs)):
             # I hope dearly that this mathematical algorithm acquaints for both non-basic columns being optimal.
             if goalRhs[i] == None:
                 metGoals[i] = True
+                if goals[i][-1] != 2:
+                    # print(f"Goal {i + 1} met by {goalRhs[i]}")
+                    goalMetString.append(f"{i + 1} met: exactly")
                 continue
 
             # TODO display the met state in gui
@@ -444,31 +472,87 @@ def DoPreemptive(goals, constraints):
             if goals[i][-1] == 0:
                 if (goalRhs[i] + goals[i][-2]) <= goals[i][-2]:
                     # print("Goal {} met".format(i + 1))
+                    # print(f"Goal {i + 1} met by {goalRhs[i]}")
+                    if goalRhs[i] > 0:
+                        goalMetString.append(
+                            f"{i + 1} met: over by {abs(goalRhs[i])}")
+                    else:
+                        goalMetString.append(
+                            f"{i + 1} met: under by {abs(goalRhs[i])}")
                     metGoals[i] = True
                 else:
-                    # print("Goal {} not met".format(i + 1))
+                    # print(f"Goal {i + 1} not met by {goalRhs[i]}")
+                    # print(f"Goal {i + 1} not met by {goalRhs[i]}")
+                    if goalRhs[i] > 0:
+                        goalMetString.append(
+                            f"{i + 1} not met: over by {abs(goalRhs[i])}")
+                    else:
+                        goalMetString.append(
+                            f"{i + 1} not met: under by {abs(goalRhs[i])}")
                     metGoals[i] = False
             elif goals[i][-1] == 1:
                 if (goalRhs[i] + goals[i][-2]) >= goals[i][-2]:
-                    # print("Goal {} met".format(i + 1))
+                    # print(f"Goal {i + 1} met by {goalRhs[i]}")
+                    if goalRhs[i] > 0:
+                        goalMetString.append(
+                            f"{i + 1} met: over by {abs(goalRhs[i])}")
+                    else:
+                        goalMetString.append(
+                            f"{i + 1} met: under by {abs(goalRhs[i])}")
                     metGoals[i] = True
                 else:
-                    # print("Goal {} not met".format(i + 1))
+                    # print(f"Goal {i + 1} not met by {goalRhs[i]}")
+                    if goalRhs[i] > 0:
+                        goalMetString.append(
+                            f"{i + 1} not met: over by {abs(goalRhs[i])}")
+                    else:
+                        goalMetString.append(
+                            f"{i + 1} not met: under by {abs(goalRhs[i])}")
                     metGoals[i] = False
             elif goals[i][-1] == 2:
                 # TODO display the met state in gui but not from here from below for equalities
                 if (goalRhs[i] == goals[i][-2]):
-                    # print("Goal {} met".format(i + 1))
+                    # print(f"Goal {i + 1} met by {goalRhs[i]}")
                     metGoals[i] = True
                 else:
-                    # print("Goal {} not met".format(i + 1))
+                    # print(f"Goal {i + 1} not met by {goalRhs[i]}")
                     metGoals[i] = False
+
+        # print(metGoals)
+
+        zRhsBackUp = copy.deepcopy(zRhs)
+        if expandedOrder != []:
+            tempZRhs = []
+
+            for i in range(len(zRhs)):
+                tempZRhs.append(zRhs[expandedOrder[i]])
+
+            zRhs = copy.deepcopy(tempZRhs)
 
         # 0 in top rhs means goal met regardless of bottom rhs
         for i in range(len(zRhs)):
             if zRhs[i] == 0.0:
                 metGoals[i] = True
 
+        zRhs = copy.deepcopy(zRhsBackUp)
+
+        if expandedOrder != []:
+            tempMet = []
+            for i in range(len(metGoals)):
+                tempMet.append(metGoals[expandedOrder[i]])
+
+            metGoals = tempMet
+
+        # for the equality if z- is the basic var then z+ is false vice versa
+        if EqualitySigns != []:
+            for i in range(len(EqualitySigns)):
+                if EqualitySigns[i] < 0:
+                    metGoals[abs(EqualitySigns[i])] = True
+                else:
+                    metGoals[EqualitySigns[i]] = False
+
+
+        # swap to the row of the current goal being worked on
         for i in range(len(metGoals)):
             if metGoals[i] == False:
                 currentZRow = i
@@ -480,13 +564,32 @@ def DoPreemptive(goals, constraints):
 
                 # TODO display the met state in gui
                 if not ((metGoals[i]) and (metGoals[i+1])):
-                    # print("Goal {} not met".format(i + 1))
+                    if not metGoals[i]:
+                        # print(f"Goal {i + 1} not met by {goalRhs[i]}")
+                        if goalRhs[i] > 0:
+                            goalMetString.append(
+                                f"{i + 1} not met: over by {abs(goalRhs[i])}")
+                        else:
+                            goalMetString.append(
+                                f"{i + 1} not met: under by {abs(goalRhs[i])}")
+                    elif not metGoals[i+1]:
+                        # print(f"Goal {i + 1} not met by {goalRhs[i + 1]}")
+                        if goalRhs[i+1] > 0:
+                            goalMetString.append(
+                                f"{i + 1} not met: over by {abs(goalRhs[i+1])}")
+                        else:
+                            goalMetString.append(
+                                f"{i + 1} not met: under by {abs(goalRhs[i+1])}")
+                        pass
                     metGoals[i] = False
                     metGoals[i+1] = False
                 else:
-                    # print("Goal {} met".format(i + 1))
+                    # print(f"Goal {i + 1} met by exactly")
+                    goalMetString.append(f"{i + 1} met: exactly")
                     metGoals[i] = True
                     metGoals[i+1] = True
+
+        goalMetStrings.append(goalMetString)
 
         for i in range(len(metGoals)):
             if not metGoals[i]:
@@ -502,15 +605,42 @@ def DoPreemptive(goals, constraints):
         if all(metGoals):
             isLoopRunning = False
 
+        # print(metGoals)
+
         metGoals = copy.deepcopy(tempMetGoals)
 
-        newTab, zRhs = DoPivotOperations(
-            tableaus[-1], conStartRow, currentZRow, 1)
-        tableaus.append(newTab)
+        # print(metGoals)
+
+        try:
+            newTab, zRhs = DoPivotOperations(
+                tableaus[-1], conStartRow, currentZRow, 1)
+            tableaus.append(newTab)
+        except Exception as e:
+            # print("Exception: {}".format(e))
+            # table before is most likely optimal
+            goalMetStrings.append("0")
+            break
 
         ctr += 1
 
+    sortedGoalMetStrings = [sorted(sublist, key=lambda item: int(
+        item.split()[0])) for sublist in goalMetStrings]
+
+    for i in range(len(sortedGoalMetStrings)):
+        for j in range(len(sortedGoalMetStrings[i])):
+            sortedGoalMetStrings[i][j] = ' '.join(
+                sortedGoalMetStrings[i][j].split()[1:])
+
+    goalMetStrings = sortedGoalMetStrings
+
+    goalMetStrings.insert(0, " ")
+
     for i in range(len(tableaus)):
+        try:
+            for l in range(len(goalMetStrings[i])):
+                print(f"Goal {l+1} {goalMetStrings[i][l]}")
+        except Exception as e:
+            pass
         print("Tableau {}".format(i + 1))
         for j in range(len(tableaus[i])):
             for k in range(len(tableaus[i][j])):
@@ -518,11 +648,23 @@ def DoPreemptive(goals, constraints):
             print()
         print()
 
+    print("\noptimal Tableau:\n")
+
+    opTable = tableaus.index(tableaus[-2])
+    for l in range(len(goalMetStrings[opTable])):
+        print(f"Goal {l+1} {goalMetStrings[opTable][l]}")
+    print("Tableau {}".format(opTable + 1))
+    for j in range(len(tableaus[opTable])):
+        for k in range(len(tableaus[opTable][j])):
+            print("{:10.3f}".format(tableaus[opTable][j][k]), end=" ")
+        print()
+    print()
+
 
 def main():
-    goals, constraints = testInput()
+    goals, constraints, orderOverride = testInput()
 
-    DoPreemptive(goals, constraints)
+    DoPreemptive(goals, constraints, orderOverride)
 
 
 main()

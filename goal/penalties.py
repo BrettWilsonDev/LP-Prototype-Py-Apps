@@ -42,19 +42,19 @@ def testInput():
 
     # penalties = [200, 100, 50]
 
-    goals = [
-        # <= is 0 and >= is 1 and == is 2
-        [12, 9, 15, 125, 1],
-        [5, 3, 4, 40, 2],
-        [5, 7, 8, 55, 0],
-    ]
+    # goals = [
+    #     # <= is 0 and >= is 1 and == is 2
+    #     [12, 9, 15, 125, 1],
+    #     [5, 3, 4, 40, 2],
+    #     [5, 7, 8, 55, 0],
+    # ]
 
-    constraints = [
-    ]
+    # constraints = [
+    # ]
 
-    penalties = [5, 2, 4, 3]
+    # penalties = [5, 4, 2, 3]
 
-    orderOverride = []
+    # orderOverride = []
 
     return goals, constraints, penalties, orderOverride
 
@@ -551,10 +551,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                 tempZRhs.append(zRhs[expandedOrder[i]])
 
             zRhs = copy.deepcopy(tempZRhs)
-
-        
-
-
 
         # 0 in top rhs means goal met regardless of bottom rhs
         for i in range(len(zRhs)):

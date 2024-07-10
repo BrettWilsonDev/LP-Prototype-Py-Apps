@@ -941,10 +941,7 @@ def DoGui():
                     if goalConstraints[i][-1] == 2:
                         extraGoalCtr += 1
 
-                print(tRow)
-                print(tCol)
-
-                for i in range(len(tableaus)):
+                for i in range(len(tableaus) - len(tRow)):
                     tRow.append(-1)
                     tCol.append(-1)
 

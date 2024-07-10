@@ -943,7 +943,7 @@ def DoGui():
         # solve button ================================================
         if imgui.button("Solve"):
             try:
-                # goalConstraints, constraints, goalOrder = testInput()
+                goalConstraints, constraints, goalOrder = testInput()
 
                 orderCopy = copy.deepcopy(goalOrder)
                 if goalOrder == sorted(goalOrder):
@@ -981,6 +981,10 @@ def DoGui():
 
                 # print(tRow)
                 # print(tCol)
+
+                for i in range(len(tableaus)):
+                    tRow.append(-1)
+                    tCol.append(-1)
 
             except Exception as e:
                 # print(e)

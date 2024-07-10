@@ -15,13 +15,10 @@ GuiPivotRows = []
 def testInput():
     goals = [
         # <= is 0 and >= is 1 and == is 2
-        # [40, 30, 20, 100, 0],
-        # [2, 4, 3, 10, 2],
-        # [5, 8, 4, 30, 1],
         [40, 30, 20, 100, 0],
         [2, 4, 3, 10, 2],
         [5, 8, 4, 30, 1],
-        # [2, 4, 3, 10, 2],
+
     ]
 
     constraints = [
@@ -30,41 +27,6 @@ def testInput():
     penalties = [5, 8, 12, 15]
 
     orderOverride = [2, 1, 0]
-    # orderOverride = [3, 1, 2, 0]
-    # orderOverride = []
-
-    # penalties = [5, 8, 12, 15, 8, 12]
-    # penalties = [5, 8, 12, 8, 12, 15]
-    # penalties = [5, 8, 12, 15, 8, 12,]
-    # penalties = [8, 12, 8, 12]
-    # penalties = [2, 4, 2, 4]
-
-    # goals = [
-    #     # <= is 0 and >= is 1 and == is 2
-    #     [7, 3, 40, 1],
-    #     [10, 5, 60, 1],
-    #     [5, 4, 35, 1],
-    # ]
-
-    # constraints = [
-    #     [100, 60, 600, 0]
-    # ]
-
-    # penalties = [200, 100, 50]
-
-    # goals = [
-    #     # <= is 0 and >= is 1 and == is 2
-    #     [12, 9, 15, 125, 1],
-    #     [5, 3, 4, 40, 2],
-    #     [5, 7, 8, 55, 0],
-    # ]
-
-    # constraints = [
-    # ]
-
-    # penalties = [5, 4, 2, 3]
-
-    # orderOverride = []
 
     return goals, constraints, penalties, orderOverride
 
@@ -121,7 +83,6 @@ def BuildFirstpenaltiesVarTableau(goalConstraints, constraints, penaltiesVar, or
     for i in range(amtOfGoals):
         oldTab[i][0] = 1
 
-    # TODO keep an eye on the placement of the penalties for goal 2+ 2-
     # put in penaltiesVar spots
     gCtr = amtOfObjVars + 1
     ExtraCtr = 0
@@ -170,12 +131,6 @@ def BuildFirstpenaltiesVarTableau(goalConstraints, constraints, penaltiesVar, or
                    len(goalConstraints)][j + 1] = constraints[i][j]  # lhs
             oldTab[i + amtOfGoals +
                    len(goalConstraints)][-1] = constraints[i][-2]  # rhs
-
-    # for j in range(len(oldTab)):
-    #     for k in range(len(oldTab[j])):
-    #         print("{:10.3f}".format(oldTab[j][k]), end=" ")
-    #     print()
-    # print()
 
     # first tab done move on to second tab
     newTab = copy.deepcopy(oldTab)
@@ -257,13 +212,6 @@ def BuildFirstpenaltiesVarTableau(goalConstraints, constraints, penaltiesVar, or
         for i in range(len(tempNewTab)):
             newTab[i] = tempNewTab[i]
 
-    # print()
-    # for j in range(len(newTab)):
-    #     for k in range(len(newTab[j])):
-    #         print("{:10.3f}".format(newTab[j][k]), end=" ")
-    #     print()
-    # print()
-
     conStart = amtOfGoals
     return oldTab, newTab, conStart
 
@@ -279,8 +227,6 @@ def DoPivotOperations(tab, conStartRow, zRow, tabNum=1):
     currentZRow = zRow
     currentZ = tab[currentZRow][:-1]
     currentZ[0] = 0
-
-    # print(currentZ)
 
     # find the largest z and its index for the pivot col
     largestZ = max(currentZ)
@@ -343,9 +289,6 @@ def DoPivotOperations(tab, conStartRow, zRow, tabNum=1):
     for i in range(conStartRow):
         zRhs.append(newTab[i][-1])
 
-    # print(f"pivoting on table {tabNum}\nIn row {
-        #   pivotRow + 1} and col {pivotCol + 1}\n")
-
     GuiPivotRows.append(pivotRow)
     GuiPivotCols.append(pivotCol)
 
@@ -405,7 +348,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
     lenObj = len(goals[-1]) - 2
 
     # sign list to compare to and initial met goal state
-    # the order of signs for example g- g+ TODO add option to swap the two
     metGoals = []
     signLst = []
     for i in range(len(goals)):
@@ -510,7 +452,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
 
         # check if goal is met based on constraints conditions
         for i in range(len(goalRhs)):
-            # I hope dearly that this mathematical algorithm acquaints for both non-basic columns being optimal.
             if goalRhs[i] == None:
                 metGoals[i] = True
                 if goals[i][-1] != 2:
@@ -518,12 +459,9 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                     goalMetString.append(f"{i + 1} met: exactly")
                 continue
 
-            # TODO display the met state in gui
             # check if goal is met based on constraints conditions
             if goals[i][-1] == 0:
                 if (goalRhs[i] + goals[i][-2]) <= goals[i][-2]:
-                    # print("Goal {} met".format(i + 1))
-                    # print(f"Goal {i + 1} met by {goalRhs[i]}")
                     if goalRhs[i] > 0:
                         goalMetString.append(
                             f"{i + 1} met: over by {abs(goalRhs[i])}")
@@ -532,8 +470,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                             f"{i + 1} met: under by {abs(goalRhs[i])}")
                     metGoals[i] = True
                 else:
-                    # print(f"Goal {i + 1} not met by {goalRhs[i]}")
-                    # print(f"Goal {i + 1} not met by {goalRhs[i]}")
                     if goalRhs[i] > 0:
                         goalMetString.append(
                             f"{i + 1} not met: over by {abs(goalRhs[i])}")
@@ -543,7 +479,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                     metGoals[i] = False
             elif goals[i][-1] == 1:
                 if (goalRhs[i] + goals[i][-2]) >= goals[i][-2]:
-                    # print(f"Goal {i + 1} met by {goalRhs[i]}")
                     if goalRhs[i] > 0:
                         goalMetString.append(
                             f"{i + 1} met: over by {abs(goalRhs[i])}")
@@ -552,7 +487,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                             f"{i + 1} met: under by {abs(goalRhs[i])}")
                     metGoals[i] = True
                 else:
-                    # print(f"Goal {i + 1} not met by {goalRhs[i]}")
                     if goalRhs[i] > 0:
                         goalMetString.append(
                             f"{i + 1} not met: over by {abs(goalRhs[i])}")
@@ -561,15 +495,10 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                             f"{i + 1} not met: under by {abs(goalRhs[i])}")
                     metGoals[i] = False
             elif goals[i][-1] == 2:
-                # TODO display the met state in gui but not from here from below for equalities
                 if (goalRhs[i] == goals[i][-2]):
-                    # print(f"Goal {i + 1} met by {goalRhs[i]}")
                     metGoals[i] = True
                 else:
-                    # print(f"Goal {i + 1} not met by {goalRhs[i]}")
                     metGoals[i] = False
-
-        # print(metGoals)
 
         zRhsBackUp = copy.deepcopy(zRhs)
         if expandedOrder != []:
@@ -602,7 +531,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                 else:
                     metGoals[EqualitySigns[i]] = False
 
-        # print(metGoals)
         # penalties specific used to get the total penalties for each tableau
         tempPenaltiesTotal = 0
         for i in range(len(metGoals)):
@@ -622,10 +550,9 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
         for i in range(len(originalGoals)):
             if originalGoals[i][-1] == 2:
 
-                # TODO display the met state in gui
                 if not ((metGoals[i]) and (metGoals[i+1])):
                     if not metGoals[i]:
-                        # print(f"Goal {i + 1} not met by {goalRhs[i]}")
+
                         if goalRhs[i] > 0:
                             goalMetString.append(
                                 f"{i + 1} not met: over by {abs(goalRhs[i])}")
@@ -633,7 +560,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                             goalMetString.append(
                                 f"{i + 1} not met: under by {abs(goalRhs[i])}")
                     elif not metGoals[i+1]:
-                        # print(f"Goal {i + 1} not met by {goalRhs[i + 1]}")
                         if goalRhs[i+1] > 0:
                             goalMetString.append(
                                 f"{i + 1} not met: over by {abs(goalRhs[i+1])}")
@@ -644,7 +570,6 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
                     metGoals[i] = False
                     metGoals[i+1] = False
                 else:
-                    # print(f"Goal {i + 1} met by exactly")
                     goalMetString.append(f"{i + 1} met: exactly")
                     metGoals[i] = True
                     metGoals[i+1] = True
@@ -665,19 +590,13 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
         if all(metGoals):
             isLoopRunning = False
 
-        # print(metGoals)
-
         metGoals = copy.deepcopy(tempMetGoals)
-
-        # print(metGoals)
 
         try:
             newTab, zRhs = DoPivotOperations(
                 tableaus[-1], conStartRow, currentZRow, 1)
             tableaus.append(newTab)
         except Exception as e:
-            # print("Exception: {}".format(e))
-            # table before is most likely optimal
             goalMetStrings.append("0")
             penaltiesTotals.append(float('inf'))
             break
@@ -727,15 +646,17 @@ def DoPenalties(goals, constraints, penalties, orderOverride=[]):
 
     return tableaus, goalMetStrings, opTable, penaltiesTotals
 
+
 def spaceGui(amt):
     for i in range(amt):
         imgui.spacing()
+
 
 def DoGui():
     # window setup
     pygame.init()
     size = 1920 / 2, 1080 / 2
-    
+
     os.system('cls' if os.name == 'nt' else 'clear')
     print("\nBrett's simplex prototype tool for goal Preemptive simplex problems\n")
 
@@ -761,20 +682,16 @@ def DoGui():
 
     # goal constraints
     amtOfGoalConstraints = 1
-    goalConstraints = [[0.0, 0.0, 0.0, 0.0]] 
+    goalConstraints = [[0.0, 0.0, 0.0, 0.0]]
     signItems = ["<=", ">=", "="]
     signItemsChoices = [0]
 
     # goal constraints
     amtOfConstraints = 0
-    # constraints = [[0.0, 0.0, 0.0, 0.0]] 
-    constraints = [] 
+    constraints = []
     signItemsChoicesC = [0]
 
     tableaus = []
-
-    # goals = ["Goal 1", "Goal 2", "Goal 3"]
-    # goalOrder = [0, 1, 2]
 
     goals = ["goal 1"]
     goalOrder = [0]
@@ -816,7 +733,7 @@ def DoGui():
             (window_size[0]), (window_size[1]))  # Set the window size
         imgui.begin("Tableaus Output",
                     flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-        
+
         # input
 
         # obj vars ===========================================
@@ -835,14 +752,13 @@ def DoGui():
 
         spaceGui(3)
 
-
         # goal constraints ===========================================
         if imgui.button("GoalConstraint +"):
             amtOfGoalConstraints += 1
             # goalConstraints.append([0.0, 0.0])
             goalConstraints.append([0.0] * amtOfObjVars)
-            goalConstraints[-1].append(0.0) # add sign spot
-            goalConstraints[-1].append(0.0) # add rhs spot
+            goalConstraints[-1].append(0.0)  # add sign spot
+            goalConstraints[-1].append(0.0)  # add rhs spot
             signItemsChoices.append(0)
             goals.append(f"Goal {len(goals) + 1}")
             goalOrder.append(len(goals) - 1)
@@ -877,9 +793,10 @@ def DoGui():
                 if changed:
                     goalConstraints[i][j] = xValue
 
-            imgui.same_line()  
+            imgui.same_line()
             imgui.push_item_width(50)
-            changed, selectedItemSign = imgui.combo("combo{}{}".format(i, j), signItemsChoices[i], signItems)
+            changed, selectedItemSign = imgui.combo(
+                "combo{}{}".format(i, j), signItemsChoices[i], signItems)
             if changed:
                 signItemsChoices[i] = selectedItemSign
                 goalConstraints[i][-1] = signItemsChoices[i]
@@ -891,17 +808,16 @@ def DoGui():
                         penalties.pop()
 
             imgui.pop_item_width()
-            imgui.same_line()   
+            imgui.same_line()
             imgui.set_next_item_width(50)
             rhsValue = goalConstraints[i][-2]
             rhsChanged, rhs = imgui.input_float(
                 "RHS{}{}".format(i, j), rhsValue)
-                
+
             if rhsChanged:
-                goalConstraints[i][-2] = rhs 
+                goalConstraints[i][-2] = rhs
 
         spaceGui(6)
-
 
         # normal constraints ===========================================
         if len(constraints) == 0:
@@ -911,8 +827,8 @@ def DoGui():
             amtOfConstraints += 1
             # goalConstraints.append([0.0, 0.0])
             constraints.append([0.0] * amtOfObjVars)
-            constraints[-1].append(0.0) # add sign spot
-            constraints[-1].append(0.0) # add rhs spot
+            constraints[-1].append(0.0)  # add sign spot
+            constraints[-1].append(0.0)  # add rhs spot
             signItemsChoicesC.append(0)
 
         imgui.same_line()
@@ -940,28 +856,25 @@ def DoGui():
                     if changed:
                         constraints[i][j] = xValue
 
-                imgui.same_line()  
+                imgui.same_line()
                 imgui.push_item_width(50)
-                changed, selectedItemSignC = imgui.combo("comboC{}{}".format(i, j), signItemsChoicesC[i], signItems)
+                changed, selectedItemSignC = imgui.combo(
+                    "comboC{}{}".format(i, j), signItemsChoicesC[i], signItems)
                 if changed:
                     signItemsChoicesC[i] = selectedItemSignC
                     constraints[i][-1] = signItemsChoicesC[i]
 
                 imgui.pop_item_width()
-                imgui.same_line()   
+                imgui.same_line()
                 imgui.set_next_item_width(50)
                 rhsValue = constraints[i][-2]
                 rhsChanged, rhs = imgui.input_float(
                     "RHSC{}{}".format(i, j), rhsValue)
-                    
+
                 if rhsChanged:
-                    constraints[i][-2] = rhs 
+                    constraints[i][-2] = rhs
 
-        spaceGui(6) 
-
-        # for i in range(len(goalConstraints)):
-        #     if goalConstraints[i][-1] == 2:
-        #         penalties.append(0.0)
+        spaceGui(6)
 
         imgui.text("Penalties:")
         for i in range(len(penalties)):
@@ -982,45 +895,36 @@ def DoGui():
             toggle = not toggle
 
         if toggle:
-            spaceGui(3) 
+            spaceGui(3)
             for i in range(len(goals)):
                 imgui.text(goals[i])
-                
+
                 imgui.same_line()
                 if imgui.button(f"Up##{i}") and i > 0:
                     goals[i], goals[i - 1] = goals[i - 1], goals[i]
-                    goalOrder[i], goalOrder[i - 1] = goalOrder[i - 1], goalOrder[i]
-                
+                    goalOrder[i], goalOrder[i -
+                                            1] = goalOrder[i - 1], goalOrder[i]
+
                 imgui.same_line()
                 if imgui.button(f"Down##{i}") and i < len(goals) - 1:
                     goals[i], goals[i + 1] = goals[i + 1], goals[i]
-                    goalOrder[i], goalOrder[i + 1] = goalOrder[i + 1], goalOrder[i]
-
+                    goalOrder[i], goalOrder[i +
+                                            1] = goalOrder[i + 1], goalOrder[i]
 
         spaceGui(6)
         # solve button ================================================
         if imgui.button("Solve"):
             try:
-                goalConstraints, constraints, penalties, goalOrder = testInput()
+                # goalConstraints, constraints, penalties, goalOrder = testInput()
 
                 orderCopy = copy.deepcopy(goalOrder)
                 if goalOrder == sorted(goalOrder):
                     orderCopy = []
 
-                print(goalConstraints)
-                print(constraints)
-                print(goalOrder)
-
                 GuiPivotCols.append(-1)
                 GuiPivotRows.append(-1)
-                # tableaus = DoPreemptive(goalConstraints, constraints, goalOrder)
-                # tableaus, goalMetStrings, opTable = DoPreemptive(goalConstraints, constraints, orderCopy)
-                tableaus, goalMetStrings, opTable, penaltiesTotals = DoPenalties(goalConstraints, constraints, penalties, orderCopy)
-
-                # print(opTable)  
-
-                # tableaus.append(tableaus[opTable])
-                # print(tableaus)
+                tableaus, goalMetStrings, opTable, penaltiesTotals = DoPenalties(
+                    goalConstraints, constraints, penalties, orderCopy)
 
                 GuiPivotCols.append(-1)
                 GuiPivotRows.append(-1)
@@ -1032,7 +936,6 @@ def DoGui():
                 GuiHeaderRow.clear()
                 GuiPivotRows.clear()
                 GuiPivotCols.clear()
-
 
                 for i in range(len(goalConstraints)):
                     if goalConstraints[i][-1] == 2:
@@ -1046,9 +949,8 @@ def DoGui():
                     tCol.append(-1)
 
             except Exception as e:
-                # print(e)
+                print(e)
                 imgui.text("Math Error")
-                # raise e
 
         try:
             imgui.spacing()
@@ -1068,7 +970,8 @@ def DoGui():
                     imgui.text(f"Penalties: {penaltiesTotals[i]}")
                 for metString in range(len(goalMetStrings[i])):
                     if goalMetStrings[i][metString] != " ":
-                        imgui.text(f"Goal {metString + 1} {goalMetStrings[i][metString]}")
+                        imgui.text(
+                            f"Goal {metString + 1} {goalMetStrings[i][metString]}")
                     # imgui.text(goalMetStrings[i])
                 imgui.text("t-" + str(i))
                 imgui.same_line(0, 20)
@@ -1082,11 +985,13 @@ def DoGui():
                     if j < (len(goalConstraints) + extraGoalCtr):
                         imgui.text("z " + str(j + 1))
                     else:
-                        imgui.text("c " + str(j - (len(goalConstraints) + extraGoalCtr) + 1))
+                        imgui.text(
+                            "c " + str(j - (len(goalConstraints) + extraGoalCtr) + 1))
                     imgui.same_line(0, 20)
                     for k in range(len(tableaus[i][j])):
                         if k == pivotCol and pivotCol != -1:
-                            imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                            imgui.push_style_color(
+                                imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
                         imgui.text("{:>8.3f}".format(tableaus[i][j][k]))
                         if k < len(tableaus[i][j]) - 1:
                             imgui.same_line(0, 20)
@@ -1102,12 +1007,10 @@ def DoGui():
             imgui.spacing()
 
         except Exception as e:
-            # print(e)
             imgui.text("Could Not display next tableau")
-            raise e
 
         imgui.end()
-        
+
         imgui.render()
         impl.render(imgui.get_draw_data())
 
@@ -1115,10 +1018,7 @@ def DoGui():
 
 
 def main():
-    # goals, constraints, penalties, orderOverride = testInput()
-
-    # DoPenalties(goals, constraints, penalties, orderOverride)
-
     DoGui()
+
 
 main()

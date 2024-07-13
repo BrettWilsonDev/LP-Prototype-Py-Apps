@@ -17,13 +17,14 @@ def testInput():
                    [2, 1, 60, 0],
                    ]
 
-    isMin = True
+    isMin = False
     objFunc = [100, 30]
     constraints = [[0, 1, 3, 1],
                    [1, 1, 7, 0],
                    [10, 4, 40, 0],
                    ]
 
+    isMin = False
     objFunc = [1200, 800]
     constraints = [[8, 4, 1600, 0],
                    [4, 4, 1000, 0],
@@ -148,6 +149,32 @@ def solveGraphical(objFunc, feasiblePoints, isMin=False):
     return optimalValue, optimalPoint
 
 
+def grahamScan(points):
+    # Function to calculate the cross product of vectors p1p2 and p2p3
+    def crossProduct(p1, p2, p3):
+        return (p2[0] - p1[0]) * (p3[1] - p2[1]) - (p2[1] - p1[1]) * (p3[0] - p2[0])
+
+    # Sort points lexicographically
+    points = sorted(points)
+
+    # Calculate the lower hull
+    lowerHull = []
+    for p in points:
+        while len(lowerHull) >= 2 and crossProduct(lowerHull[-2], lowerHull[-1], p) < 0:
+            lowerHull.pop()
+        lowerHull.append(p)
+
+    # Calculate the upper hull
+    upperHull = []
+    for p in reversed(points):
+        while len(upperHull) >= 2 and crossProduct(upperHull[-2], upperHull[-1], p) < 0:
+            upperHull.pop()
+        upperHull.append(p)
+
+    # Remove the last point of each hull as it is a duplicate of the first point of the other hull
+    return lowerHull[:-1] + upperHull[:-1]
+
+
 def drawGraph(feasiblePoints, lineSegmentPoints, intersectionPoints, optimalPoint=None, optimalValue=None):
     # print(lineSegmentPoints)
     fullLineSegments = []
@@ -193,21 +220,22 @@ def drawGraph(feasiblePoints, lineSegmentPoints, intersectionPoints, optimalPoin
         x, y = point
         plt.text(x, y, f'({x}, {y})', fontsize=10, va='bottom', ha='left')
 
-    # the optimal point
-    if optimalPoint is not None:
-        x, y = optimalPoint
-        plt.scatter(x, y, color='green', marker='o', label=f"Optimal Point at {
-                    optimalPoint} : {optimalValue}", s=150)
+    # the feasible region
+    feasiblePoints.append(feasiblePoints[0])
+    print(grahamScan(feasiblePoints))
+    plt.fill_between(*zip(*grahamScan(feasiblePoints)), color='red',
+                     alpha=0.2, label='Feasible Region')
 
     # the intersection points
     for point in intersectionPoints:
         x, y = point
         plt.plot(x, y, color='black', marker='o')
 
-    # the feasible region
-    feasiblePoints.append(feasiblePoints[0])
-    plt.fill_between(*zip(*feasiblePoints), color='red',
-                     alpha=0.2, label='Feasible Region')
+    # the optimal point
+    if optimalPoint is not None:
+        x, y = optimalPoint
+        plt.scatter(x, y, color='green', marker='o', label=f"Optimal Point at\n{
+                    optimalPoint}\n: {optimalValue}", s=150)
 
     # the origin point 0, 0
     plt.plot(0, 0, color='black', marker='o')
@@ -358,7 +386,7 @@ def doGui():
         # solve button ================================================
         if imgui.button("Solve"):
             try:
-                # objFunc, constraints, isMin = testInput()
+                objFunc, constraints, isMin = testInput()
 
                 feasiblePoints, lineSegmentPoints, intersectionPoints = getSortedPoints(
                     constraints)

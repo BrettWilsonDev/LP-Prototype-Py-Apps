@@ -17,12 +17,12 @@ def testInput():
                    [2, 1, 60, 0],
                    ]
 
-    # isMin = True
-    # objFunc = [100, 30]
-    # constraints = [[0, 1, 3, 1],
-    #                [1, 1, 7, 0],
-    #                [10, 4, 40, 0],
-    #                ]
+    isMin = True
+    objFunc = [100, 30]
+    constraints = [[0, 1, 3, 1],
+                   [1, 1, 7, 0],
+                   [10, 4, 40, 0],
+                   ]
     
     objFunc = [1200, 800]
     constraints = [[8, 4, 1600, 0],
@@ -215,12 +215,12 @@ def doGui():
     size = 1920 / 2, 1080 / 2
 
     os.system('cls' if os.name == 'nt' else 'clear')
-    print("\nBrett's simplex prototype tool for goal Preemptive simplex problems\n")
+    print("\nBrett's lp Graphical Solver Prototype\n")
 
     pygame.display.set_mode(size, pygame.DOUBLEBUF |
                             pygame.OPENGL | pygame.RESIZABLE)
 
-    pygame.display.set_caption("Goal Preemptive Simplex Prototype")
+    pygame.display.set_caption("lp Graphical Solver Prototype")
 
     icon = pygame.Surface((1, 1)).convert_alpha()
     icon.fill((0, 0, 0, 1))

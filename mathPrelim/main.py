@@ -596,7 +596,7 @@ def doGui():
         # solve button run once ===========================
         if imgui.button("Solve"):
             try:
-                objFunc, constraints, isMin = testInput()
+                # objFunc, constraints, isMin = testInput()
 
                 # print(objFunc, constraints, isMin)
                 a = copy.deepcopy(objFunc)

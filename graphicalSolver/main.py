@@ -113,6 +113,18 @@ def getSortedPoints(constraints):
         if point not in lineSegmentPoints:
             lineSegmentPoints.append(point)
 
+    print("\nlineSegments")
+    for i in range(len(lineSegmentPoints)):
+        try:
+            print(f" (start: {lineSegmentPoints[i]} end: {lineSegmentPoints[i + 1]})")
+        except:
+            pass
+
+    print("\nfeasible region")
+    for i in range(len(feasiblePoints)):
+        print(feasiblePoints[i], end="")
+    print("\n")
+
     return feasiblePoints, lineSegmentPoints, intersectionPoints
 
 
@@ -129,6 +141,8 @@ def solveGraphical(objFunc, feasiblePoints, isMin=False):
         optimalValue = max(objectiveValues)
 
     optimalPoint = feasiblePoints[objectiveValues.index(optimalValue)]
+
+    print(f"Optimal value: {optimalValue} at {optimalPoint}")
 
     return optimalValue, optimalPoint
 
@@ -344,7 +358,7 @@ def doGui():
         # solve button ================================================
         if imgui.button("Solve"):
             try:
-                # objFunc, constraints, isMin = testInput()
+                objFunc, constraints, isMin = testInput()
 
                 feasiblePoints, lineSegmentPoints, intersectionPoints = getSortedPoints(
                     constraints)
@@ -358,7 +372,6 @@ def doGui():
             except Exception as e:
                 print(e)
                 imgui.text("Math Error")
-                raise
                 
 
         imgui.end()

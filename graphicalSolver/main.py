@@ -23,7 +23,7 @@ def testInput():
                    [1, 1, 7, 0],
                    [10, 4, 40, 0],
                    ]
-    
+
     objFunc = [1200, 800]
     constraints = [[8, 4, 1600, 0],
                    [4, 4, 1000, 0],
@@ -116,7 +116,8 @@ def getSortedPoints(constraints):
     print("\nlineSegments")
     for i in range(len(lineSegmentPoints)):
         try:
-            print(f" (start: {lineSegmentPoints[i]} end: {lineSegmentPoints[i + 1]})")
+            print(f" (start: {lineSegmentPoints[i]} end: {
+                  lineSegmentPoints[i + 1]})")
         except:
             pass
 
@@ -203,12 +204,11 @@ def drawGraph(feasiblePoints, lineSegmentPoints, intersectionPoints, optimalPoin
         x, y = point
         plt.plot(x, y, color='black', marker='o')
 
-
     # the feasible region
     feasiblePoints.append(feasiblePoints[0])
     plt.fill_between(*zip(*feasiblePoints), color='red',
                      alpha=0.2, label='Feasible Region')
-    
+
     # the origin point 0, 0
     plt.plot(0, 0, color='black', marker='o')
     plt.text(0, 0, f'({0}, {0})', fontsize=10, va='bottom', ha='left')
@@ -358,7 +358,7 @@ def doGui():
         # solve button ================================================
         if imgui.button("Solve"):
             try:
-                objFunc, constraints, isMin = testInput()
+                # objFunc, constraints, isMin = testInput()
 
                 feasiblePoints, lineSegmentPoints, intersectionPoints = getSortedPoints(
                     constraints)
@@ -372,7 +372,6 @@ def doGui():
             except Exception as e:
                 print(e)
                 imgui.text("Math Error")
-                
 
         imgui.end()
 

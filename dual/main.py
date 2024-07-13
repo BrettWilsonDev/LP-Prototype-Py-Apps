@@ -112,7 +112,8 @@ def DoDualPivotOperation(tab):
     rhs = [row[-1] for row in tab]
     rhsNeg = [row[-1] for row in tab if row[-1] < 0]
 
-    minRhsNum = min(rhsNeg)
+    # minRhsNum = min(rhsNeg)
+    minRhsNum = max(rhsNeg)
 
     pivotRow = rhs.index(minRhsNum)
 
@@ -363,6 +364,17 @@ def DoDualSimplex(objFunc, constraints, isMin, tabOverride=None):
 
             thetaCols.append(thetaCol.copy())
             tableaus.append(tab)
+
+        # final optimal check
+        rhsTest = []
+        for i in range(len(tableaus[-1])):
+            rhsTest.append(tableaus[-1][i][-1])
+        allRhsPositive = all(num >= 0 for num in rhsTest)
+
+        if not allRhsPositive:
+            tableaus.pop()
+            IMPivotCols.pop()
+            IMPivotRows.pop()
 
         print("\nOptimal Solution Found")
         if tableaus[-1] is not None:
@@ -621,6 +633,14 @@ def DoGui():
                 # constraints = [[8,4,2,60,1],
                 #                [6,2,1.5,30,1],
                 #                [1,1.5,0.5,20,1]]
+
+                objFunc = [10, 50, 80, 100]
+                constraints = [[1, 4, 4, 8, 140, 0],
+                            [1, 0, 0, 0, 50, 0],
+                            [1, 0, 0, 0, 50, 1],
+                            [1, 1, 1, 1, 70, 1],
+                            ]
+                isMin = False
 
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)

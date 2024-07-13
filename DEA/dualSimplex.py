@@ -354,6 +354,17 @@ def DoDualSimplex(objFunc, constraints, isMin):
             thetaCols.append(thetaCol.copy())
             tableaus.append(tab)
 
+        # final optimal check
+        rhsTest = []
+        for i in range(len(tableaus[-1])):
+            rhsTest.append(tableaus[-1][i][-1])
+        allRhsPositive = all(num >= 0 for num in rhsTest)
+
+        if not allRhsPositive:
+            tableaus.pop()
+            IMPivotCols.pop()
+            IMPivotRows.pop()
+
         # print("\nOptimal Solution Found")
         if tableaus[-1] is not None:
             # print(tableaus[-1][0][-1])

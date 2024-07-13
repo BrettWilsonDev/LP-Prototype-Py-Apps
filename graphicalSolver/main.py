@@ -386,7 +386,7 @@ def doGui():
         # solve button ================================================
         if imgui.button("Solve"):
             try:
-                objFunc, constraints, isMin = testInput()
+                # objFunc, constraints, isMin = testInput()
 
                 feasiblePoints, lineSegmentPoints, intersectionPoints = getSortedPoints(
                     constraints)

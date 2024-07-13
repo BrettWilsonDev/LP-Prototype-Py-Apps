@@ -26,6 +26,14 @@ def testInput():
         [10, 4, 40, 0],
     ]
 
+    objFunc = [10, 50, 80, 100]
+    constraints = [[1, 4, 4, 8, 140, 0],
+                [1, 0, 0, 0, 50, 0],
+                [1, 0, 0, 0, 50, 1],
+                [1, 1, 1, 1, 70, 1],
+                ]
+    isMin = False
+
     return objFunc, constraints, isMin
 
 
@@ -307,6 +315,8 @@ def DoTwoPhase(objFunc, constraints, isMin):
     else:
         AllPosZ = all(num <= 0 for num in tabs[-1][1][:-1])
 
+    indexOfDupe = tabs.index(tabs[-1])
+
     phase2Ctr = 0
     while not AllPosZ:
         tab, AllPosZ = DoPivotOperationsPhase2(tabs[-1], isMin)
@@ -318,7 +328,14 @@ def DoTwoPhase(objFunc, constraints, isMin):
         phase2Ctr += 1
         IMPhaseType.append(2)
 
-    print("\nNote there is a extra table before phase 2 to show all\n")
+    del tabs[indexOfDupe]
+
+    # final optimal check
+    isAllNegW = all(num <= 0 for num in tabs[-1][0]) if tabs[-1][0] else False
+    if not isAllNegW:
+        tabs.pop()
+        IMPivotCols.pop()
+        IMPivotRows.pop()
 
     IMPhaseType.append(2)
     currentPhase = 1
@@ -333,6 +350,7 @@ def DoTwoPhase(objFunc, constraints, isMin):
                 print("{:10.3f}".format(tabs[i][j][k]), end=" ")
             print()
         print()
+
 
     return tabs
 
@@ -499,11 +517,13 @@ def DoGui():
         if imgui.button("Solve"):
             print(objFunc, constraints, isMin)
             try:
+                # objFunc, constraints, isMin = testInput()
+
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)
                 tableaus = DoTwoPhase(a, b, isMin)
 
-                del tableaus[-2]
+                # del tableaus[-2]
 
                 IMPivotCols.append(-1)
                 IMPivotRows.append(-1)
@@ -523,6 +543,9 @@ def DoGui():
                 IMPivotRows.clear()
                 IMPivotCols.clear()
                 IMPhaseType.clear()
+            
+                tCol.append(-1)
+                tRow.append(-1)
 
             except Exception as e:
                 print("math error:", e)

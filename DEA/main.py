@@ -1,8 +1,13 @@
-import dualSimplex
-
 import copy
+import math
 
-from pulp import LpMaximize, LpProblem, LpVariable
+import pygame
+from imgui.integrations.pygame import PygameRenderer
+import imgui
+import os
+import sys
+
+import dualSimplex
 
 
 def testInput():
@@ -20,15 +25,16 @@ def testInput():
 
     return LpInputs, LpOutputs
 
-def buildTable(LpInputs, LpOutputs, currentSelection = 0):
+
+def buildTable(LpInputs, LpOutputs, currentSelection=0):
     tabWLen = len(LpInputs[-1]) + len(LpOutputs[-1])
 
     # build bottom rows
     bottomRows = []
     for i in range(len(LpInputs) + 2):
-            row = [0] * (len(LpInputs) + 2)
-            row[i] = 1
-            bottomRows.append(row)
+        row = [0] * (len(LpInputs) + 2)
+        row[i] = 1
+        bottomRows.append(row)
 
     # build top rows
     topRows = []
@@ -46,8 +52,8 @@ def buildTable(LpInputs, LpOutputs, currentSelection = 0):
 
     currentMiddleRow = LpInputs[currentSelection]
     for i in range(len(currentMiddleRow)):
-         del middleRow[i]
-         middleRow.append(currentMiddleRow[i])
+        del middleRow[i]
+        middleRow.append(currentMiddleRow[i])
 
     zRow = copy.deepcopy(LpOutputs[currentSelection])
 
@@ -63,7 +69,6 @@ def buildTable(LpInputs, LpOutputs, currentSelection = 0):
 
     for i in range(len(bottomRows)):
         table.append(bottomRows[i])
-
 
     constraints = []
     for i in range(len(topRows)):
@@ -90,11 +95,13 @@ def buildTable(LpInputs, LpOutputs, currentSelection = 0):
         constraints.append(tempCons[i])
 
     conRow = LpInputs[currentSelection]
-    
+
     return table, zRow, constraints, conRow
 
-def SolveTable(table, objfunc, constraints, conRow):
-    tableaus, changingVars, optimalSolution = dualSimplex.DoDualSimplex(objfunc, constraints, 0)
+
+def SolveTable(table, objfunc, constraints, conRow, isMin = False):
+    tableaus, changingVars, optimalSolution = dualSimplex.DoDualSimplex(
+        objfunc, constraints, isMin)
     print(changingVars, optimalSolution)
 
     mathCons = []
@@ -111,7 +118,7 @@ def SolveTable(table, objfunc, constraints, conRow):
         cellRef.append(tSum)
 
     # get the len of the outputs
-    objFuncLen = 0  
+    objFuncLen = 0
     for i in range(len(objfunc)):
         if objfunc[i] != 0:
             objFuncLen += 1
@@ -132,9 +139,8 @@ def SolveTable(table, objfunc, constraints, conRow):
 
     return outputTotal, inputTotal, outputRange, inputRange, cellRef, changingVars
 
-def DoDEA():
-    LpInputs, LpOutputs = testInput()
 
+def DoDEA(LpInputs, LpOutputs, isMin):
     tables = []
     allRangesO = []
     allRangesI = []
@@ -142,8 +148,10 @@ def DoDEA():
     allInputTotals = []
 
     for i in range(len(LpInputs)):
-        table, objfunc, constraints, conRow = buildTable(LpInputs, LpOutputs, i)
-        outputTotal, inputTotal, outputRange, inputRange, cellRef, changingVars = SolveTable(table, objfunc, constraints, conRow)
+        table, objfunc, constraints, conRow = buildTable(
+            LpInputs, LpOutputs, i)
+        outputTotal, inputTotal, outputRange, inputRange, cellRef, changingVars = SolveTable(
+            table, objfunc, constraints, conRow, isMin)
 
         allRangesO.append(outputRange)
         allRangesI.append(inputRange)
@@ -180,7 +188,6 @@ def DoDEA():
     header.append("ref")
     header.append("sign")
     header.append("rhs")
-
 
     for i in range(len(tables)):
         for cvCtr in range(len(changingVars)):
@@ -220,11 +227,296 @@ def DoDEA():
         for j in range(len(LpInputs[-1])):
             print("{:10.6f}".format(allRangesI[i][j]), end=" ")
         print(f"   Input total: {allInputTotals[i]}", end=" ")
-                
-        print(f"\n\nTotals:\n\n{allOutputTotals[i]}\ndivided by\n{allInputTotals[i]}\n\n= {allOutputTotals[i] / allInputTotals[i]}")
+
+        print(f"\n\nTotals:\n\n{allOutputTotals[i]}\ndivided by\n{
+              allInputTotals[i]}\n\n= {allOutputTotals[i] / allInputTotals[i]}")
         print()
 
+        return tables, header, allInputTotals, allOutputTotals, allRangesO, allRangesI, changingVars
+
+
+def DoGui():
+    # window setup
+    pygame.init()
+    size = 1920 / 2, 1080 / 2
+
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print("\nData Envelopment Analysis prototype tool for lp DEA problems\n")
+
+    pygame.display.set_mode(size, pygame.DOUBLEBUF |
+                            pygame.OPENGL | pygame.RESIZABLE)
+
+    pygame.display.set_caption("Data Envelopment Analysis Prototype")
+
+    icon = pygame.Surface((1, 1)).convert_alpha()
+    icon.fill((0, 0, 0, 1))
+    pygame.display.set_icon(icon)
+
+    imgui.create_context()
+    impl = PygameRenderer()
+
+    io = imgui.get_io()
+    io.display_size = size
+
+    # var setup
+
+    amtOfItems = 1
+
+    amtOfOutputs = 1
+    LpOutputs = [[0.0]]
+
+    amtOfInputs = 1
+    LpInputs = [[0.0]]
+
+    tables = []
+    header = []
+    allInputTotals = []
+    allOutputTotals = []
+    allRangesO = []
+    allRangesI = []
+    changingVars = []
+
+    problemType = "Max"
+    isMin = False
+
+    while 1:
+        # window handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+
+            impl.process_event(event)
+
+        imgui.new_frame()
+
+        window_size = pygame.display.get_window_size()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (window_size[0]), (window_size[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        # input =============================
+
+        if imgui.radio_button("Max", problemType == "Max"):
+            problemType = "Max"
+
+        if imgui.radio_button("Min", problemType == "Min"):
+            problemType = "Min"
+
+        if problemType == "Max":
+            isMin = False
+        else:
+            isMin = True
+
+        # item rows ===========================================
+        if imgui.button("Item Row +"):
+            amtOfItems += 1
+            LpOutputs.append([0.0] * amtOfOutputs)
+            LpInputs.append([0.0] * amtOfInputs)
+
+        imgui.same_line()
+
+        if imgui.button("Item Row -"):
+            if amtOfItems != 1:
+                amtOfItems += -1
+                LpOutputs.pop()
+                LpInputs.pop()
+
+        # inputs ===========================================
+        if imgui.button("Inputs +"):
+            amtOfInputs += 1
+            for i in range(len(LpInputs)):
+                LpInputs[i].append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("Inputs -"):
+            if amtOfInputs != 1:
+                amtOfInputs += -1
+                for i in range(len(LpInputs)):
+                    LpInputs[i].pop()
+
+        imgui.same_line(0, 20)
+
+        # outputs ===========================================
+        if imgui.button("Outputs +"):
+            amtOfOutputs += 1
+            for i in range(len(LpOutputs)):
+                LpOutputs[i].append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("Outputs -"):
+            if amtOfOutputs != 1:
+                amtOfOutputs += -1
+                for i in range(len(LpOutputs)):
+                    LpOutputs[i].pop()
+
+        for i in range(amtOfItems):
+            imgui.spacing()
+            # input gui input
+            if len(LpInputs) <= i:
+                LpInputs.append([0.0] * (amtOfItems))
+
+            for j in range(amtOfInputs):
+                value = LpInputs[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "i{}{}".format(i, j), value)
+                if changed:
+                    LpInputs[i][j] = xValue
+                imgui.same_line()
+
+            imgui.spacing()
+            imgui.same_line()
+            imgui.spacing()
+            imgui.same_line()
+            imgui.spacing()
+            imgui.same_line()
+            imgui.spacing()
+
+            # output gui input
+            if len(LpOutputs) <= i:
+                LpOutputs.append([0.0] * (amtOfItems))
+
+            for j in range(amtOfOutputs):
+                value = LpOutputs[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "o{}{}".format(i, j), value)
+                if changed:
+                    LpOutputs[i][j] = xValue
+                imgui.same_line()
+
+            imgui.spacing()
+
+        imgui.spacing()
+        # solve button ========================================================
+        if imgui.button("Solve"):
+            try:
+                # LpInputs, LpOutputs = testInput()
+                print(LpInputs)
+                print(LpOutputs)
+                tables, header, allInputTotals, allOutputTotals, allRangesO, allRangesI, changingVars = DoDEA(
+                    LpInputs, LpOutputs, isMin)
+            except Exception as e:
+                print(f"math error {e}")
+
+        # output ============================================================
+
+        imgui.spacing()
+        imgui.spacing()
+        for i in range(len(tables)):
+            imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+            imgui.text("cv   ")
+            imgui.same_line()
+            for cvCtr in range(len(changingVars)):
+                imgui.text("{:10.4f}".format(changingVars[cvCtr]))
+                imgui.same_line()
+            imgui.pop_style_color()
+            imgui.spacing()
+            imgui.text("       ")
+            imgui.same_line()
+            imgui.push_style_color(imgui.COLOR_TEXT, 204/255.0, 204/255.0, 0.0)
+            for hctr in range(len(header)):
+                imgui.text("  {:8}".format(header[hctr]))
+                imgui.same_line()
+            imgui.pop_style_color()
+            imgui.spacing()
+            for j in range(len(tables[i])):
+                imgui.push_style_color(imgui.COLOR_TEXT, 204/255.0, 204/255.0, 0.0)
+                if j == 0:
+                    imgui.text(f"{problemType} z")
+                    imgui.same_line()
+                elif j < (len(LpOutputs[-1]) + len(LpInputs[-1]) - 1):
+                    imgui.text(f"c {j}  ")
+                    imgui.same_line()
+                elif j == (len(LpOutputs[-1]) + len(LpInputs[-1]) - 1):
+                    imgui.push_style_color(imgui.COLOR_TEXT, 255/255.0, 165/255.0, 0.0)
+                    imgui.text(f"con  ")
+                    imgui.pop_style_color()
+                    imgui.same_line()
+                else:
+                    imgui.text(f"     ")
+                    imgui.same_line()
+                imgui.pop_style_color()
+                for k in range(len(tables[i][j])):
+                    if j == (len(LpOutputs[-1]) + len(LpInputs[-1]) - 1):
+                        imgui.push_style_color(imgui.COLOR_TEXT, 255/255.0, 165/255.0, 0.0)
+                    if k == (len(tables[i][j]) - 3) and j == 0:
+                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+                    if k == (len(LpOutputs[-1]) + len(LpInputs[-1]) + 1):
+                        if tables[i][j][k] == 0:
+                            imgui.text("{:10}".format("    <="))
+                        elif tables[i][j][k] == 1:
+                            imgui.text("{:10}".format("    >="))
+                        else:
+                            imgui.text("{:10}".format("     ="))
+                    else:
+                        imgui.text("{:10.4f}".format(tables[i][j][k]))
+                    
+                    if j == (len(LpOutputs[-1]) + len(LpInputs[-1]) - 1):
+                        imgui.pop_style_color()
+                    if k == (len(tables[i][j]) - 3) and j == 0:
+                        imgui.pop_style_color()
+
+                    imgui.same_line()
+                imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            imgui.text("\nRanges:")
+            imgui.spacing()
+            for j in range(len(LpOutputs[-1])):
+                imgui.text("  {:8}".format("o" + str(j + 1)))
+                imgui.same_line()
+
+            imgui.spacing()
+            for j in range(len(LpOutputs[-1])):
+                imgui.text("{:10.6f}".format(allRangesO[i][j]))
+                imgui.same_line()
+            imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+            imgui.text(f"  Output total: {allOutputTotals[i]}")
+            imgui.pop_style_color()
+
+            imgui.text("\n")
+            for j in range(len(LpInputs[-1])):
+                imgui.text("  {:8}".format("i" + str(j + 1)))
+                imgui.same_line()
+
+            imgui.spacing()
+            for j in range(len(LpInputs[-1])):
+                imgui.text("{:10.6f}".format(allRangesI[i][j]))
+                imgui.same_line()
+            imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+            imgui.text(f"   Input total: {allInputTotals[i]}")
+            imgui.pop_style_color()
+
+            imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+            imgui.text(f"\n\nTotals: {allOutputTotals[i]} / {allInputTotals[i]} = {allOutputTotals[i] / allInputTotals[i]}")
+            imgui.pop_style_color()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+        # close =============================
+
+        imgui.end()
+
+        imgui.render()
+        impl.render(imgui.get_draw_data())
+
+        pygame.display.flip()
+
+
 def main():
-    DoDEA()
+    DoGui()
+
 
 main()

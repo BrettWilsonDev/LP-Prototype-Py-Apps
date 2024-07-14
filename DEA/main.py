@@ -21,18 +21,7 @@ def testInput():
     return LpInputs, LpOutputs
 
 def buildTable(LpInputs, LpOutputs, currentSelection = 0):
-
-    # currentSelection = 0
-    # inputsLen = len(LpInputs[-1])
-    # outputsLen = len(LpOutputs[-1])
-
-    # LpInputs, LpOutputs = testInput()
-
     tabWLen = len(LpInputs[-1]) + len(LpOutputs[-1])
-    # print(tabWLen)
-
-    tabHLen = tabWLen + 1 + 1 + len(LpInputs)
-    # print(tabHLen)
 
     # build bottom rows
     bottomRows = []
@@ -50,31 +39,21 @@ def buildTable(LpInputs, LpOutputs, currentSelection = 0):
         for j in range(len(LpInputs[i])):
             topRows[i].append(copy.deepcopy(-LpInputs[i][j]))
 
-    # print(topRows)
-
     # build middle row
     middleRow = []
     for i in range(tabWLen):
         middleRow.append(0)
 
-    # TODO clean up brain not braining
     currentMiddleRow = LpInputs[currentSelection]
-    # print(currentMiddleRow)
     for i in range(len(currentMiddleRow)):
          del middleRow[i]
          middleRow.append(currentMiddleRow[i])
 
-    # print(middleRow) 
-
-    # zRow
     zRow = copy.deepcopy(LpOutputs[currentSelection])
 
     for i in range(tabWLen - len(zRow)):
         zRow.append(0)
 
-    # print(zRow)
-
-    # print()
     table = []
     table.append(zRow)
     for i in range(len(topRows)):
@@ -85,18 +64,6 @@ def buildTable(LpInputs, LpOutputs, currentSelection = 0):
     for i in range(len(bottomRows)):
         table.append(bottomRows[i])
 
-    # print(table)
-    
-    # print()
-    # for i in range(len(table)):
-    #     for j in range(len(table[i])):
-    #         # print(table[i][j], end=" ")
-    #         print("{:10.3f}".format(table[i][j]), end=" ")
-    #     print()
-
-    objfunc = LpOutputs[currentSelection]
-
-    # print(objfunc)
 
     constraints = []
     for i in range(len(topRows)):
@@ -122,32 +89,11 @@ def buildTable(LpInputs, LpOutputs, currentSelection = 0):
         tempCons[i].append(1)
         constraints.append(tempCons[i])
 
-    # print(constraints)
-    # print()
-
-    # print()
-    # for i in range(len(table)):
-    #     for j in range(len(table[i])):
-    #         # print(table[i][j], end=" ")
-    #         print("{:10.3f}".format(table[i][j]), end=" ")
-    #     print()
-
-    # print(zRow)
-    # print(constraints)
-
     conRow = LpInputs[currentSelection]
-    # print(conRow)
-
-    # return table, objfunc, constraints
+    
     return table, zRow, constraints, conRow
 
 def SolveTable(table, objfunc, constraints, conRow):
-    # print(objfunc, constraints)
-
-    # print(objfunc)
-    # for i in range(len(constraints)):
-    #     print(constraints[i])
-
     tableaus, changingVars, optimalSolution = dualSimplex.DoDualSimplex(objfunc, constraints, 0)
     print(changingVars, optimalSolution)
 
@@ -160,20 +106,9 @@ def SolveTable(table, objfunc, constraints, conRow):
     # get the cell ref for display purposes
     cellRef = []
     cellRef.append(optimalSolution)
-    # sum([a * b for a, b in zip(dualChangingVars, dualConstraintsLhs[i])])
     for i in range(len(mathCons)):
-        # print(mathCons[i])
         tSum = sum([a * b for a, b in zip(changingVars, mathCons[i])])
-        # print(tSum)
         cellRef.append(tSum)
-
-    # print(cellRef)
-
-    # zRow = []
-    # for i in range(len(objfunc)):
-        # zRow.append(ob)
-
-    # print(objfunc)
 
     # get the len of the outputs
     objFuncLen = 0  
@@ -181,33 +116,19 @@ def SolveTable(table, objfunc, constraints, conRow):
         if objfunc[i] != 0:
             objFuncLen += 1
 
-    # print(objFuncLen)
-
     # get the outputs multiplied by the changing vars
     outputRange = []
     for i in range(objFuncLen):
-        # print(objfunc[i] * changingVars[i])
         outputRange.append(objfunc[i] * changingVars[i])
 
-    # print()
     # get the inputs multiplied by the changing vars
     inputRange = []
     for i in range(len(objfunc) - objFuncLen):
-        # print(conRow[i] * changingVars[i + objFuncLen])
         inputRange.append(conRow[i] * changingVars[i + objFuncLen])
 
     # get the totals
     outputTotal = sum(outputRange)
     inputTotal = sum(inputRange)
-
-    # print(outputTotal, inputTotal)
-    # print(outputTotal / inputTotal)
-
-    # print()
-    # for i in range(len(tableaus[-1])):
-    #     for j in range(len(tableaus[-1][i])):
-    #         print(tableaus[-1][i][j], end=" ")
-    #     print()
 
     return outputTotal, inputTotal, outputRange, inputRange, cellRef, changingVars
 

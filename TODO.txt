@@ -1,0 +1,23 @@
+TODO:
+Finish graphical sensitivity analysis and normal sensitivity analysis
+
+TODO: 
+Give all gui input boxes correct labels
+
+TODO: 
+Unify Naming conventions
+
+TODO:
+Convert to oop
+
+TODO:
+Make gui look better or swap it out for something else
+
+TODO:
+Add demo examples
+
+TODO:
+make all lp programs into one app
+
+TODO:
+web support - cant be done with imgui and pygame look at pyscript for that

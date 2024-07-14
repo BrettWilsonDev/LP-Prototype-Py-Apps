@@ -1,3 +1,4 @@
+
 TODO:
 Finish graphical sensitivity analysis and normal sensitivity analysis
 
@@ -9,6 +10,9 @@ Unify Naming conventions
 
 TODO:
 Convert to oop
+
+TODO:
+Do away with OpenGL and Pygame for windowing and use something meant for apps
 
 TODO:
 Make gui look better or swap it out for something else

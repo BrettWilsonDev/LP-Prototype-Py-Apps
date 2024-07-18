@@ -2,7 +2,7 @@
 
 This repository contains a collection of prototype linear programming (LP) applications that implement specific algorithms I learned in college. The purpose is to demonstrate that these mathematical models can be systematically programmed to solve LP problems in python.
 
-## List of Applications
+## List of LP tools
 
 - Adding activities and constraints
 - Data Envelopment Analysis

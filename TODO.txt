@@ -1,15 +1,8 @@
-
 TODO:
 Finish graphical sensitivity analysis and normal sensitivity analysis
 
-TODO: 
-Give all gui input boxes correct labels
-
-TODO: 
-Unify Naming conventions
-
 TODO:
-Convert to oop
+Extend duality add missing cases with uneven number of constraints and uneven number of variables
 
 TODO:
 Do away with OpenGL and Pygame for windowing and use something meant for apps

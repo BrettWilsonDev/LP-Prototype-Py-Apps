@@ -7,9 +7,13 @@ import copy
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from dual.dualsimplex import DualSimplex as Dual
-from mathPrelim.mathpreliminaries import MathPreliminaries as MathPrelims
+try:
+    from dualsimplex import DualSimplex as Dual
+    from mathpreliminaries import MathPreliminaries as MathPrelims
+except:
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from dual.dualsimplex import DualSimplex as Dual
+    from mathPrelim.mathpreliminaries import MathPreliminaries as MathPrelims   
 
 
 class LPDuality:

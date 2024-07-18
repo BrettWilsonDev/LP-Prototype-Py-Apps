@@ -8,9 +8,13 @@ import sympy as sp
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from mathPrelim.mathpreliminaries import MathPreliminaries as MathPrelims
-from dual.dualsimplex import DualSimplex as Dual
+try:
+    from dualsimplex import DualSimplex as Dual
+    from mathpreliminaries import MathPreliminaries as MathPrelims
+except:
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from dual.dualsimplex import DualSimplex as Dual
+    from mathPrelim.mathpreliminaries import MathPreliminaries as MathPrelims
 
 
 class AddingActsCons:

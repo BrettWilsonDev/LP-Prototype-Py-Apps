@@ -7,6 +7,7 @@ from imgui.integrations.pygame import PygameRenderer
 import imgui
 import os
 
+# TODO fix when z is the same twice in a row
 
 class TwoPhaseSimplex:
     IMPivotCols = []
@@ -14,10 +15,9 @@ class TwoPhaseSimplex:
     IMHeaderRow = []
     IMPhaseType = []
 
-    isConsoleOutput = False
-
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
+        self.prevZ = 0
 
     def testInput(self, testNum=-1):
         isMin = False
@@ -38,6 +38,13 @@ class TwoPhaseSimplex:
                         [1, 0, 0, 0, 50, 1],
                         [1, 1, 1, 1, 70, 1],
                         ]
+        elif testNum == 2:
+            objFunc = [48, 20, 8]
+
+            constraints = [[8,4,2,60,1],
+                            [6,2,1.5,30,1],
+                            [1,1.5,0.5,20,1]]
+            isMin = True
             
         if testNum == -1:
             return None
@@ -103,7 +110,8 @@ class TwoPhaseSimplex:
 
             summedW.append(temp)
 
-        print()
+        if self.isConsoleOutput:
+            print()
 
         # neg the w row
         for i in range(len(summedW)):
@@ -117,7 +125,8 @@ class TwoPhaseSimplex:
         for i in range(len(eCons)):
             wStr += " - e" + str(i + 1)
 
-        print(f"w{wStr} = {summedW[-1]}\n")
+        if self.isConsoleOutput:
+            print(f"w{wStr} = {summedW[-1]}\n")
 
         # fill the table with duds but respect amt of a cols
         for i in range(tableH):
@@ -198,15 +207,13 @@ class TwoPhaseSimplex:
         divNum = tab[pivotRow][pivotCol]
 
         if divNum == 0:
-            print("Divide by 0 error")
+            if self.isConsoleOutput:
+                print("Divide by 0 error")
             return
 
         for i in range(len(tab)):
             for j in range(len(tab[i])):
                 newTab[pivotRow][j] = tab[pivotRow][j] / divNum
-                # print(f"{newTab[pivotRow][j]} = {tab[pivotRow][j]} / {divNum}")
-
-        # print()
 
         # the formula: Element_New_Table((i, j)) = Element_Old_Table((i, j)) - (Element_Old_Table((i, Pivot_column)) * Element_New_Table((Pivot_Row, j)))
         for i in range(len(tab)):
@@ -214,12 +221,17 @@ class TwoPhaseSimplex:
                 if i != pivotRow:
                     newTab[i][j] = tab[i][j] - \
                         (tab[i][pivotCol] * newTab[pivotRow][j])
+                    
+        for i in range(len(newTab[0])):
+            # if newTab[0][i] > 0 and abs(newTab[0][i]) < 1e-16:
+            if abs(newTab[0][i]) < 1e-12:
+                newTab[0][i] = 0.0
 
         isAllNegW = all(num <= 0 for num in newTab[0]) if newTab[0] else False
-
-        print(f"In Phase 1, The pivot row is {
-            pivotRow + 1} and the pivot col is {pivotCol + 1}")
-
+        
+        if self.isConsoleOutput:
+            print(f"In Phase 1, The pivot row is {
+                pivotRow + 1} and the pivot col is {pivotCol + 1}")
 
         self.IMPivotCols.append(pivotCol)
         self.IMPivotRows.append(pivotRow)
@@ -228,7 +240,6 @@ class TwoPhaseSimplex:
 
 
     def doPivotOperationsPhase2(self, tab, isMin):
-
         if isMin:
             largestZ = max(tab[1][:-1])
         else:
@@ -243,7 +254,31 @@ class TwoPhaseSimplex:
             else:
                 thetas.append(tab[i][-1] / tab[i][pivotCol])
 
-        theta = min(x for x in thetas if x > 0 and x != float('inf'))
+        allNegativeThetas = all(num < 0 for num in thetas)
+        
+        if allNegativeThetas:
+            return None, None
+
+        for i in range(len(thetas)):
+            if abs(thetas[i]) < 1e-12:
+                thetas[i] = 0.0
+        
+        # if tab[1][-1] == self.prevZ:
+        #     print(tab[1][-1], self.prevZ)
+        # # print(tab[-1][1][-1])
+
+        if not any(num > 0 for num in thetas if num not in {0, float('inf')}):
+            if 0 in thetas:
+                theta = 0.0
+            else:
+                return None, None
+        else:
+            theta = min(x for x in thetas if x > 0 and x != float('inf'))
+        # theta = min(x for x in thetas if x >= 0.0 and x != float('inf'))
+        # print(theta)
+
+        # if theta == 0:
+        #     return None, None
 
         pivotRow = thetas.index(theta)
         pivotRow += 2
@@ -258,7 +293,8 @@ class TwoPhaseSimplex:
         divNum = tab[pivotRow][pivotCol]
 
         if divNum == 0:
-            print("Divide by 0 error")
+            if self.isConsoleOutput:
+                print("Divide by 0 error")
             return
 
         for i in range(len(tab)):
@@ -277,8 +313,9 @@ class TwoPhaseSimplex:
         else:
             isAllNegZ = all(num >= 0 for num in newTab[1][:-1])
 
-        print(f"In Phase 2, The pivot row is {
-            pivotRow + 1} and the pivot col is {pivotCol + 1}")
+        if self.isConsoleOutput:
+            print(f"In Phase 2, The pivot row is {
+                pivotRow + 1} and the pivot col is {pivotCol + 1}")
 
         self.IMPivotCols.append(pivotCol)
         self.IMPivotRows.append(pivotRow)
@@ -296,11 +333,14 @@ class TwoPhaseSimplex:
         phase1Ctr = 0
         while not isAllNegW:
             tab, isAllNegW = self.doPivotOperationsPhase1(tabs[-1])
+            if isAllNegW is None and tab is None:
+                break
+
             tabs.append(tab)
 
             phase1Ctr += 1
             self.IMPhaseType.append(0)
-            if isAllNegW or phase1Ctr > 100:
+            if isAllNegW or phase1Ctr > 10:
                 break
 
         tabPhaseNum = phase1Ctr + 1
@@ -309,7 +349,7 @@ class TwoPhaseSimplex:
 
         for k in range(len(aCols)):
             for i in range(len(newTab)):
-                newTab[i][aCols[k]] = 0
+                newTab[i][aCols[k]] = 0.0
 
         tabs.append(newTab)
 
@@ -322,7 +362,12 @@ class TwoPhaseSimplex:
 
         phase2Ctr = 0
         while not AllPosZ:
+            self.prevZ = tabs[-1][1][-1]
             tab, AllPosZ = self.doPivotOperationsPhase2(tabs[-1], isMin)
+
+            if AllPosZ is None and tab is None:
+                break
+
             tabs.append(tab)
 
             if AllPosZ or phase2Ctr > 100:
@@ -346,14 +391,14 @@ class TwoPhaseSimplex:
             if i == tabPhaseNum:
                 currentPhase = 2
 
-            print("Phase {}".format(currentPhase))
-            print("Tableau {}".format(i + 1))
-            for j in range(len(tabs[i])):
-                for k in range(len(tabs[i][j])):
-                    print("{:10.3f}".format(tabs[i][j][k]), end=" ")
+            if self.isConsoleOutput:
+                print("Phase {}".format(currentPhase))
+                print("Tableau {}".format(i + 1))
+                for j in range(len(tabs[i])):
+                    for k in range(len(tabs[i][j])):
+                        print("{:10.3f}".format(tabs[i][j][k]), end=" ")
+                    print()
                 print()
-            print()
-
 
         return tabs
 
@@ -363,7 +408,8 @@ class TwoPhaseSimplex:
         size = 1920 / 2, 1080 / 2
 
         os.system('cls' if os.name == 'nt' else 'clear')
-        print("\nBrett's simplex prototype tool for Two-Phase simplex problems\n")
+        if self.isConsoleOutput:
+            print("\nBrett's simplex prototype tool for Two-Phase simplex problems\n")
 
         pygame.display.set_mode(size, pygame.DOUBLEBUF |
                                 pygame.OPENGL | pygame.RESIZABLE)
@@ -516,12 +562,12 @@ class TwoPhaseSimplex:
             else:
                 isMin = False
 
+            # solve button ================================================
             if imgui.button("Solve"):
-                print(objFunc, constraints, isMin)
                 try:
                     # objFunc, constraints, isMin = testInput()
-                    if self.testInput() is not None:
-                        objFunc, constraints, isMin = self.testInput()
+                    if self.testInput(2) is not None:
+                        objFunc, constraints, isMin = self.testInput(2)
 
                     a = copy.deepcopy(objFunc)
                     b = copy.deepcopy(constraints)
@@ -539,9 +585,8 @@ class TwoPhaseSimplex:
                     tCol = copy.deepcopy(self.IMPivotCols)
                     tHeader = copy.deepcopy(self.IMHeaderRow)
                     tPhase = copy.deepcopy(self.IMPhaseType)
-
-                    # print(len(tableaus))
-                    # print(tPhase)
+                    tPhase[-1] = 2
+                    tPhase[-2] = 2
 
                     self.IMHeaderRow.clear()
                     self.IMPivotRows.clear()
@@ -560,10 +605,10 @@ class TwoPhaseSimplex:
             for i in range(len(tableaus)):
                 pivotCol = tCol[i]
                 pivotRow = tRow[i]
-                # if tPhase[i] == 0:
-                #     imgui.text("Phase 1")
-                # else:
-                #     imgui.text("Phase 2")
+                if tPhase[i] == 0:
+                    imgui.text("Phase 1")
+                else:
+                    imgui.text("Phase 2")                
                 imgui.text("Tableau {}".format(i + 1))
                 imgui.text("t-" + str(i + 1))
                 imgui.same_line(0, 20)

@@ -1,13 +1,13 @@
-import pygame
-from imgui.integrations.pygame import PygameRenderer
 import imgui
+from imgui.integrations.glfw import GlfwRenderer
+import glfw
 
 import copy
+import sys
+import os
 
 import sympy as sp
 
-import sys
-import os
 # python to exe keeps files in root
 try:
     from dualsimplex import DualSimplex as Dual
@@ -793,44 +793,37 @@ class MathPreliminaries:
         imgui.end()
 
     def doGui(self):
-        pygame.init()
-        size = 1920 / 2, 1080 / 2
+        if not glfw.init():
+            print("Could not initialize OpenGL context")
+            return
 
-        os.system('cls' if os.name == 'nt' else 'clear')
-        if self.isConsoleOutput:
-            print("\nBrett's simplex prototype tool for dual simplex problems\n")
+        window = glfw.create_window(
+            int(1920 / 2), int(1080 / 2), "Mathematical Preliminaries Simplex Prototype", None, None)
+        if not window:
+            glfw.terminate()
+            return
 
-        pygame.display.set_mode(size, pygame.DOUBLEBUF |
-                                pygame.OPENGL | pygame.RESIZABLE)
+        # Make the window's context current
+        glfw.make_context_current(window)
 
-        pygame.display.set_caption(
-            "mathematical preliminaries Simplex Prototype")
-
-        icon = pygame.Surface((1, 1)).convert_alpha()
-        icon.fill((0, 0, 0, 1))
-        pygame.display.set_icon(icon)
-
+        # Initialize ImGui
         imgui.create_context()
-        impl = PygameRenderer()
+        impl = GlfwRenderer(window)
 
-        io = imgui.get_io()
-        io.display_size = size
+        while not glfw.window_should_close(window):
+            glfw.poll_events()
+            impl.process_inputs()
 
-        while 1:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    sys.exit()
+            self.imguiUIElements(glfw.get_window_size(window))
 
-                impl.process_event(event)
-
-            windowSize = pygame.display.get_window_size()
-
-            self.imguiUIElements(windowSize)
-
+            # Rendering
             imgui.render()
             impl.render(imgui.get_draw_data())
+            glfw.swap_buffers(window)
 
-            pygame.display.flip()
+        # Cleanup
+        impl.shutdown()
+        glfw.terminate()
 
 
 def main(isConsoleOutput=False):

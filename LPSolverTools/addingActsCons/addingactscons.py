@@ -1,13 +1,12 @@
-import pygame
-from imgui.integrations.pygame import PygameRenderer
 import imgui
+from imgui.integrations.glfw import GlfwRenderer
+import glfw
 
 import copy
-
-import sympy as sp
-
 import sys
 import os
+
+import sympy as sp
 try:
     from dualsimplex import DualSimplex as Dual
     from mathpreliminaries import MathPreliminaries as MathPrelims
@@ -237,7 +236,7 @@ class AddingActsCons:
                 print()
 
         return displayTab, newTab
-    
+
     def imguiUIElements(self, windowSize):
         imgui.new_frame()
 
@@ -355,7 +354,8 @@ class AddingActsCons:
         if imgui.radio_button("adding constraints", self.problemChoice == "constraints"):
             self.problemChoice = "constraints"
 
-        imgui.text("the current problem is adding {}".format(self.problemChoice))
+        imgui.text("the current problem is adding {}".format(
+            self.problemChoice))
 
         if self.problemType == "Min":
             isMin = True
@@ -409,7 +409,8 @@ class AddingActsCons:
             for i in range(self.amtOfAddingConstraints):
                 imgui.spacing()
                 if len(self.addingConstraints) <= i:
-                    self.addingConstraints.append([0.0] * (self.amtOfObjVars + 2))
+                    self.addingConstraints.append(
+                        [0.0] * (self.amtOfObjVars + 2))
 
                 for j in range(self.amtOfObjVars):
                     value = (self.addingConstraints[i][j])
@@ -476,7 +477,8 @@ class AddingActsCons:
         if imgui.button("Solve"):
             try:
                 if self.testInput(self.testInputSelected) is not None:
-                    self.objFunc, self.constraints, isMin, self.addingConstraints = self.testInput(self.testInputSelected)
+                    self.objFunc, self.constraints, isMin, self.addingConstraints = self.testInput(
+                        self.testInputSelected)
 
                 a = copy.deepcopy(self.objFunc)
                 b = copy.deepcopy(self.constraints)
@@ -549,7 +551,8 @@ class AddingActsCons:
                 tab = copy.deepcopy(self.changingTable)
 
                 for i in range(len(tab)):
-                    tab[i].insert(len(self.objFunc), float(self.actDisplayCol[i]))
+                    tab[i].insert(len(self.objFunc),
+                                  float(self.actDisplayCol[i]))
                     if self.isConsoleOutput:
                         print(float(self.actDisplayCol[i]))
 
@@ -664,42 +667,37 @@ class AddingActsCons:
         imgui.end()
 
     def doGui(self):
-        pygame.init()
-        size = 1920 / 2, 1080 / 2
+        if not glfw.init():
+            print("Could not initialize OpenGL context")
+            return
 
-        os.system('cls' if os.name == 'nt' else 'clear')
+        window = glfw.create_window(
+            int(1920 / 2), int(1080 / 2), "Adding activities/constraints Simplex Prototype", None, None)
+        if not window:
+            glfw.terminate()
+            return
 
-        pygame.display.set_mode(size, pygame.DOUBLEBUF |
-                                pygame.OPENGL | pygame.RESIZABLE)
+        # Make the window's context current
+        glfw.make_context_current(window)
 
-        pygame.display.set_caption(
-            "adding activities/constraints Simplex Prototype")
-
-        icon = pygame.Surface((1, 1)).convert_alpha()
-        icon.fill((0, 0, 0, 1))
-        pygame.display.set_icon(icon)
-
+        # Initialize ImGui
         imgui.create_context()
-        impl = PygameRenderer()
+        impl = GlfwRenderer(window)
 
-        io = imgui.get_io()
-        io.display_size = size
+        while not glfw.window_should_close(window):
+            glfw.poll_events()
+            impl.process_inputs()
 
-        while 1:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    sys.exit()
+            self.imguiUIElements(glfw.get_window_size(window))
 
-                impl.process_event(event)
-
-            windowSize = pygame.display.get_window_size()
-
-            self.imguiUIElements(windowSize)
-
+            # Rendering
             imgui.render()
             impl.render(imgui.get_draw_data())
+            glfw.swap_buffers(window)
 
-            pygame.display.flip()
+        # Cleanup
+        impl.shutdown()
+        glfw.terminate()
 
 
 def main(isConsoleOutput=False):

@@ -5,9 +5,6 @@ TODO:
 Extend duality add missing cases with uneven number of constraints and uneven number of variables
 
 TODO:
-Do away with OpenGL and Pygame for windowing and use something meant for apps
-
-TODO:
 Make gui look better or swap it out for something else
 
 TODO:

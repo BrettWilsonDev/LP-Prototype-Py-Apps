@@ -14,12 +14,10 @@ This repository contains a collection of prototype linear programming (LP) appli
 - Two-Phase Simplex
 
 ## pip packages used
-- imgui==2.0.0 for gui
-- matplotlib==3.9.1 for graphical method ploting
-- pygame==2.5.2 for windowing 
-- PyOpenGL==3.1.7 part of windowing and gui
-- PyOpenGL==3.1.7 part of windowing and gui
-- sympy==1.12 for mathematical preliminaries
+- glfw for windowing 
+- imgui for gui
+- matplotlib for graphical method ploting
+- sympy for mathematical preliminaries
 
 Install these packages using pip:
 ```bash

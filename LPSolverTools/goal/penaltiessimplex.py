@@ -11,6 +11,10 @@ class PenaltiesSimplex:
 
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
+
+        self.reset()
+
+    def reset(self):
         self.testInputSelected = -1
 
         self.GuiHeaderRow = []
@@ -700,14 +704,14 @@ class PenaltiesSimplex:
         for i in range(amt):
             imgui.spacing()
 
-    def imguiUIElements(self, windowSize):
-        imgui.new_frame()
-
-        imgui.set_next_window_position(0, 0)  # Set the window position
+    def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
+        imgui.set_next_window_position(windowPosX, windowPosY)  # Set the window position
         imgui.set_next_window_size(
             (windowSize[0]), (windowSize[1]))  # Set the window size
         imgui.begin("Tableaus Output",
-                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
+        imgui.begin_child("Scrollable Child", width=0, height=0,
+            border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
 
         # input
 
@@ -934,7 +938,12 @@ class PenaltiesSimplex:
             except Exception as e:
                 print(e)
                 imgui.text("Math Error")
-                
+
+        imgui.same_line(0, 30)
+        imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 0.0, 0.0)
+        if imgui.button("Reset"):
+            self.reset()
+        imgui.pop_style_color()
 
         try:
             imgui.spacing()
@@ -993,7 +1002,7 @@ class PenaltiesSimplex:
         except Exception as e:
             imgui.text("Could Not display next tableau")
             
-
+        imgui.end_child()
         imgui.end()
 
     def doGui(self):
@@ -1018,6 +1027,7 @@ class PenaltiesSimplex:
             glfw.poll_events()
             impl.process_inputs()
 
+            imgui.new_frame()
             self.imguiUIElements(glfw.get_window_size(window))
 
             # Rendering

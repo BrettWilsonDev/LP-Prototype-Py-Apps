@@ -15,8 +15,12 @@ except:
 class LPDuality:
 
     def __init__(self, isConsoleOutput=False):
-        self.dual = Dual()
         self.isConsoleOutput = isConsoleOutput
+
+        self.reset()
+
+    def reset(self):
+        self.dual = Dual()
         self.testInputSelected = -1
 
         # simplex specific vars
@@ -180,19 +184,22 @@ class LPDuality:
             print()
             for i in range(len(dualConstraintsLhs)):
                 for j in range(len(dualConstraintsLhs[0])):
-                    print(dualConstraintsLhs[i][j], end=" ")
+                    try:
+                        print(dualConstraintsLhs[i][j], end=" ")
+                    except:
+                        pass
                 print()
 
         return objFunc, optimalSolution, changingVars, constraintsLhs, cellRef, dualObjFunc, dualOptimalSolution, dualChangingVars, dualConstraintsLhs, dualCellRef
 
-    def imguiUIElements(self, windowSize):
-        imgui.new_frame()
-
-        imgui.set_next_window_position(0, 0)  # Set the window position
+    def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
+        imgui.set_next_window_position(windowPosX, windowPosY)  # Set the window position
         imgui.set_next_window_size(
             (windowSize[0]), (windowSize[1]))  # Set the window size
         imgui.begin("Tableaus Output",
-                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
+        imgui.begin_child("Scrollable Child", width=0, height=0,
+            border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
 
         if imgui.radio_button("Max", self.problemType == "Max"):
             self.problemType = "Max"
@@ -347,6 +354,12 @@ class LPDuality:
                 imgui.text("math error: {}".format(e))
                 self.errorE = "math error: {}".format(e)
 
+        imgui.same_line(0, 30)
+        imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 0.0, 0.0)
+        if imgui.button("Reset"):
+            self.reset()
+        imgui.pop_style_color()
+
         imgui.spacing()
         imgui.text(self.errorE)
 
@@ -496,6 +509,7 @@ class LPDuality:
         except Exception as e:
             pass
 
+        imgui.end_child()
         imgui.end()
 
     def doGui(self):
@@ -520,6 +534,7 @@ class LPDuality:
             glfw.poll_events()
             impl.process_inputs()
 
+            imgui.new_frame()
             self.imguiUIElements(glfw.get_window_size(window))
 
             # Rendering

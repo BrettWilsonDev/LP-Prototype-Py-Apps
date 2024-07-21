@@ -20,6 +20,10 @@ class MathPreliminaries:
 
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
+
+        self.reset()
+
+    def reset(self):
         self.testInputSelected = -1
 
         self.dual = Dual()
@@ -395,14 +399,14 @@ class MathPreliminaries:
         except TypeError:
             return float("inf")
 
-    def imguiUIElements(self, windowSize):
-        imgui.new_frame()
-
-        imgui.set_next_window_position(0, 0)  # Set the window position
+    def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
+        imgui.set_next_window_position(windowPosX, windowPosY)  # Set the window position
         imgui.set_next_window_size(
             (windowSize[0]), (windowSize[1]))  # Set the window size
         imgui.begin("Tableaus Output",
-                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
+        imgui.begin_child("Scrollable Child", width=0, height=0,
+            border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
 
         if imgui.radio_button("Max", self.problemType == "Max"):
             self.problemType = "Max"
@@ -617,6 +621,13 @@ class MathPreliminaries:
             except Exception as e:
                 print("math error:", e)
 
+        imgui.same_line(0, 30)
+        imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 0.0, 0.0)
+        if imgui.button("Reset"):
+            self.reset()
+        imgui.pop_style_color()
+
+
         imgui.spacing()
         imgui.spacing()
         imgui.spacing()
@@ -789,7 +800,8 @@ class MathPreliminaries:
         imgui.spacing()
         imgui.spacing()
         imgui.spacing()
-
+        
+        imgui.end_child()
         imgui.end()
 
     def doGui(self):
@@ -814,6 +826,7 @@ class MathPreliminaries:
             glfw.poll_events()
             impl.process_inputs()
 
+            imgui.new_frame()
             self.imguiUIElements(glfw.get_window_size(window))
 
             # Rendering

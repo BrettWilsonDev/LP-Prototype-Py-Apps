@@ -11,7 +11,4 @@ TODO:
 Add demo examples
 
 TODO:
-make all lp programs into one app
-
-TODO:
-web support - cant be done with imgui and pygame look at pyscript for that
+web support - look at pyscript for that

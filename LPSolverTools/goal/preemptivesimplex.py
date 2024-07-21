@@ -11,6 +11,10 @@ class PreemptiveSimplex:
 
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
+
+        self.reset()
+
+    def reset(self):
         self.testInputSelected = -1
 
         self.GuiHeaderRow = []
@@ -403,8 +407,6 @@ class PreemptiveSimplex:
             for i in range(len(goals)):
                 goalRhs.append(None)
 
-            # print(basicVarLst)
-
             # get the rhs from basic cols
             for i in range(len(basicVarLst)):
                 if basicVarLst[i] is not None:
@@ -621,30 +623,33 @@ class PreemptiveSimplex:
 
         goalMetStrings.insert(0, " ")
 
-        for i in range(len(tableaus)):
-            try:
-                for l in range(len(goalMetStrings[i])):
-                    print(f"Goal {l+1} {goalMetStrings[i][l]}")
-            except Exception as e:
-                pass
-            print("Tableau {}".format(i + 1))
-            for j in range(len(tableaus[i])):
-                for k in range(len(tableaus[i][j])):
-                    print("{:10.3f}".format(tableaus[i][j][k]), end=" ")
+        if self.isConsoleOutput:
+            for i in range(len(tableaus)):
+                try:
+                    for l in range(len(goalMetStrings[i])):
+                        print(f"Goal {l+1} {goalMetStrings[i][l]}")
+                except Exception as e:
+                    pass
+                print("Tableau {}".format(i + 1))
+                for j in range(len(tableaus[i])):
+                    for k in range(len(tableaus[i][j])):
+                        print("{:10.3f}".format(tableaus[i][j][k]), end=" ")
+                    print()
                 print()
-            print()
 
-        print("\noptimal Tableau:\n")
+            print("\noptimal Tableau:\n")
 
         opTable = tableaus.index(tableaus[-2])
-        for l in range(len(goalMetStrings[opTable])):
-            print(f"Goal {l+1} {goalMetStrings[opTable][l]}")
-        print("Tableau {}".format(opTable + 1))
-        for j in range(len(tableaus[opTable])):
-            for k in range(len(tableaus[opTable][j])):
-                print("{:10.3f}".format(tableaus[opTable][j][k]), end=" ")
+
+        if self.isConsoleOutput:
+            for l in range(len(goalMetStrings[opTable])):
+                print(f"Goal {l+1} {goalMetStrings[opTable][l]}")
+            print("Tableau {}".format(opTable + 1))
+            for j in range(len(tableaus[opTable])):
+                for k in range(len(tableaus[opTable][j])):
+                    print("{:10.3f}".format(tableaus[opTable][j][k]), end=" ")
+                print()
             print()
-        print()
 
         return tableaus, goalMetStrings, opTable
 
@@ -652,14 +657,15 @@ class PreemptiveSimplex:
         for i in range(amt):
             imgui.spacing()
 
-    def imguiUIElements(self, windowSize):
-        imgui.new_frame()
-
-        imgui.set_next_window_position(0, 0)  # Set the window position
+    def imguiUIElements(self, windowSize, windowPosX=0, windowPosY=0):
+        imgui.set_next_window_position(
+            windowPosX, windowPosY)  # Set the window position
         imgui.set_next_window_size(
             (windowSize[0]), (windowSize[1]))  # Set the window size
         imgui.begin("Tableaus Output",
-                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
+        imgui.begin_child("Scrollable Child", width=0, height=0,
+            border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
 
         # input
 
@@ -859,6 +865,12 @@ class PreemptiveSimplex:
                 print(e)
                 imgui.text("Math Error")
 
+        imgui.same_line(0, 30)
+        imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 0.0, 0.0)
+        if imgui.button("Reset"):
+            self.reset()
+        imgui.pop_style_color()
+
         try:
             imgui.spacing()
             imgui.spacing()
@@ -913,8 +925,8 @@ class PreemptiveSimplex:
 
         except Exception as e:
             imgui.text("Could Not display next tableau")
-            
 
+        imgui.end_child()
         imgui.end()
 
     def doGui(self):
@@ -939,6 +951,7 @@ class PreemptiveSimplex:
             glfw.poll_events()
             impl.process_inputs()
 
+            imgui.new_frame()
             self.imguiUIElements(glfw.get_window_size(window))
 
             # Rendering

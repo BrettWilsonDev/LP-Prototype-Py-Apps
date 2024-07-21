@@ -9,20 +9,36 @@ import sys
 
 try:
     from dualsimplex import DualSimplex as Dual
-    from mathpreliminaries import MathPreliminaries as MathPrelims
 except:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from dual.dualsimplex import DualSimplex as Dual
-    from mathPrelim.mathpreliminaries import MathPreliminaries as MathPrelims   
 
 
 class DEASolver:
-    dual = Dual()
-
-    isConsoleOutput = False
 
     def __init__(self, isConsoleOutput=False):
+        self.dual = Dual()
         self.isConsoleOutput = isConsoleOutput
+        self.testInputSelected = -1
+
+        self.amtOfItems = 1
+
+        self.amtOfOutputs = 1
+        self.LpOutputs = [[0.0]]
+
+        self.amtOfInputs = 1
+        self.LpInputs = [[0.0]]
+
+        self.tables = []
+        self.header = []
+        self.allInputTotals = []
+        self.allOutputTotals = []
+        self.allRangesO = []
+        self.allRangesI = []
+        self.changingVars = []
+
+        self.problemType = "Max"
+        self.isMin = False
 
     def testInput(self, testNum=-1):
         if testNum == 0:
@@ -138,10 +154,10 @@ class DEASolver:
         return table, zRow, constraints, conRow
 
     def solveTable(self, table, objfunc, constraints, conRow, isMin=False):
-        print(objfunc, constraints)
         tableaus, changingVars, optimalSolution = self.dual.doDualSimplex(
             objfunc, constraints, isMin)
-        print(changingVars, optimalSolution)
+        print("changingVars", changingVars)
+        print("optimalSolution", optimalSolution)
 
         mathCons = []
         for i in range(len(constraints)):
@@ -272,6 +288,244 @@ class DEASolver:
 
             return tables, header, allInputTotals, allOutputTotals, allRangesO, allRangesI, changingVars
 
+    def imguiUIElements(self, windowSize):
+        imgui.new_frame()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (windowSize[0]), (windowSize[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        # input =============================
+
+        if imgui.radio_button("Max", self.problemType == "Max"):
+            self.problemType = "Max"
+
+        if imgui.radio_button("Min", self.problemType == "Min"):
+            self.problemType = "Min"
+
+        if self.problemType == "Max":
+            self.isMin = False
+        else:
+            self.isMin = True
+
+        # item rows ===========================================
+        if imgui.button("Item Row +"):
+            self.amtOfItems += 1
+            self.LpOutputs.append([0.0] * self.amtOfOutputs)
+            self.LpInputs.append([0.0] * self.amtOfInputs)
+
+        imgui.same_line()
+
+        if imgui.button("Item Row -"):
+            if self.amtOfItems != 1:
+                self.amtOfItems += -1
+                self.LpOutputs.pop()
+                self.LpInputs.pop()
+
+        # inputs ===========================================
+        if imgui.button("Inputs +"):
+            self.amtOfInputs += 1
+            for i in range(len(self.LpInputs)):
+                self.LpInputs[i].append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("Inputs -"):
+            if self.amtOfInputs != 1:
+                self.amtOfInputs += -1
+                for i in range(len(self.LpInputs)):
+                    self.LpInputs[i].pop()
+
+        imgui.same_line(0, 20)
+
+        # outputs ===========================================
+        if imgui.button("Outputs +"):
+            self.amtOfOutputs += 1
+            for i in range(len(self.LpOutputs)):
+                self.LpOutputs[i].append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("Outputs -"):
+            if self.amtOfOutputs != 1:
+                self.amtOfOutputs += -1
+                for i in range(len(self.LpOutputs)):
+                    self.LpOutputs[i].pop()
+
+        for i in range(self.amtOfItems):
+            imgui.spacing()
+            # input gui input
+            if len(self.LpInputs) <= i:
+                self.LpInputs.append([0.0] * (self.amtOfItems))
+
+            for j in range(self.amtOfInputs):
+                value = self.LpInputs[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "##i{}{}".format(i, j), value)
+                imgui.same_line()
+                imgui.text(f"i{j + 1}")
+                if changed:
+                    self.LpInputs[i][j] = xValue
+                imgui.same_line()
+
+            imgui.spacing()
+            imgui.same_line()
+            imgui.spacing()
+            imgui.same_line()
+            imgui.spacing()
+            imgui.same_line()
+            imgui.spacing()
+
+            # output gui input
+            if len(self.LpOutputs) <= i:
+                self.LpOutputs.append([0.0] * (self.amtOfItems))
+
+            for j in range(self.amtOfOutputs):
+                value = self.LpOutputs[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "##o{}{}".format(i, j), value)
+                imgui.same_line()
+                imgui.text(f"o{j + 1}")
+                if changed:
+                    self.LpOutputs[i][j] = xValue
+                imgui.same_line()
+
+            imgui.spacing()
+
+        imgui.spacing()
+        # solve button ========================================================
+        if imgui.button("Solve"):
+            try:
+                if self.testInput(self.testInputSelected) is not None:
+                    self.LpInputs, self.LpOutputs = self.testInput(
+                        self.testInputSelected)
+
+                self.tables, self.header, self.allInputTotals, self.allOutputTotals, self.allRangesO, self.allRangesI, self.changingVars = self.doDEA(
+                    self.LpInputs, self.LpOutputs, self.isMin)
+
+                print(self.tables[0])
+            except Exception as e:
+                print(f"math error {e}")
+                raise
+
+        # output ============================================================
+        try:
+            imgui.spacing()
+            imgui.spacing()
+            for i in range(len(self.tables)):
+                imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                imgui.text("cv   ")
+                imgui.same_line()
+                for cvCtr in range(len(self.changingVars)):
+                    imgui.text("{:10.4f}".format(self.changingVars[cvCtr]))
+                    imgui.same_line()
+                imgui.pop_style_color()
+                imgui.spacing()
+                imgui.text("       ")
+                imgui.same_line()
+                imgui.push_style_color(
+                    imgui.COLOR_TEXT, 204/255.0, 204/255.0, 0.0)
+                for hctr in range(len(self.header)):
+                    imgui.text("  {:8}".format(self.header[hctr]))
+                    imgui.same_line()
+                imgui.pop_style_color()
+                imgui.spacing()
+                for j in range(len(self.tables[i])):
+                    imgui.push_style_color(
+                        imgui.COLOR_TEXT, 204/255.0, 204/255.0, 0.0)
+                    if j == 0:
+                        imgui.text(f"{self.problemType} z")
+                        imgui.same_line()
+                    elif j < (len(self.LpOutputs) + 1):
+                        imgui.text(f"c{j}   ")
+                        imgui.same_line()
+                    elif j == (len(self.LpOutputs) + 1):
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 255/255.0, 165/255.0, 0.0)
+                        imgui.text(f"con  ")
+                        imgui.pop_style_color()
+                        imgui.same_line()
+                    else:
+                        imgui.text(f"{j - len(self.LpOutputs) - 1}    ")
+                        imgui.same_line()
+                    imgui.pop_style_color()
+                    for k in range(len(self.tables[i][j])):
+                        if j == (len(self.LpOutputs) + 1):
+                            imgui.push_style_color(
+                                imgui.COLOR_TEXT, 255/255.0, 165/255.0, 0.0)
+                        if k == (len(self.tables[i][j]) - 3) and j == 0:
+                            imgui.push_style_color(
+                                imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+                        if k == (len(self.LpOutputs[-1]) + len(self.LpInputs[-1]) + 1):
+                            if self.tables[i][j][k] == 0:
+                                imgui.text("{:10}".format("    <="))
+                            elif self.tables[i][j][k] == 1:
+                                imgui.text("{:10}".format("    >="))
+                            else:
+                                imgui.text("{:10}".format("     ="))
+                        else:
+                            imgui.text("{:10.4f}".format(self.tables[i][j][k]))
+
+                        if j == (len(self.LpOutputs) + 1):
+                            imgui.pop_style_color()
+                        if k == (len(self.tables[i][j]) - 3) and j == 0:
+                            imgui.pop_style_color()
+
+                        imgui.same_line()
+                    imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+
+                imgui.text("\nRanges:")
+                imgui.spacing()
+                for j in range(len(self.LpOutputs[-1])):
+                    imgui.text("  {:8}".format("o" + str(j + 1)))
+                    imgui.same_line()
+
+                imgui.spacing()
+                for j in range(len(self.LpOutputs[-1])):
+                    imgui.text("{:10.6f}".format(self.allRangesO[i][j]))
+                    imgui.same_line()
+                imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+                imgui.text(f"  Output total: {self.allOutputTotals[i]}")
+                imgui.pop_style_color()
+
+                imgui.text("\n")
+                for j in range(len(self.LpInputs[-1])):
+                    imgui.text("  {:8}".format("i" + str(j + 1)))
+                    imgui.same_line()
+
+                imgui.spacing()
+                for j in range(len(self.LpInputs[-1])):
+                    imgui.text("{:10.6f}".format(self.allRangesI[i][j]))
+                    imgui.same_line()
+                imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+                imgui.text(f"   Input total: {self.allInputTotals[i]}")
+                imgui.pop_style_color()
+
+                imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+                imgui.text(f"\n\nTotals: {
+                    self.allOutputTotals[i]} / {self.allInputTotals[i]} = {self.allOutputTotals[i] / self.allInputTotals[i]}")
+                imgui.pop_style_color()
+                imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+        except:
+            pass
+            raise
+
+        # close =============================
+
+        imgui.end()
+
     def doGui(self):
         # window setup
         pygame.init()
@@ -295,27 +549,6 @@ class DEASolver:
         io = imgui.get_io()
         io.display_size = size
 
-        # var setup
-
-        amtOfItems = 1
-
-        amtOfOutputs = 1
-        LpOutputs = [[0.0]]
-
-        amtOfInputs = 1
-        LpInputs = [[0.0]]
-
-        tables = []
-        header = []
-        allInputTotals = []
-        allOutputTotals = []
-        allRangesO = []
-        allRangesI = []
-        changingVars = []
-
-        problemType = "Max"
-        isMin = False
-
         while 1:
             # window handling
             for event in pygame.event.get():
@@ -324,241 +557,9 @@ class DEASolver:
 
                 impl.process_event(event)
 
-            imgui.new_frame()
+            windowSize = pygame.display.get_window_size()
 
-            window_size = pygame.display.get_window_size()
-
-            imgui.set_next_window_position(0, 0)  # Set the window position
-            imgui.set_next_window_size(
-                (window_size[0]), (window_size[1]))  # Set the window size
-            imgui.begin("Tableaus Output",
-                        flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-
-            # input =============================
-
-            if imgui.radio_button("Max", problemType == "Max"):
-                problemType = "Max"
-
-            if imgui.radio_button("Min", problemType == "Min"):
-                problemType = "Min"
-
-            if problemType == "Max":
-                isMin = False
-            else:
-                isMin = True
-
-            # item rows ===========================================
-            if imgui.button("Item Row +"):
-                amtOfItems += 1
-                LpOutputs.append([0.0] * amtOfOutputs)
-                LpInputs.append([0.0] * amtOfInputs)
-
-            imgui.same_line()
-
-            if imgui.button("Item Row -"):
-                if amtOfItems != 1:
-                    amtOfItems += -1
-                    LpOutputs.pop()
-                    LpInputs.pop()
-
-            # inputs ===========================================
-            if imgui.button("Inputs +"):
-                amtOfInputs += 1
-                for i in range(len(LpInputs)):
-                    LpInputs[i].append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("Inputs -"):
-                if amtOfInputs != 1:
-                    amtOfInputs += -1
-                    for i in range(len(LpInputs)):
-                        LpInputs[i].pop()
-
-            imgui.same_line(0, 20)
-
-            # outputs ===========================================
-            if imgui.button("Outputs +"):
-                amtOfOutputs += 1
-                for i in range(len(LpOutputs)):
-                    LpOutputs[i].append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("Outputs -"):
-                if amtOfOutputs != 1:
-                    amtOfOutputs += -1
-                    for i in range(len(LpOutputs)):
-                        LpOutputs[i].pop()
-
-            for i in range(amtOfItems):
-                imgui.spacing()
-                # input gui input
-                if len(LpInputs) <= i:
-                    LpInputs.append([0.0] * (amtOfItems))
-
-                for j in range(amtOfInputs):
-                    value = LpInputs[i][j]
-                    imgui.set_next_item_width(50)
-                    imgui.same_line()
-                    changed, xValue = imgui.input_float(
-                        "##i{}{}".format(i, j), value)
-                    imgui.same_line()
-                    imgui.text(f"i{j + 1}")
-                    if changed:
-                        LpInputs[i][j] = xValue
-                    imgui.same_line()
-
-                imgui.spacing()
-                imgui.same_line()
-                imgui.spacing()
-                imgui.same_line()
-                imgui.spacing()
-                imgui.same_line()
-                imgui.spacing()
-
-                # output gui input
-                if len(LpOutputs) <= i:
-                    LpOutputs.append([0.0] * (amtOfItems))
-
-                for j in range(amtOfOutputs):
-                    value = LpOutputs[i][j]
-                    imgui.set_next_item_width(50)
-                    imgui.same_line()
-                    changed, xValue = imgui.input_float(
-                        "##o{}{}".format(i, j), value)
-                    imgui.same_line()
-                    imgui.text(f"o{j + 1}")
-                    if changed:
-                        LpOutputs[i][j] = xValue
-                    imgui.same_line()
-
-                imgui.spacing()
-
-            imgui.spacing()
-            # solve button ========================================================
-            if imgui.button("Solve"):
-                try:
-                    if self.testInput() is not None:
-                        LpInputs, LpOutputs = self.testInput()
-
-                    tables, header, allInputTotals, allOutputTotals, allRangesO, allRangesI, changingVars = self.doDEA(
-                        LpInputs, LpOutputs, isMin)
-
-                    print(tables[0])
-                except Exception as e:
-                    print(f"math error {e}")
-
-            # output ============================================================
-            try:
-                imgui.spacing()
-                imgui.spacing()
-                for i in range(len(tables)):
-                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                    imgui.text("cv   ")
-                    imgui.same_line()
-                    for cvCtr in range(len(changingVars)):
-                        imgui.text("{:10.4f}".format(changingVars[cvCtr]))
-                        imgui.same_line()
-                    imgui.pop_style_color()
-                    imgui.spacing()
-                    imgui.text("       ")
-                    imgui.same_line()
-                    imgui.push_style_color(
-                        imgui.COLOR_TEXT, 204/255.0, 204/255.0, 0.0)
-                    for hctr in range(len(header)):
-                        imgui.text("  {:8}".format(header[hctr]))
-                        imgui.same_line()
-                    imgui.pop_style_color()
-                    imgui.spacing()
-                    for j in range(len(tables[i])):
-                        imgui.push_style_color(
-                            imgui.COLOR_TEXT, 204/255.0, 204/255.0, 0.0)
-                        if j == 0:
-                            imgui.text(f"{problemType} z")
-                            imgui.same_line()
-                        elif j < (len(LpOutputs) + 1):
-                            imgui.text(f"c{j}   ")
-                            imgui.same_line()
-                        elif j == (len(LpOutputs) + 1):
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 255/255.0, 165/255.0, 0.0)
-                            imgui.text(f"con  ")
-                            imgui.pop_style_color()
-                            imgui.same_line()
-                        else:
-                            imgui.text(f"{j - len(LpOutputs) - 1}    ")
-                            imgui.same_line()
-                        imgui.pop_style_color()
-                        for k in range(len(tables[i][j])):
-                            if j == (len(LpOutputs) + 1):
-                                imgui.push_style_color(
-                                    imgui.COLOR_TEXT, 255/255.0, 165/255.0, 0.0)
-                            if k == (len(tables[i][j]) - 3) and j == 0:
-                                imgui.push_style_color(
-                                    imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
-                            if k == (len(LpOutputs[-1]) + len(LpInputs[-1]) + 1):
-                                if tables[i][j][k] == 0:
-                                    imgui.text("{:10}".format("    <="))
-                                elif tables[i][j][k] == 1:
-                                    imgui.text("{:10}".format("    >="))
-                                else:
-                                    imgui.text("{:10}".format("     ="))
-                            else:
-                                imgui.text("{:10.4f}".format(tables[i][j][k]))
-
-                            if j == (len(LpOutputs) + 1):
-                                imgui.pop_style_color()
-                            if k == (len(tables[i][j]) - 3) and j == 0:
-                                imgui.pop_style_color()
-
-                            imgui.same_line()
-                        imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-
-                    imgui.text("\nRanges:")
-                    imgui.spacing()
-                    for j in range(len(LpOutputs[-1])):
-                        imgui.text("  {:8}".format("o" + str(j + 1)))
-                        imgui.same_line()
-
-                    imgui.spacing()
-                    for j in range(len(LpOutputs[-1])):
-                        imgui.text("{:10.6f}".format(allRangesO[i][j]))
-                        imgui.same_line()
-                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
-                    imgui.text(f"  Output total: {allOutputTotals[i]}")
-                    imgui.pop_style_color()
-
-                    imgui.text("\n")
-                    for j in range(len(LpInputs[-1])):
-                        imgui.text("  {:8}".format("i" + str(j + 1)))
-                        imgui.same_line()
-
-                    imgui.spacing()
-                    for j in range(len(LpInputs[-1])):
-                        imgui.text("{:10.6f}".format(allRangesI[i][j]))
-                        imgui.same_line()
-                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
-                    imgui.text(f"   Input total: {allInputTotals[i]}")
-                    imgui.pop_style_color()
-
-                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
-                    imgui.text(f"\n\nTotals: {
-                               allOutputTotals[i]} / {allInputTotals[i]} = {allOutputTotals[i] / allInputTotals[i]}")
-                    imgui.pop_style_color()
-                    imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-            except:
-                pass
-
-            # close =============================
-
-            imgui.end()
+            self.imguiUIElements(windowSize)
 
             imgui.render()
             impl.render(imgui.get_draw_data())

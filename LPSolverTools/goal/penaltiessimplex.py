@@ -9,14 +9,49 @@ import sys
 
 
 class PenaltiesSimplex:
-    GuiHeaderRow = []
-    GuiPivotCols = []
-    GuiPivotRows = []
-
-    isConsoleOutput = False
 
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
+        self.testInputSelected = -1
+
+        self.GuiHeaderRow = []
+        self.GuiPivotCols = []
+        self.GuiPivotRows = []
+
+        # goal constraints
+        self.amtOfObjVars = 2
+
+        # goal constraints
+        self.amtOfGoalConstraints = 1
+        self.goalConstraints = [[0.0, 0.0, 0.0, 0.0]]
+        self.signItems = ["<=", ">=", "="]
+        self.signItemsChoices = [0]
+
+        # goal constraints
+        self.amtOfConstraints = 0
+        self.constraints = []
+        self.signItemsChoicesC = [0]
+
+        self.tableaus = []
+
+        self.goals = ["goal 1"]
+        self.goalOrder = [0]
+
+        self.toggle = False
+
+        self.pivotCol = -1
+        self.pivotRow = -1
+        self.tCol = -1
+        self.tRow = -1
+
+        self.goalMetStrings = []
+
+        self.opTable = -1
+
+        self.extraGoalCtr = 0
+
+        self.penalties = [0.0]
+        self.penaltiesTotals = []
 
     def testInput(self, testNum=-1):
         if testNum == 0:
@@ -34,12 +69,26 @@ class PenaltiesSimplex:
             penalties = [5, 8, 12, 15]
 
             orderOverride = [2, 1, 0]
+        elif testNum == 1:
+            goals = [
+                # <= is 0 and >= is 1 and == is 2
+                [12, 9, 15, 125, 1],
+                [5, 3, 4, 40, 2],
+                [5, 7, 8, 55, 0],
 
+            ]
+
+            constraints = [
+            ]
+
+            penalties = [5, 2, 4, 3]
+
+            orderOverride = [0, 1, 2]
         if testNum == -1:
             return None
         else:
             return goals, constraints, penalties, orderOverride
-    
+
     def buildFirstpenaltiesVarTableau(self, goalConstraints, constraints, penaltiesVar, orderOverride=[]):
         oldTab = []
         newTab = []
@@ -135,9 +184,9 @@ class PenaltiesSimplex:
         for i in range(len(constraints)):
             for j in range(amtOfObjVars):
                 oldTab[i + amtOfGoals +
-                    len(goalConstraints)][j + 1] = constraints[i][j]  # lhs
+                       len(goalConstraints)][j + 1] = constraints[i][j]  # lhs
                 oldTab[i + amtOfGoals +
-                    len(goalConstraints)][-1] = constraints[i][-2]  # rhs
+                       len(goalConstraints)][-1] = constraints[i][-2]  # rhs
 
         # first tab done move on to second tab
         newTab = copy.deepcopy(oldTab)
@@ -221,7 +270,7 @@ class PenaltiesSimplex:
 
         conStart = amtOfGoals
         return oldTab, newTab, conStart
-    
+
     def doPivotOperations(self, tab, conStartRow, zRow, tabNum=1):
         oldTab = copy.deepcopy(tab)
         newTab = []
@@ -281,7 +330,7 @@ class PenaltiesSimplex:
                     (oldTab[i][pivotCol] * newTab[pivotRow][j])
 
         newTab = [[0.0 if abs(val) < 1e-10 else val for val in sublist]
-                for sublist in newTab]
+                  for sublist in newTab]
 
         for items in newTab:
             for i, item in enumerate(items):
@@ -297,7 +346,6 @@ class PenaltiesSimplex:
         self.GuiPivotCols.append(pivotCol)
 
         return newTab, zRhs
-
 
     def doPenalties(self, goals, constraints, penalties, orderOverride=[]):
         a = copy.deepcopy(goals)
@@ -393,9 +441,11 @@ class PenaltiesSimplex:
                     for j in range(len(basicVarLst[i])):
                         if basicVarLst[i][j] == 1.0:
                             if sign == 1:
-                                goalRhs[j] = (tableaus[-1][j + conStartRow][-1])
+                                goalRhs[j] = (
+                                    tableaus[-1][j + conStartRow][-1])
                             elif sign == -1:
-                                goalRhs[j] = (-tableaus[-1][j + conStartRow][-1])
+                                goalRhs[j] = (-tableaus[-1]
+                                              [j + conStartRow][-1])
 
             sortedLst = []
 
@@ -646,12 +696,307 @@ class PenaltiesSimplex:
             print()
 
         return tableaus, goalMetStrings, opTable, penaltiesTotals
-    
+
     def spaceGui(self, amt):
         for i in range(amt):
             imgui.spacing()
 
-    
+    def imguiUIElements(self, windowSize):
+        imgui.new_frame()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (windowSize[0]), (windowSize[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        # input
+
+        # obj vars ===========================================
+        if imgui.button("decision variables +"):
+            self.amtOfObjVars += 1
+            for i in range(len(self.goalConstraints)):
+                self.goalConstraints[i].append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("decision variables -"):
+            if self.amtOfObjVars != 2:
+                self.amtOfObjVars += -1
+                for i in range(len(self.goalConstraints)):
+                    self.goalConstraints[i].pop()
+
+        self.spaceGui(3)
+
+        # goal constraints ===========================================
+        if imgui.button("GoalConstraint +"):
+            self.amtOfGoalConstraints += 1
+            # goalConstraints.append([0.0, 0.0])
+            self.goalConstraints.append([0.0] * self.amtOfObjVars)
+            self.goalConstraints[-1].append(0.0)  # add sign spot
+            self.goalConstraints[-1].append(0.0)  # add rhs spot
+            self.signItemsChoices.append(0)
+            self.goals.append(f"Goal {len(self.goals) + 1}")
+            self.goalOrder.append(len(self.goals) - 1)
+            self.penalties.append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("GoalConstraint -"):
+            if self.amtOfGoalConstraints != 1:
+                self.amtOfGoalConstraints += -1
+                self.goalConstraints.pop()
+                self.signItemsChoices.pop()
+                self.goals.pop()
+                self.goalOrder.pop()
+                self.penalties.pop()
+
+        # spaceGui(3)
+
+        imgui.spacing()
+        for i in range(self.amtOfGoalConstraints):
+            imgui.spacing()
+            if len(self.goalConstraints) <= i:
+                # Fill with default values if needed
+                self.goalConstraints.append([0.0] * (self.amtOfObjVars + 2))
+
+            for j in range(self.amtOfObjVars):
+                value = self.goalConstraints[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "##x{}{}".format(i, j), value)
+                imgui.same_line()
+                imgui.text(f"x{j + 1}")
+                if changed:
+                    self.goalConstraints[i][j] = xValue
+
+            imgui.same_line()
+            imgui.push_item_width(50)
+            changed, self.selectedItemSign = imgui.combo(
+                "##combo{}{}".format(i, j), self.signItemsChoices[i], self.signItems)
+            if changed:
+                self.signItemsChoices[i] = self.selectedItemSign
+                self.goalConstraints[i][-1] = self.signItemsChoices[i]
+                # for i in range(len(goalConstraints)):
+                if self.goalConstraints[i][-1] == 2:
+                    self.penalties.append(0.0)
+                else:
+                    if len(self.penalties) > len(self.goalConstraints):
+                        self.penalties.pop()
+
+            imgui.pop_item_width()
+            imgui.same_line()
+            imgui.set_next_item_width(50)
+            rhsValue = self.goalConstraints[i][-2]
+            rhsChanged, rhs = imgui.input_float(
+                "##RHS{}{}".format(i, j), rhsValue)
+
+            if rhsChanged:
+                self.goalConstraints[i][-2] = rhs
+
+        self.spaceGui(6)
+
+        # normal constraints ===========================================
+        if len(self.constraints) == 0:
+            pass
+
+        if imgui.button("Constraint +"):
+            self.amtOfConstraints += 1
+            # goalConstraints.append([0.0, 0.0])
+            self.constraints.append([0.0] * self.amtOfObjVars)
+            self.constraints[-1].append(0.0)  # add sign spot
+            self.constraints[-1].append(0.0)  # add rhs spot
+            self.signItemsChoicesC.append(0)
+
+        imgui.same_line()
+
+        if len(self.constraints) != 0:
+            if imgui.button("Constraint -"):
+                if self.amtOfConstraints != 0:
+                    self.amtOfConstraints += -1
+                    self.constraints.pop()
+                    self.signItemsChoicesC.pop()
+
+            # spaceGui(6)
+            for i in range(self.amtOfConstraints):
+                imgui.spacing()
+                if len(self.constraints) <= i:
+                    # Fill with default values if needed
+                    self.constraints.append([0.0] * (self.amtOfObjVars + 2))
+
+                for j in range(self.amtOfObjVars):
+                    value = self.constraints[i][j]
+                    imgui.set_next_item_width(50)
+                    imgui.same_line()
+                    changed, xValue = imgui.input_float(
+                        "##xC{}{}".format(i, j), value)
+                    imgui.same_line()
+                    imgui.text(f"x{j + 1}")
+                    if changed:
+                        self.constraints[i][j] = xValue
+
+                imgui.same_line()
+                imgui.push_item_width(50)
+                changed, self.selectedItemSignC = imgui.combo(
+                    "##comboC{}{}".format(i, j), self.signItemsChoicesC[i], self.signItems)
+                if changed:
+                    self.signItemsChoicesC[i] = self.selectedItemSignC
+                    self.constraints[i][-1] = self.signItemsChoicesC[i]
+
+                imgui.pop_item_width()
+                imgui.same_line()
+                imgui.set_next_item_width(50)
+                rhsValue = self.constraints[i][-2]
+                rhsChanged, rhs = imgui.input_float(
+                    "##RHSC{}{}".format(i, j), rhsValue)
+
+                if rhsChanged:
+                    self.constraints[i][-2] = rhs
+
+        self.spaceGui(6)
+
+        imgui.text("Penalties:")
+        self.spaceGui(2)
+        for i in range(len(self.penalties)):
+            value = self.penalties[i]
+            imgui.text(f"penalty {i + 1}")
+            imgui.set_next_item_width(50)
+            imgui.same_line()
+            changed, self.penalties[i] = imgui.input_float(
+                "##penalty {}".format(i + 1), value)
+            imgui.same_line()
+
+            if changed:
+                # Value has been updated
+                pass
+
+        self.spaceGui(6)
+
+        if imgui.button("Show Goal Order" if not self.toggle else "Hide Goal Order"):
+            # Toggle the boolean variable
+            self.toggle = not self.toggle
+
+        if self.toggle:
+            self.spaceGui(3)
+            for i in range(len(self.goals)):
+                imgui.text(self.goals[i])
+
+                imgui.same_line()
+                if imgui.button(f"Up##{i}") and i > 0:
+                    self.goals[i], self.goals[i -
+                                              1] = self.goals[i - 1], self.goals[i]
+                    self.goalOrder[i], self.goalOrder[i -
+                                                      1] = self.goalOrder[i - 1], self.goalOrder[i]
+
+                imgui.same_line()
+                if imgui.button(f"Down##{i}") and i < len(self.goals) - 1:
+                    self.goals[i], self.goals[i +
+                                              1] = self.goals[i + 1], self.goals[i]
+                    self.goalOrder[i], self.goalOrder[i +
+                                                      1] = self.goalOrder[i + 1], self.goalOrder[i]
+
+        self.spaceGui(6)
+        # solve button =============================================================================================
+        if imgui.button("Solve"):
+            try:
+                if self.testInput(self.testInputSelected) is not None:
+                    self.goalConstraints, self.constraints, self.penalties, self.goalOrder = self.testInput(
+                        self.testInputSelected)
+
+                orderCopy = copy.deepcopy(self.goalOrder)
+                if self.goalOrder == sorted(self.goalOrder):
+                    orderCopy = []
+
+                self.GuiPivotCols.append(-1)
+                self.GuiPivotRows.append(-1)
+                self.tableaus, self.goalMetStrings, self.opTable, self.penaltiesTotals = self.doPenalties(
+                    self.goalConstraints, self.constraints, self.penalties, orderCopy)
+
+                self.GuiPivotCols.append(-1)
+                self.GuiPivotRows.append(-1)
+
+                self.tRow = copy.deepcopy(self.GuiPivotRows)
+                self.tCol = copy.deepcopy(self.GuiPivotCols)
+                self.tHeader = copy.deepcopy(self.GuiHeaderRow)
+
+                self.GuiHeaderRow.clear()
+                self.GuiPivotRows.clear()
+                self.GuiPivotCols.clear()
+
+                for i in range(len(self.goalConstraints)):
+                    if self.goalConstraints[i][-1] == 2:
+                        self.extraGoalCtr += 1
+
+                for i in range(len(self.tableaus) - len(self.tRow)):
+                    self.tRow.append(-1)
+                    self.tCol.append(-1)
+
+            except Exception as e:
+                print(e)
+                imgui.text("Math Error")
+                raise
+
+        try:
+            imgui.spacing()
+            imgui.spacing()
+            for i in range(len(self.tableaus)):
+                pivotCol = self.tCol[i]
+                pivotRow = self.tRow[i]
+                if i == 0:
+                    imgui.text("Setup Tableau")
+                elif i == self.opTable:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+                    imgui.text(f"Optimal Tableau {self.opTable}")
+                    imgui.pop_style_color()
+                else:
+                    imgui.text("Tableau {}".format(i))
+                if self.penaltiesTotals[i] != float('inf'):
+                    imgui.text(f"Penalties: {self.penaltiesTotals[i]}")
+                for metString in range(len(self.goalMetStrings[i])):
+                    if self.goalMetStrings[i][metString] != " ":
+                        imgui.text(
+                            f"Goal {metString + 1} {self.goalMetStrings[i][metString]}")
+                    # imgui.text(goalMetStrings[i])
+                imgui.text("t-" + str(i))
+                imgui.same_line(0, 20)
+                for hCtr in range(len(self.tHeader)):
+                    imgui.text("{:>8}".format(str(self.tHeader[hCtr])))
+                    imgui.same_line(0, 20)
+                imgui.spacing()
+                for j in range(len(self.tableaus[i])):
+                    if j == pivotRow and pivotRow != -1:
+                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    if j < (len(self.goalConstraints) + self.extraGoalCtr):
+                        imgui.text("z " + str(j + 1))
+                    else:
+                        imgui.text(
+                            "c " + str(j - (len(self.goalConstraints) + self.extraGoalCtr) + 1))
+                    imgui.same_line(0, 20)
+                    for k in range(len(self.tableaus[i][j])):
+                        if k == pivotCol and pivotCol != -1:
+                            imgui.push_style_color(
+                                imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                        imgui.text("{:>8.3f}".format(self.tableaus[i][j][k]))
+                        if k < len(self.tableaus[i][j]) - 1:
+                            imgui.same_line(0, 20)
+                        if k == pivotCol and pivotCol != -1:
+                            imgui.pop_style_color()
+                    if j == pivotRow and pivotRow != -1:
+                        imgui.pop_style_color()
+                    imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+            imgui.spacing()
+
+        except Exception as e:
+            imgui.text("Could Not display next tableau")
+            raise
+
+        imgui.end()
+
     def doGui(self):
         # window setup
         pygame.init()
@@ -659,7 +1004,8 @@ class PenaltiesSimplex:
 
         os.system('cls' if os.name == 'nt' else 'clear')
         if self.isConsoleOutput:
-            print("\nBrett's simplex prototype tool for goal Preemptive simplex problems\n")
+            print(
+                "\nBrett's simplex prototype tool for goal Preemptive simplex problems\n")
 
         pygame.display.set_mode(size, pygame.DOUBLEBUF |
                                 pygame.OPENGL | pygame.RESIZABLE)
@@ -678,41 +1024,6 @@ class PenaltiesSimplex:
 
         # var setup
 
-        # goal constraints
-        amtOfObjVars = 2
-
-        # goal constraints
-        amtOfGoalConstraints = 1
-        goalConstraints = [[0.0, 0.0, 0.0, 0.0]]
-        signItems = ["<=", ">=", "="]
-        signItemsChoices = [0]
-
-        # goal constraints
-        amtOfConstraints = 0
-        constraints = []
-        signItemsChoicesC = [0]
-
-        tableaus = []
-
-        goals = ["goal 1"]
-        goalOrder = [0]
-
-        toggle = False
-
-        pivotCol = -1
-        pivotRow = -1
-        tCol = -1
-        tRow = -1
-
-        goalMetStrings = []
-
-        opTable = -1
-
-        extraGoalCtr = 0
-
-        penalties = [0.0]
-        penaltiesTotals = []
-
         while 1:
             # window handling
             for event in pygame.event.get():
@@ -721,297 +1032,9 @@ class PenaltiesSimplex:
 
                 impl.process_event(event)
 
-            imgui.new_frame()
+            windowSize = pygame.display.get_window_size()
 
-            window_size = pygame.display.get_window_size()
-
-            imgui.set_next_window_position(0, 0)  # Set the window position
-            imgui.set_next_window_size(
-                (window_size[0]), (window_size[1]))  # Set the window size
-            imgui.begin("Tableaus Output",
-                        flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-
-            # input
-
-            # obj vars ===========================================
-            if imgui.button("decision variables +"):
-                amtOfObjVars += 1
-                for i in range(len(goalConstraints)):
-                    goalConstraints[i].append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("decision variables -"):
-                if amtOfObjVars != 2:
-                    amtOfObjVars += -1
-                    for i in range(len(goalConstraints)):
-                        goalConstraints[i].pop()
-
-            self.spaceGui(3)
-
-            # goal constraints ===========================================
-            if imgui.button("GoalConstraint +"):
-                amtOfGoalConstraints += 1
-                # goalConstraints.append([0.0, 0.0])
-                goalConstraints.append([0.0] * amtOfObjVars)
-                goalConstraints[-1].append(0.0)  # add sign spot
-                goalConstraints[-1].append(0.0)  # add rhs spot
-                signItemsChoices.append(0)
-                goals.append(f"Goal {len(goals) + 1}")
-                goalOrder.append(len(goals) - 1)
-                penalties.append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("GoalConstraint -"):
-                if amtOfGoalConstraints != 1:
-                    amtOfGoalConstraints += -1
-                    goalConstraints.pop()
-                    signItemsChoices.pop()
-                    goals.pop()
-                    goalOrder.pop()
-                    penalties.pop()
-
-            # spaceGui(3)
-
-            imgui.spacing()
-            for i in range(amtOfGoalConstraints):
-                imgui.spacing()
-                if len(goalConstraints) <= i:
-                    # Fill with default values if needed
-                    goalConstraints.append([0.0] * (amtOfObjVars + 2))
-
-                for j in range(amtOfObjVars):
-                    value = goalConstraints[i][j]
-                    imgui.set_next_item_width(50)
-                    imgui.same_line()
-                    changed, xValue = imgui.input_float(
-                        "##x{}{}".format(i, j), value)
-                    imgui.same_line()
-                    imgui.text(f"x{j + 1}")
-                    if changed:
-                        goalConstraints[i][j] = xValue
-
-                imgui.same_line()
-                imgui.push_item_width(50)
-                changed, selectedItemSign = imgui.combo(
-                    "##combo{}{}".format(i, j), signItemsChoices[i], signItems)
-                if changed:
-                    signItemsChoices[i] = selectedItemSign
-                    goalConstraints[i][-1] = signItemsChoices[i]
-                    # for i in range(len(goalConstraints)):
-                    if goalConstraints[i][-1] == 2:
-                        penalties.append(0.0)
-                    else:
-                        if len(penalties) > len(goalConstraints):
-                            penalties.pop()
-
-                imgui.pop_item_width()
-                imgui.same_line()
-                imgui.set_next_item_width(50)
-                rhsValue = goalConstraints[i][-2]
-                rhsChanged, rhs = imgui.input_float(
-                    "##RHS{}{}".format(i, j), rhsValue)
-
-                if rhsChanged:
-                    goalConstraints[i][-2] = rhs
-
-            self.spaceGui(6)
-
-            # normal constraints ===========================================
-            if len(constraints) == 0:
-                pass
-
-            if imgui.button("Constraint +"):
-                amtOfConstraints += 1
-                # goalConstraints.append([0.0, 0.0])
-                constraints.append([0.0] * amtOfObjVars)
-                constraints[-1].append(0.0)  # add sign spot
-                constraints[-1].append(0.0)  # add rhs spot
-                signItemsChoicesC.append(0)
-
-            imgui.same_line()
-
-            if len(constraints) != 0:
-                if imgui.button("Constraint -"):
-                    if amtOfConstraints != 0:
-                        amtOfConstraints += -1
-                        constraints.pop()
-                        signItemsChoicesC.pop()
-
-                # spaceGui(6)
-                for i in range(amtOfConstraints):
-                    imgui.spacing()
-                    if len(constraints) <= i:
-                        # Fill with default values if needed
-                        constraints.append([0.0] * (amtOfObjVars + 2))
-
-                    for j in range(amtOfObjVars):
-                        value = constraints[i][j]
-                        imgui.set_next_item_width(50)
-                        imgui.same_line()
-                        changed, xValue = imgui.input_float(
-                            "##xC{}{}".format(i, j), value)
-                        imgui.same_line()
-                        imgui.text(f"x{j + 1}")
-                        if changed:
-                            constraints[i][j] = xValue
-
-                    imgui.same_line()
-                    imgui.push_item_width(50)
-                    changed, selectedItemSignC = imgui.combo(
-                        "##comboC{}{}".format(i, j), signItemsChoicesC[i], signItems)
-                    if changed:
-                        signItemsChoicesC[i] = selectedItemSignC
-                        constraints[i][-1] = signItemsChoicesC[i]
-
-                    imgui.pop_item_width()
-                    imgui.same_line()
-                    imgui.set_next_item_width(50)
-                    rhsValue = constraints[i][-2]
-                    rhsChanged, rhs = imgui.input_float(
-                        "##RHSC{}{}".format(i, j), rhsValue)
-
-                    if rhsChanged:
-                        constraints[i][-2] = rhs
-
-            self.spaceGui(6)
-
-            imgui.text("Penalties:")
-            self.spaceGui(2)
-            for i in range(len(penalties)):
-                value = penalties[i]
-                imgui.text(f"penalty {i + 1}")
-                imgui.set_next_item_width(50)
-                imgui.same_line()
-                changed, penalties[i] = imgui.input_float(
-                    "##penalty {}".format(i + 1), value)
-                imgui.same_line()
-
-                if changed:
-                    # Value has been updated
-                    pass
-
-            self.spaceGui(6)
-
-            if imgui.button("Show Goal Order" if not toggle else "Hide Goal Order"):
-                # Toggle the boolean variable
-                toggle = not toggle
-
-            if toggle:
-                self.spaceGui(3)
-                for i in range(len(goals)):
-                    imgui.text(goals[i])
-
-                    imgui.same_line()
-                    if imgui.button(f"Up##{i}") and i > 0:
-                        goals[i], goals[i - 1] = goals[i - 1], goals[i]
-                        goalOrder[i], goalOrder[i -
-                                                1] = goalOrder[i - 1], goalOrder[i]
-
-                    imgui.same_line()
-                    if imgui.button(f"Down##{i}") and i < len(goals) - 1:
-                        goals[i], goals[i + 1] = goals[i + 1], goals[i]
-                        goalOrder[i], goalOrder[i +
-                                                1] = goalOrder[i + 1], goalOrder[i]
-
-            self.spaceGui(6)
-            # solve button ================================================
-            if imgui.button("Solve"):
-                try:
-                    if self.testInput() is not None:
-                        goalConstraints, constraints, penalties, goalOrder = self.testInput()
-
-                    orderCopy = copy.deepcopy(goalOrder)
-                    if goalOrder == sorted(goalOrder):
-                        orderCopy = []
-
-                    self.GuiPivotCols.append(-1)
-                    self.GuiPivotRows.append(-1)
-                    tableaus, goalMetStrings, opTable, penaltiesTotals = self.doPenalties(
-                        goalConstraints, constraints, penalties, orderCopy)
-
-                    self.GuiPivotCols.append(-1)
-                    self.GuiPivotRows.append(-1)
-
-                    tRow = copy.deepcopy(self.GuiPivotRows)
-                    tCol = copy.deepcopy(self.GuiPivotCols)
-                    tHeader = copy.deepcopy(self.GuiHeaderRow)
-
-                    self.GuiHeaderRow.clear()
-                    self.GuiPivotRows.clear()
-                    self.GuiPivotCols.clear()
-
-                    for i in range(len(goalConstraints)):
-                        if goalConstraints[i][-1] == 2:
-                            extraGoalCtr += 1
-
-                    for i in range(len(tableaus) - len(tRow)):
-                        tRow.append(-1)
-                        tCol.append(-1)
-
-                except Exception as e:
-                    print(e)
-                    imgui.text("Math Error")
-
-            try:
-                imgui.spacing()
-                imgui.spacing()
-                for i in range(len(tableaus)):
-                    pivotCol = tCol[i]
-                    pivotRow = tRow[i]
-                    if i == 0:
-                        imgui.text("Setup Tableau")
-                    elif i == opTable:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
-                        imgui.text(f"Optimal Tableau {opTable}")
-                        imgui.pop_style_color()
-                    else:
-                        imgui.text("Tableau {}".format(i))
-                    if penaltiesTotals[i] != float('inf'):
-                        imgui.text(f"Penalties: {penaltiesTotals[i]}")
-                    for metString in range(len(goalMetStrings[i])):
-                        if goalMetStrings[i][metString] != " ":
-                            imgui.text(
-                                f"Goal {metString + 1} {goalMetStrings[i][metString]}")
-                        # imgui.text(goalMetStrings[i])
-                    imgui.text("t-" + str(i))
-                    imgui.same_line(0, 20)
-                    for hCtr in range(len(tHeader)):
-                        imgui.text("{:>8}".format(str(tHeader[hCtr])))
-                        imgui.same_line(0, 20)
-                    imgui.spacing()
-                    for j in range(len(tableaus[i])):
-                        if j == pivotRow and pivotRow != -1:
-                            imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                        if j < (len(goalConstraints) + extraGoalCtr):
-                            imgui.text("z " + str(j + 1))
-                        else:
-                            imgui.text(
-                                "c " + str(j - (len(goalConstraints) + extraGoalCtr) + 1))
-                        imgui.same_line(0, 20)
-                        for k in range(len(tableaus[i][j])):
-                            if k == pivotCol and pivotCol != -1:
-                                imgui.push_style_color(
-                                    imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                            imgui.text("{:>8.3f}".format(tableaus[i][j][k]))
-                            if k < len(tableaus[i][j]) - 1:
-                                imgui.same_line(0, 20)
-                            if k == pivotCol and pivotCol != -1:
-                                imgui.pop_style_color()
-                        if j == pivotRow and pivotRow != -1:
-                            imgui.pop_style_color()
-                        imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-                imgui.spacing()
-
-            except Exception as e:
-                imgui.text("Could Not display next tableau")
-
-            imgui.end()
+            self.imguiUIElements(windowSize)
 
             imgui.render()
             impl.render(imgui.get_draw_data())

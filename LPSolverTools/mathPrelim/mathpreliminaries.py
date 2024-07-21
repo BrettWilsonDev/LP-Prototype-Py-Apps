@@ -17,14 +17,52 @@ except:
 
 
 class MathPreliminaries:
-    dual = Dual()
-
-    d = sp.symbols('d')
-    globalOptimalTab = []
-    globalHeaderRow = []
 
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
+        self.testInputSelected = -1
+
+        self.dual = Dual()
+
+        self.d = sp.symbols('d')
+        self.globalOptimalTab = []
+        self.globalHeaderRow = []
+
+        self.problemType = "Max"
+        self.absProblemType = "abs Off"
+
+        self.amtOfObjVars = 2
+        self.objFunc = [0.0, 0.0]
+
+        self.constraints = [[0.0, 0.0, 0.0, 0.0]]
+        self.signItems = ["<=", ">="]
+        self.signItemsChoices = [0]
+
+        self.amtOfConstraints = 1
+
+        self.changingTable = []
+
+        self.matCbv = []
+        self.matB = []
+        self.matBNegOne = []
+        self.matCbvNegOne = []
+
+        self.absRule = False
+
+        self.lockOptTab = "off"
+        self.optTabLockState = False
+
+        self.newTableaus = []
+
+        self.IMPivotCols = []
+        self.IMPivotRows = []
+        self.IMHeaderRow = []
+
+        self.pivotCol = -1
+        self.pivotRow = -1
+
+        self.solveDelta = False
+        self.deltaSolve = "off"
 
     def testInput(self, testNum=-1):
         isMin = False
@@ -357,6 +395,403 @@ class MathPreliminaries:
         except TypeError:
             return float("inf")
 
+    def imguiUIElements(self, windowSize):
+        imgui.new_frame()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (windowSize[0]), (windowSize[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        if imgui.radio_button("Max", self.problemType == "Max"):
+            self.problemType = "Max"
+
+        if imgui.radio_button("Min", self.problemType == "Min"):
+            self.problemType = "Min"
+
+        imgui.text("Problem is: {}".format(self.problemType))
+
+        if imgui.radio_button("abs on", self.absProblemType == "abs On"):
+            self.absProblemType = "abs On"
+
+        if imgui.radio_button("abs off", self.absProblemType == "abs Off"):
+            self.absProblemType = "abs Off"
+
+        imgui.text("absolute rule is: {}".format(self.absProblemType))
+
+        # obj vars ===========================================
+        if imgui.button("decision variables +"):
+            self.amtOfObjVars += 1
+            for i in range(len(self.constraints)):
+                self.constraints[i].append(0.0)
+            self.objFunc.append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("decision variables -"):
+            if self.amtOfObjVars != 2:
+                self.amtOfObjVars += -1
+                for i in range(len(self.constraints)):
+                    self.constraints[i].pop()
+                self.objFunc.pop()
+
+        imgui.spacing()
+        imgui.text(
+            "you can use +d to represent the delta variable ex: 60+d")
+        imgui.spacing()
+        imgui.spacing()
+
+        for i in range(len(self.objFunc)):
+            # value = objFunc[i]
+            value = str(self.objFunc[i])
+            imgui.set_next_item_width(50)
+            imgui.same_line()
+            # changed, objFunc[i] = imgui.input_float(
+            changed, self.objFunc[i] = imgui.input_text(
+                "##objFunc {}".format(i + 1), value)
+            imgui.same_line()
+            imgui.text(f"x{i + 1}")
+
+            if changed:
+                pass
+
+        if imgui.button("Constraint +"):
+            self.amtOfConstraints += 1
+            self.constraints.append([0.0] * self.amtOfObjVars)
+            self.constraints[-1].append(0.0)  # add sign spot
+            self.constraints[-1].append(0.0)  # add rhs spot
+            self.signItemsChoices.append(0)
+
+        imgui.same_line()
+
+        if imgui.button("Constraint -"):
+            if self.amtOfConstraints != 1:
+                self.amtOfConstraints += -1
+                self.constraints.pop()
+                self.signItemsChoices.pop()
+
+        # spaceGui(6)
+        for i in range(self.amtOfConstraints):
+            imgui.spacing()
+            if len(self.constraints) <= i:
+                # Fill with default values if needed
+                self.constraints.append([0.0] * (self.amtOfObjVars + 2))
+
+            for j in range(self.amtOfObjVars):
+                # value = constraints[i][j]
+                value = str(self.constraints[i][j])
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                # changed, xValue = imgui.input_float(
+                changed, xValue = imgui.input_text(
+                    "##xC{}{}".format(i, j), value)
+                imgui.same_line()
+                imgui.text(f"x{j + 1}")
+                if changed:
+                    self.constraints[i][j] = xValue
+
+            imgui.same_line()
+            imgui.push_item_width(50)
+            changed, self.selectedItemSign = imgui.combo(
+                "##comboC{}{}".format(i, j), self.signItemsChoices[i], self.signItems)
+            if changed:
+                self.signItemsChoices[i] = self.selectedItemSign
+                self.constraints[i][-1] = self.signItemsChoices[i]
+
+            imgui.pop_item_width()
+            imgui.same_line()
+            imgui.set_next_item_width(50)
+            # rhsValue = constraints[i][-2]
+            rhsValue = str(self.constraints[i][-2])
+            # rhsChanged, rhs = imgui.input_float(
+            rhsChanged, rhs = imgui.input_text(
+                "##RHSC{}{}".format(i, j), rhsValue)
+
+            if rhsChanged:
+                self.constraints[i][-2] = rhs
+
+        if imgui.radio_button("lock optimal tab", self.lockOptTab == "on"):
+            self.lockOptTab = "on"
+
+        imgui.same_line(0, 20)
+
+        if imgui.radio_button("unlock optimal tab", self.lockOptTab == "off"):
+            self.lockOptTab = "off"
+
+        imgui.text("optimal tab lock: {}".format(self.lockOptTab))
+
+        if imgui.radio_button("solve Delta on", self.deltaSolve == "on"):
+            self.deltaSolve = "on"
+
+        imgui.same_line(0, 20)
+
+        if imgui.radio_button("solve Delta off", self.deltaSolve == "off"):
+            self.deltaSolve = "off"
+
+        if self.problemType == "Min":
+            isMin = True
+        else:
+            isMin = False
+
+        if self.absProblemType == "abs On":
+            absRule = True
+        else:
+            absRule = False
+
+        if self.lockOptTab == "on":
+            optTabLockState = True
+        else:
+            optTabLockState = False
+
+        if self.deltaSolve == "on":
+            self.solveDelta = True
+        else:
+            self.solveDelta = False
+
+        # solve button ==================================================================
+        if imgui.button("Solve"):
+            try:
+                if self.testInput(self.testInputSelected) is not None:
+                    self.objFunc, self.constraints, isMin = self.testInput(
+                        self.testInputSelected)
+
+                # print(objFunc, constraints, isMin)
+                a = copy.deepcopy(self.objFunc)
+                b = copy.deepcopy(self.constraints)
+
+                # convert obj func to numbers
+                for i in range(len(a)):
+                    try:
+                        a[i] = float(a[i])
+                    except Exception as e:
+                        pass
+
+                # obj func to expressions
+                for i in range(len(a)):
+                    try:
+                        a[i] = sp.parse_expr(a[i])
+                    except Exception as e:
+                        pass
+
+                # convert constraints to numbers
+                for i in range(len(b)):
+                    for j in range(len(b[i])):
+                        try:
+                            b[i][j] = float(b[i][j])
+                        except Exception as e:
+                            pass
+
+                # convert constraints to expressions
+                for i in range(len(b)):
+                    for j in range(len(b[i])):
+                        try:
+                            b[i][j] = sp.parse_expr(b[i][j])
+                        except Exception as e:
+                            pass
+
+                self.changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.doSensitivityAnalysis(
+                    a, b, isMin, absRule, optTabLockState)
+
+                self.matCbv = matrixCbv.tolist()
+                self.matB = matrixB.transpose().tolist()
+                self.matBNegOne = matrixBNegOne.transpose().tolist()
+                self.matCbvNegOne = matrixCbvNegOne.tolist()
+
+                # make matrix in to a 2d list
+                tMatCbv = []
+                tMatCbvNegOne = []
+                for i in range(len(self.matCbv)):
+                    tMatCbv.append(self.matCbv[i][0])
+                    tMatCbvNegOne.append(self.matCbvNegOne[i][0])
+                self.matCbv = tMatCbv
+                self.matCbvNegOne = tMatCbvNegOne
+
+                if self.solveDelta:
+                    for i in range(len(self.changingTable)):
+                        for j in range(len(self.changingTable[i])):
+                            if isinstance(self.changingTable[i][j], (sp.Add, sp.Mul)):
+                                self.changingTable[i][j] = f"d = {
+                                    round(float(sp.solve(self.changingTable[i][j], self.d)[0]), 6)}"
+
+            except Exception as e:
+                print("math error:", e)
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        try:
+            # cbv matrix
+            imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+            imgui.text("{:>30}".format("CBv"))
+            imgui.pop_style_color()
+            for i in range(len(self.matCbv)):
+                if type(self.matCbv[i]).__name__ == "Float" or self.absF(self.matCbv[i]) == 0.0 or self.absF(self.matCbv[i]) == 1:
+                    imgui.text("{:>15.3f}".format(float(self.matCbv[i])))
+                else:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    imgui.text("{:>15}".format(str(self.matCbv[i])))
+                    imgui.pop_style_color()
+                imgui.same_line(0, 20)
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            # b matrix
+            imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+            imgui.text("{:>29}".format("B"))
+            imgui.pop_style_color()
+            for i in range(len(self.matB)):
+                for j in range(len(self.matB[i])):
+                    if type(self.matB[i][j]).__name__ == "Float" or self.absF(self.matB[i][j]) == 0.0 or self.absF(self.matB[i][j]) == 1:
+                        imgui.text("{:>15.3f}".format(float(self.matB[i][j])))
+                    else:
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                        imgui.text("{:>15}".format(str(self.matB[i][j])))
+                        imgui.pop_style_color()
+                    imgui.same_line(0, 20)
+                imgui.spacing()
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            # b^-1 matrix
+            imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+            imgui.text("{:>31}".format("B^-1"))
+            imgui.pop_style_color()
+            for i in range(len(self.matBNegOne)):
+                for j in range(len(self.matBNegOne[i])):
+                    if type(self.matBNegOne[i][j]).__name__ == "Float" or self.absF(self.matBNegOne[i][j]) == 0.0 or self.absF(self.matBNegOne[i][j]) == 1:
+                        imgui.text("{:>15.3f}".format(
+                            float(self.matBNegOne[i][j])))
+                    else:
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                        imgui.text("{:>15}".format(str(self.matBNegOne[i][j])))
+                        imgui.pop_style_color()
+                    imgui.same_line(0, 20)
+                imgui.spacing()
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            # cbv^-1 matrix
+            imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+            imgui.text("{:>35}".format("CbvB^-1 or q"))
+            imgui.pop_style_color()
+            for i in range(len(self.matCbvNegOne)):
+                if type(self.matCbvNegOne[i]).__name__ == "Float" or self.absF(self.matCbvNegOne[i]) == 0.0 or self.absF(self.matCbvNegOne[i]) == 1:
+                    imgui.text("{:>15.3f}".format(float(self.matCbvNegOne[i])))
+                else:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    imgui.text("{:>15}".format(str(self.matCbvNegOne[i])))
+                    imgui.pop_style_color()
+                imgui.same_line(0, 20)
+
+        except Exception as e:
+            print("error:", e)
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+        imgui.text("{:>40}".format("changing Optimal Table"))
+        imgui.pop_style_color()
+        for hCtr in range(len(self.globalHeaderRow)):
+            imgui.text("{:>15}".format(str(self.globalHeaderRow[hCtr])))
+            imgui.same_line(0, 20)
+        imgui.spacing()
+        for i in range(len(self.changingTable)):
+            for j in range(len(self.changingTable[i])):
+                if isinstance(self.changingTable[i][j], float) or self.absF(self.changingTable[i][j]) == 0.0 or self.absF(self.changingTable[i][j]) == 1:
+                    imgui.text("{:>15.3f}".format(self.changingTable[i][j]))
+                else:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    imgui.text("{:>15}".format(str(self.changingTable[i][j])))
+                    imgui.pop_style_color()
+                if i < len(self.changingTable[i]) - 1:
+                    imgui.same_line(0, 20)
+            imgui.spacing()
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        if optTabLockState:
+            if imgui.button("Optimize again"):
+                try:
+                    self.newTableaus, changingVars, optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow = self.dual.doDualSimplex([
+                    ], [], isMin, self.changingTable)
+                except Exception as e:
+                    print("math error in Optimize again:", e)
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            for i in range(len(self.newTableaus)):
+                if i < len(self.IMPivotCols):
+                    pivotCol = self.IMPivotCols[i]
+                    pivotRow = self.IMPivotRows[i]
+                else:
+                    pivotCol = -1
+                    pivotRow = -1
+                imgui.text("Tableau {}".format(i + 1))
+                imgui.text("t-" + str(i + 1))
+                imgui.same_line(0, 20)
+                for hCtr in range(len(self.globalHeaderRow)):
+                    imgui.text("{:>8}".format(
+                        str(self.globalHeaderRow[hCtr])))
+                    imgui.same_line(0, 20)
+                imgui.spacing()
+                for j in range(len(self.newTableaus[i])):
+                    if j == pivotRow and pivotRow != -1:
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    if j == 0:
+                        imgui.text("z  ")
+                    else:
+                        imgui.text("c " + str(j))
+                    imgui.same_line(0, 20)
+                    for k in range(len(self.newTableaus[i][j])):
+                        if k == pivotCol and pivotCol != -1:
+                            imgui.push_style_color(
+                                imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                        imgui.text("{:>8.3f}".format(
+                            self.newTableaus[i][j][k]))
+                        if k < len(self.newTableaus[i][j]) - 1:
+                            imgui.same_line(0, 20)
+                        if k == pivotCol and pivotCol != -1:
+                            imgui.pop_style_color()
+                    if j == pivotRow and pivotRow != -1:
+                        imgui.pop_style_color()
+                    imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+                imgui.spacing()
+            imgui.spacing()
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        imgui.end()
+
     def doGui(self):
         pygame.init()
         size = 1920 / 2, 1080 / 2
@@ -381,45 +816,6 @@ class MathPreliminaries:
         io = imgui.get_io()
         io.display_size = size
 
-        # simplex specific vars
-
-        problemType = "Max"
-        absProblemType = "abs Off"
-
-        # dual constraints
-        amtOfObjVars = 2
-        objFunc = [0.0, 0.0]
-
-        constraints = [[0.0, 0.0, 0.0, 0.0]]
-        signItems = ["<=", ">="]
-        signItemsChoices = [0]
-
-        amtOfConstraints = 1
-
-        changingTable = []
-
-        matCbv = []
-        matB = []
-        matBNegOne = []
-        matCbvNegOne = []
-
-        absRule = False
-
-        lockOptTab = "off"
-        optTabLockState = False
-
-        newTableaus = []
-
-        IMPivotCols = []
-        IMPivotRows = []
-        IMHeaderRow = []
-
-        pivotCol = -1
-        pivotRow = -1
-
-        solveDelta = False
-        deltaSolve = "off"
-
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -427,402 +823,9 @@ class MathPreliminaries:
 
                 impl.process_event(event)
 
-            imgui.new_frame()
+            windowSize = pygame.display.get_window_size()
 
-            window_size = pygame.display.get_window_size()
-
-            imgui.set_next_window_position(0, 0)  # Set the window position
-            imgui.set_next_window_size(
-                (window_size[0]), (window_size[1]))  # Set the window size
-            imgui.begin("Tableaus Output",
-                        flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-
-            if imgui.radio_button("Max", problemType == "Max"):
-                problemType = "Max"
-
-            if imgui.radio_button("Min", problemType == "Min"):
-                problemType = "Min"
-
-            imgui.text("Problem is: {}".format(problemType))
-
-            if imgui.radio_button("abs on", absProblemType == "abs On"):
-                absProblemType = "abs On"
-
-            if imgui.radio_button("abs off", absProblemType == "abs Off"):
-                absProblemType = "abs Off"
-
-            imgui.text("absolute rule is: {}".format(absProblemType))
-
-            # obj vars ===========================================
-            if imgui.button("decision variables +"):
-                amtOfObjVars += 1
-                for i in range(len(constraints)):
-                    constraints[i].append(0.0)
-                objFunc.append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("decision variables -"):
-                if amtOfObjVars != 2:
-                    amtOfObjVars += -1
-                    for i in range(len(constraints)):
-                        constraints[i].pop()
-                    objFunc.pop()
-
-            imgui.spacing()
-            imgui.text(
-                "you can use +d to represent the delta variable ex: 60+d")
-            imgui.spacing()
-            imgui.spacing()
-
-            for i in range(len(objFunc)):
-                # value = objFunc[i]
-                value = str(objFunc[i])
-                imgui.set_next_item_width(50)
-                imgui.same_line()
-                # changed, objFunc[i] = imgui.input_float(
-                changed, objFunc[i] = imgui.input_text(
-                    "##objFunc {}".format(i + 1), value)
-                imgui.same_line()
-                imgui.text(f"x{i + 1}")
-
-                if changed:
-                    pass
-
-            if imgui.button("Constraint +"):
-                amtOfConstraints += 1
-                constraints.append([0.0] * amtOfObjVars)
-                constraints[-1].append(0.0)  # add sign spot
-                constraints[-1].append(0.0)  # add rhs spot
-                signItemsChoices.append(0)
-
-            imgui.same_line()
-
-            if imgui.button("Constraint -"):
-                if amtOfConstraints != 1:
-                    amtOfConstraints += -1
-                    constraints.pop()
-                    signItemsChoices.pop()
-
-            # spaceGui(6)
-            for i in range(amtOfConstraints):
-                imgui.spacing()
-                if len(constraints) <= i:
-                    # Fill with default values if needed
-                    constraints.append([0.0] * (amtOfObjVars + 2))
-
-                for j in range(amtOfObjVars):
-                    # value = constraints[i][j]
-                    value = str(constraints[i][j])
-                    imgui.set_next_item_width(50)
-                    imgui.same_line()
-                    # changed, xValue = imgui.input_float(
-                    changed, xValue = imgui.input_text(
-                        "##xC{}{}".format(i, j), value)
-                    imgui.same_line()
-                    imgui.text(f"x{j + 1}")
-                    if changed:
-                        constraints[i][j] = xValue
-
-                imgui.same_line()
-                imgui.push_item_width(50)
-                changed, selectedItemSign = imgui.combo(
-                    "##comboC{}{}".format(i, j), signItemsChoices[i], signItems)
-                if changed:
-                    signItemsChoices[i] = selectedItemSign
-                    constraints[i][-1] = signItemsChoices[i]
-
-                imgui.pop_item_width()
-                imgui.same_line()
-                imgui.set_next_item_width(50)
-                # rhsValue = constraints[i][-2]
-                rhsValue = str(constraints[i][-2])
-                # rhsChanged, rhs = imgui.input_float(
-                rhsChanged, rhs = imgui.input_text(
-                    "##RHSC{}{}".format(i, j), rhsValue)
-
-                if rhsChanged:
-                    constraints[i][-2] = rhs
-
-            if imgui.radio_button("lock optimal tab", lockOptTab == "on"):
-                lockOptTab = "on"
-
-            imgui.same_line(0, 20)
-
-            if imgui.radio_button("unlock optimal tab", lockOptTab == "off"):
-                lockOptTab = "off"
-
-            imgui.text("optimal tab lock: {}".format(lockOptTab))
-
-            if imgui.radio_button("solve Delta on", deltaSolve == "on"):
-                deltaSolve = "on"
-
-            imgui.same_line(0, 20)
-
-            if imgui.radio_button("solve Delta off", deltaSolve == "off"):
-                deltaSolve = "off"
-
-            if problemType == "Min":
-                isMin = True
-            else:
-                isMin = False
-
-            if absProblemType == "abs On":
-                absRule = True
-            else:
-                absRule = False
-
-            if lockOptTab == "on":
-                optTabLockState = True
-            else:
-                optTabLockState = False
-
-            if deltaSolve == "on":
-                solveDelta = True
-            else:
-                solveDelta = False
-
-            # solve button =======================================================
-            if imgui.button("Solve"):
-                try:
-                    if self.testInput() is not None:
-                        objFunc, constraints, isMin = self.testInput()
-                    # objFunc, constraints, isMin = testInput()
-
-                    # print(objFunc, constraints, isMin)
-                    a = copy.deepcopy(objFunc)
-                    b = copy.deepcopy(constraints)
-
-                    # convert obj func to numbers
-                    for i in range(len(a)):
-                        try:
-                            a[i] = float(a[i])
-                        except Exception as e:
-                            pass
-
-                    # obj func to expressions
-                    for i in range(len(a)):
-                        try:
-                            a[i] = sp.parse_expr(a[i])
-                        except Exception as e:
-                            pass
-
-                    # convert constraints to numbers
-                    for i in range(len(b)):
-                        for j in range(len(b[i])):
-                            try:
-                                b[i][j] = float(b[i][j])
-                            except Exception as e:
-                                pass
-
-                    # convert constraints to expressions
-                    for i in range(len(b)):
-                        for j in range(len(b[i])):
-                            try:
-                                b[i][j] = sp.parse_expr(b[i][j])
-                            except Exception as e:
-                                pass
-
-                    changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.doSensitivityAnalysis(
-                        a, b, isMin, absRule, optTabLockState)
-
-                    matCbv = matrixCbv.tolist()
-                    matB = matrixB.transpose().tolist()
-                    matBNegOne = matrixBNegOne.transpose().tolist()
-                    matCbvNegOne = matrixCbvNegOne.tolist()
-
-                    # make matrix in to a 2d list
-                    tMatCbv = []
-                    tMatCbvNegOne = []
-                    for i in range(len(matCbv)):
-                        tMatCbv.append(matCbv[i][0])
-                        tMatCbvNegOne.append(matCbvNegOne[i][0])
-                    matCbv = tMatCbv
-                    matCbvNegOne = tMatCbvNegOne
-
-                    if solveDelta:
-                        for i in range(len(changingTable)):
-                            for j in range(len(changingTable[i])):
-                                if isinstance(changingTable[i][j], (sp.Add, sp.Mul)):
-                                    changingTable[i][j] = f"d = {
-                                        round(float(sp.solve(changingTable[i][j], self.d)[0]), 6)}"
-
-                except Exception as e:
-                    print("math error:", e)
-
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-
-            try:
-                # cbv matrix
-                imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-                imgui.text("{:>30}".format("CBv"))
-                imgui.pop_style_color()
-                for i in range(len(matCbv)):
-                    if type(matCbv[i]).__name__ == "Float" or self.absF(matCbv[i]) == 0.0 or self.absF(matCbv[i]) == 1:
-                        imgui.text("{:>15.3f}".format(float(matCbv[i])))
-                    else:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                        imgui.text("{:>15}".format(str(matCbv[i])))
-                        imgui.pop_style_color()
-                    imgui.same_line(0, 20)
-
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-
-                # b matrix
-                imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-                imgui.text("{:>29}".format("B"))
-                imgui.pop_style_color()
-                for i in range(len(matB)):
-                    for j in range(len(matB[i])):
-                        if type(matB[i][j]).__name__ == "Float" or self.absF(matB[i][j]) == 0.0 or self.absF(matB[i][j]) == 1:
-                            imgui.text("{:>15.3f}".format(float(matB[i][j])))
-                        else:
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                            imgui.text("{:>15}".format(str(matB[i][j])))
-                            imgui.pop_style_color()
-                        imgui.same_line(0, 20)
-                    imgui.spacing()
-
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-
-                # b^-1 matrix
-                imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-                imgui.text("{:>31}".format("B^-1"))
-                imgui.pop_style_color()
-                for i in range(len(matBNegOne)):
-                    for j in range(len(matBNegOne[i])):
-                        if type(matBNegOne[i][j]).__name__ == "Float" or self.absF(matBNegOne[i][j]) == 0.0 or self.absF(matBNegOne[i][j]) == 1:
-                            imgui.text("{:>15.3f}".format(
-                                float(matBNegOne[i][j])))
-                        else:
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                            imgui.text("{:>15}".format(str(matBNegOne[i][j])))
-                            imgui.pop_style_color()
-                        imgui.same_line(0, 20)
-                    imgui.spacing()
-
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-
-                # cbv^-1 matrix
-                imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-                imgui.text("{:>35}".format("CbvB^-1 or q"))
-                imgui.pop_style_color()
-                for i in range(len(matCbvNegOne)):
-                    if type(matCbvNegOne[i]).__name__ == "Float" or self.absF(matCbvNegOne[i]) == 0.0 or self.absF(matCbvNegOne[i]) == 1:
-                        imgui.text("{:>15.3f}".format(float(matCbvNegOne[i])))
-                    else:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                        imgui.text("{:>15}".format(str(matCbvNegOne[i])))
-                        imgui.pop_style_color()
-                    imgui.same_line(0, 20)
-
-            except Exception as e:
-                print("error:", e)
-
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-
-            imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-            imgui.text("{:>40}".format("changing Optimal Table"))
-            imgui.pop_style_color()
-            for hCtr in range(len(self.globalHeaderRow)):
-                imgui.text("{:>15}".format(str(self.globalHeaderRow[hCtr])))
-                imgui.same_line(0, 20)
-            imgui.spacing()
-            for i in range(len(changingTable)):
-                for j in range(len(changingTable[i])):
-                    if isinstance(changingTable[i][j], float) or self.absF(changingTable[i][j]) == 0.0 or self.absF(changingTable[i][j]) == 1:
-                        imgui.text("{:>15.3f}".format(changingTable[i][j]))
-                    else:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                        imgui.text("{:>15}".format(str(changingTable[i][j])))
-                        imgui.pop_style_color()
-                    if i < len(changingTable[i]) - 1:
-                        imgui.same_line(0, 20)
-                imgui.spacing()
-
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-
-            if optTabLockState:
-                if imgui.button("Optimize again"):
-                    try:
-                        newTableaus, changingVars, optimalSolution, IMPivotCols, IMPivotRows, IMHeaderRow = self.dual.doDualSimplex([
-                        ], [], isMin, changingTable)
-                    except Exception as e:
-                        print("math error in Optimize again:", e)
-
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-
-                for i in range(len(newTableaus)):
-                    if i < len(IMPivotCols):
-                        pivotCol = IMPivotCols[i]
-                        pivotRow = IMPivotRows[i]
-                    else:
-                        pivotCol = -1
-                        pivotRow = -1
-                    imgui.text("Tableau {}".format(i + 1))
-                    imgui.text("t-" + str(i + 1))
-                    imgui.same_line(0, 20)
-                    for hCtr in range(len(self.globalHeaderRow)):
-                        imgui.text("{:>8}".format(
-                            str(self.globalHeaderRow[hCtr])))
-                        imgui.same_line(0, 20)
-                    imgui.spacing()
-                    for j in range(len(newTableaus[i])):
-                        if j == pivotRow and pivotRow != -1:
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                        if j == 0:
-                            imgui.text("z  ")
-                        else:
-                            imgui.text("c " + str(j))
-                        imgui.same_line(0, 20)
-                        for k in range(len(newTableaus[i][j])):
-                            if k == pivotCol and pivotCol != -1:
-                                imgui.push_style_color(
-                                    imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                            imgui.text("{:>8.3f}".format(newTableaus[i][j][k]))
-                            if k < len(newTableaus[i][j]) - 1:
-                                imgui.same_line(0, 20)
-                            if k == pivotCol and pivotCol != -1:
-                                imgui.pop_style_color()
-                        if j == pivotRow and pivotRow != -1:
-                            imgui.pop_style_color()
-                        imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-                    imgui.spacing()
-                imgui.spacing()
-
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-
-            imgui.end()
+            self.imguiUIElements(windowSize)
 
             imgui.render()
             impl.render(imgui.get_draw_data())

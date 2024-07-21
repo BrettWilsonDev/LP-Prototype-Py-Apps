@@ -11,10 +11,24 @@ import sys
 
 
 class GraphicalSolver:
-    isConsoleOutput = False
-
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
+        self.testInputSelected = -1
+
+        # var setup
+        self.problemType = "Max"
+
+        self.amtOfObjVars = 2
+        self.objFunc = [0.0, 0.0]
+
+        # constraints
+        self.amtOfConstraints = 1
+        self.constraints = [[0.0, 0.0, 0.0, 0.0]]
+        self.signItems = ["<=", ">=", "="]
+        self.signItemsChoices = [0]
+
+        self.optimalValue = 0
+        self.optimalPoint = (0, 0)
 
     def testInput(self, testNum=-1):
         if testNum == 0:
@@ -86,7 +100,7 @@ class GraphicalSolver:
         for i in range(numConstraints):
             for j in range(i + 1, numConstraints):
                 point = self.findIntersection(constraints[i][0], constraints[i][1], constraints[i][2],
-                                         constraints[j][0], constraints[j][1], constraints[j][2])
+                                              constraints[j][0], constraints[j][1], constraints[j][2])
                 if point is not None:
                     intersectionPoints.append(point)
 
@@ -121,7 +135,8 @@ class GraphicalSolver:
             if point not in lineSegmentPoints:
                 lineSegmentPoints.append(point)
 
-        print("\nlineSegments")
+        if self.isConsoleOutput:
+            print("\nlineSegments")
         for i in range(len(lineSegmentPoints)):
             try:
                 print(f" (start: {lineSegmentPoints[i]} end: {
@@ -129,10 +144,11 @@ class GraphicalSolver:
             except:
                 pass
 
-        print("\nfeasible region")
-        for i in range(len(feasiblePoints)):
-            print(feasiblePoints[i], end="")
-        print("\n")
+        if self.isConsoleOutput:
+            print("\nfeasible region")
+            for i in range(len(feasiblePoints)):
+                print(feasiblePoints[i], end="")
+            print("\n")
 
         return feasiblePoints, lineSegmentPoints, intersectionPoints
 
@@ -149,7 +165,8 @@ class GraphicalSolver:
 
         optimalPoint = feasiblePoints[objectiveValues.index(optimalValue)]
 
-        print(f"Optimal value: {optimalValue} at {optimalPoint}")
+        if self.isConsoleOutput:
+            print(f"Optimal value: {optimalValue} at {optimalPoint}")
 
         return optimalValue, optimalPoint
 
@@ -179,7 +196,6 @@ class GraphicalSolver:
         return lowerHull[:-1] + upperHull[:-1]
 
     def drawGraph(self, feasiblePoints, lineSegmentPoints, intersectionPoints, optimalPoint=None, optimalValue=None):
-        # print(lineSegmentPoints)
         fullLineSegments = []
         for i in range(0, len(lineSegmentPoints), 2):
             x1, y1 = lineSegmentPoints[i]
@@ -212,10 +228,12 @@ class GraphicalSolver:
                      linestyle='-', color=colors[i - 1], label=f"c{i} at ({xEnd}, {yStart})")
 
             # Annotate the start and end points
-            plt.text(xStart, yStart, f'({xStart}, {yStart})',
-                     fontsize=10, va='bottom', ha='left')
-            plt.text(xEnd, yEnd, f'({xEnd}, {yEnd})',
-                     fontsize=10, va='bottom', ha='left')
+            if (xStart, yStart) not in feasiblePoints:
+                plt.text(xStart, yStart, f'({xStart}, {yStart})',
+                         fontsize=10, va='bottom', ha='left')
+            if (xEnd, yEnd) not in feasiblePoints:
+                plt.text(xEnd, yEnd, f'({xEnd}, {yEnd})',
+                         fontsize=10, va='bottom', ha='left')
 
             i += 1
 
@@ -225,7 +243,6 @@ class GraphicalSolver:
 
         # the feasible region
         feasiblePoints.append(feasiblePoints[0])
-        print(self.grahamScan(feasiblePoints))
         plt.fill_between(*zip(*self.grahamScan(feasiblePoints)), color='red',
                          alpha=0.2, label='Feasible Region')
 
@@ -253,13 +270,126 @@ class GraphicalSolver:
         plt.legend(loc='upper right', fontsize='small')
         plt.show()
 
+    def imguiUIElements(self, windowSize):
+        imgui.new_frame()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (windowSize[0]), (windowSize[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        # input ======================================================
+
+        if imgui.radio_button("Max", self.problemType == "Max"):
+            self.problemType = "Max"
+
+        if imgui.radio_button("Min", self.problemType == "Min"):
+            self.problemType = "Min"
+
+        imgui.text("Problem is: {}".format(self.problemType))
+
+        imgui.spacing()
+
+        for i in range(len(self.objFunc)):
+            value = self.objFunc[i]
+            imgui.set_next_item_width(50)
+            imgui.same_line()
+            changed, self.objFunc[i] = imgui.input_float(
+                "##objFunc {}".format(i + 1), value)
+            imgui.same_line()
+            imgui.text(f"x{i + 1}")
+
+            if changed:
+                # Value has been updated
+                pass
+
+        if imgui.button("Constraint +"):
+            self.amtOfConstraints += 1
+            self.constraints.append([0.0] * self.amtOfObjVars)
+            self.constraints[-1].append(0.0)  # add sign spot
+            self.constraints[-1].append(0.0)  # add rhs spot
+            self.signItemsChoices.append(0)
+
+        imgui.same_line()
+
+        if imgui.button("Constraint -"):
+            if self.amtOfConstraints != 1:
+                self.amtOfConstraints += -1
+                self.constraints.pop()
+                self.signItemsChoices.pop()
+
+        # spaceGui(6)
+        for i in range(self.amtOfConstraints):
+            imgui.spacing()
+            if len(self.constraints) <= i:
+                # Fill with default values if needed
+                self.constraints.append([0.0] * (self.amtOfObjVars + 2))
+
+            for j in range(self.amtOfObjVars):
+                value = self.constraints[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "##xC{}{}".format(i, j), value)
+                imgui.same_line()
+                imgui.text(f"x{j + 1}")
+                if changed:
+                    self.constraints[i][j] = xValue
+
+            imgui.same_line()
+            imgui.push_item_width(50)
+            changed, self.selectedItemSign = imgui.combo(
+                "##comboC{}{}".format(i, j), self.signItemsChoices[i], self.signItems)
+            if changed:
+                self.signItemsChoices[i] = self.selectedItemSign
+                self.constraints[i][-1] = self.signItemsChoices[i]
+
+            imgui.pop_item_width()
+            imgui.same_line()
+            imgui.set_next_item_width(50)
+            rhsValue = self.constraints[i][-2]
+            rhsChanged, rhs = imgui.input_float(
+                "##RHSC{}{}".format(i, j), rhsValue)
+
+            if rhsChanged:
+                self.constraints[i][-2] = rhs
+
+        if self.problemType == "Min":
+            isMin = True
+        else:
+            isMin = False
+
+        # solve button ================================================
+        if imgui.button("Solve"):
+            try:
+                if self.testInput(self.testInputSelected) is not None:
+                    self.objFunc, self.constraints, isMin = self.testInput(
+                        self.testInputSelected)
+
+                self.feasiblePoints, self.lineSegmentPoints, self.intersectionPoints = self.getSortedPoints(
+                    self.constraints)
+
+                self.optimalValue, self.optimalPoint = self.solveGraphical(
+                    self.objFunc, self.feasiblePoints, isMin)
+
+                self.drawGraph(self.feasiblePoints, self.lineSegmentPoints,
+                               self.intersectionPoints, self.optimalPoint, self.optimalValue)
+
+            except Exception as e:
+                print(e)
+                imgui.text("Math Error")
+
+        imgui.end()
+
     def doGui(self):
         # window setup
         pygame.init()
         size = 1920 / 2, 1080 / 2
 
         os.system('cls' if os.name == 'nt' else 'clear')
-        print("\nBrett's lp Graphical Solver Prototype\n")
+        if self.isConsoleOutput:
+            print("\nBrett's lp Graphical Solver Prototype\n")
 
         pygame.display.set_mode(size, pygame.DOUBLEBUF |
                                 pygame.OPENGL | pygame.RESIZABLE)
@@ -276,21 +406,6 @@ class GraphicalSolver:
         io = imgui.get_io()
         io.display_size = size
 
-        # var setup
-        problemType = "Max"
-
-        amtOfObjVars = 2
-        objFunc = [0.0, 0.0]
-
-        # constraints
-        amtOfConstraints = 1
-        constraints = [[0.0, 0.0, 0.0, 0.0]]
-        signItems = ["<=", ">=", "="]
-        signItemsChoices = [0]
-
-        optimalValue = 0
-        optimalPoint = (0, 0)
-
         while 1:
             # window handling
             for event in pygame.event.get():
@@ -299,116 +414,9 @@ class GraphicalSolver:
 
                 impl.process_event(event)
 
-            imgui.new_frame()
+            windowSize = pygame.display.get_window_size()
 
-            window_size = pygame.display.get_window_size()
-
-            imgui.set_next_window_position(0, 0)  # Set the window position
-            imgui.set_next_window_size(
-                (window_size[0]), (window_size[1]))  # Set the window size
-            imgui.begin("Tableaus Output",
-                        flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-
-            # input ======================================================
-
-            if imgui.radio_button("Max", problemType == "Max"):
-                problemType = "Max"
-
-            if imgui.radio_button("Min", problemType == "Min"):
-                problemType = "Min"
-
-            imgui.text("Problem is: {}".format(problemType))
-
-            imgui.spacing()
-
-            for i in range(len(objFunc)):
-                value = objFunc[i]
-                imgui.set_next_item_width(50)
-                imgui.same_line()
-                changed, objFunc[i] = imgui.input_float(
-                    "##objFunc {}".format(i + 1), value)
-                imgui.same_line()
-                imgui.text(f"x{i + 1}")
-
-                if changed:
-                    # Value has been updated
-                    pass
-            if imgui.button("Constraint +"):
-                amtOfConstraints += 1
-                constraints.append([0.0] * amtOfObjVars)
-                constraints[-1].append(0.0)  # add sign spot
-                constraints[-1].append(0.0)  # add rhs spot
-                signItemsChoices.append(0)
-
-            imgui.same_line()
-
-            if imgui.button("Constraint -"):
-                if amtOfConstraints != 1:
-                    amtOfConstraints += -1
-                    constraints.pop()
-                    signItemsChoices.pop()
-
-            # spaceGui(6)
-            for i in range(amtOfConstraints):
-                imgui.spacing()
-                if len(constraints) <= i:
-                    # Fill with default values if needed
-                    constraints.append([0.0] * (amtOfObjVars + 2))
-
-                for j in range(amtOfObjVars):
-                    value = constraints[i][j]
-                    imgui.set_next_item_width(50)
-                    imgui.same_line()
-                    changed, xValue = imgui.input_float(
-                        "##xC{}{}".format(i, j), value)
-                    imgui.same_line()
-                    imgui.text(f"x{j + 1}")
-                    if changed:
-                        constraints[i][j] = xValue
-
-                imgui.same_line()
-                imgui.push_item_width(50)
-                changed, selectedItemSign = imgui.combo(
-                    "##comboC{}{}".format(i, j), signItemsChoices[i], signItems)
-                if changed:
-                    signItemsChoices[i] = selectedItemSign
-                    constraints[i][-1] = signItemsChoices[i]
-
-                imgui.pop_item_width()
-                imgui.same_line()
-                imgui.set_next_item_width(50)
-                rhsValue = constraints[i][-2]
-                rhsChanged, rhs = imgui.input_float(
-                    "##RHSC{}{}".format(i, j), rhsValue)
-
-                if rhsChanged:
-                    constraints[i][-2] = rhs
-
-            if problemType == "Min":
-                isMin = True
-            else:
-                isMin = False
-
-            # solve button ================================================
-            if imgui.button("Solve"):
-                try:
-                    if self.testInput(2) is not None:
-                        objFunc, constraints, isMin = self.testInput(2)
-
-                    feasiblePoints, lineSegmentPoints, intersectionPoints = self.getSortedPoints(
-                        constraints)
-
-                    optimalValue, optimalPoint = self.solveGraphical(
-                        objFunc, feasiblePoints, isMin)
-
-                    self.drawGraph(feasiblePoints, lineSegmentPoints,
-                              intersectionPoints, optimalPoint, optimalValue)
-
-                except Exception as e:
-                    print(e)
-                    imgui.text("Math Error")
-
-            imgui.end()
+            self.imguiUIElements(windowSize)
 
             imgui.render()
             impl.render(imgui.get_draw_data())

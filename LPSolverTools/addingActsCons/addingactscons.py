@@ -18,13 +18,61 @@ except:
 
 
 class AddingActsCons:
-    dual = Dual()
-    mathPrelim = MathPrelims()
-
-    isConsoleOutput = False
-
     def __init__(self, isConsoleOutput=False):
+        self.dual = Dual()
+        self.mathPrelim = MathPrelims()
+        self.testInputSelected = -1
+
         self.isConsoleOutput = isConsoleOutput
+        # simplex specific vars
+        self.problemType = "Max"
+        self.absProblemType = "abs Off"
+
+        # dual constraints
+        self.amtOfObjVars = 2
+        self.objFunc = [0.0, 0.0]
+
+        self.constraints = [[0.0, 0.0, 0.0, 0.0]]
+        self.signItems = ["<=", ">="]
+        self.signItemsChoices = [0]
+
+        self.amtOfConstraints = 1
+
+        self.activity = [0.0, 0.0]
+
+        self.absRule = False
+
+        self.problemChoice = "activity"
+
+        self.problemState = True
+
+        self.actDisplayCol = []
+
+        self.amtOfAddingConstraints = 1
+
+        self.addingConstraints = []
+
+        self.addingSignItemsChoices = [0]
+
+        self.fixedTab = []
+        self.unfixedTab = []
+
+        self.changingTable = []
+
+        self.IMPivotCols = []
+        self.IMPivotRows = []
+        self.IMHeaderRow = []
+
+        self.pivotCol = -1
+        self.pivotRow = -1
+
+        self.newTableaus = []
+
+        self.reverseRowsState = False
+        self.rowsReversed = "off"
+
+        self.negRuleState = False
+        self.negRule = "off"
 
     def testInput(self, testNum=-1):
         isMin = False
@@ -189,6 +237,431 @@ class AddingActsCons:
                 print()
 
         return displayTab, newTab
+    
+    def imguiUIElements(self, windowSize):
+        imgui.new_frame()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (windowSize[0]), (windowSize[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        if imgui.radio_button("Max", self.problemType == "Max"):
+            self.problemType = "Max"
+
+        if imgui.radio_button("Min", self.problemType == "Min"):
+            self.problemType = "Min"
+
+        imgui.text("Problem is: {}".format(self.problemType))
+
+        if imgui.radio_button("abs on", self.absProblemType == "abs On"):
+            self.absProblemType = "abs On"
+
+        if imgui.radio_button("abs off", self.absProblemType == "abs Off"):
+            self.absProblemType = "abs Off"
+
+        imgui.text("absolute rule is: {}".format(self.absProblemType))
+
+        # obj vars ===========================================
+        if imgui.button("decision variables +"):
+            self.amtOfObjVars += 1
+            for i in range(len(self.constraints)):
+                self.constraints[i].append(0.0)
+            self.objFunc.append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("decision variables -"):
+            if amtOfObjVars != 2:
+                amtOfObjVars += -1
+                for i in range(len(self.constraints)):
+                    self.constraints[i].pop()
+                self.objFunc.pop()
+
+        imgui.spacing()
+
+        for i in range(len(self.objFunc)):
+            value = self.objFunc[i]
+            imgui.set_next_item_width(50)
+            imgui.same_line()
+            changed, self.objFunc[i] = imgui.input_float(
+                "##objFunc {}".format(i + 1), value)
+            imgui.same_line()
+            imgui.text(f"x{i + 1}")
+
+            if changed:
+                pass
+
+        if imgui.button("Constraint +"):
+            self.amtOfConstraints += 1
+            self.constraints.append([0.0] * self.amtOfObjVars)
+            self.constraints[-1].append(0.0)  # add sign spot
+            self.constraints[-1].append(0.0)  # add rhs spot
+            self.signItemsChoices.append(0)
+
+            self.activity.append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("Constraint -"):
+            if self.amtOfConstraints != 1:
+                self.amtOfConstraints += -1
+                self.constraints.pop()
+                self.signItemsChoices.pop()
+
+                self.activity.pop()
+
+        for i in range(self.amtOfConstraints):
+            imgui.spacing()
+            if len(self.constraints) <= i:
+                # Fill with default values if needed
+                self.constraints.append([0.0] * (self.amtOfObjVars + 2))
+
+            for j in range(self.amtOfObjVars):
+                value = self.constraints[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "##xC{}{}".format(i, j), value)
+                imgui.same_line()
+                imgui.text(f"x{j + 1}")
+                if changed:
+                    self.constraints[i][j] = xValue
+
+            imgui.same_line()
+            imgui.push_item_width(50)
+            changed, self.selectedItemSign = imgui.combo(
+                "##comboC{}{}".format(i, j), self.signItemsChoices[i], self.signItems)
+            if changed:
+                self.signItemsChoices[i] = self.selectedItemSign
+                self.constraints[i][-1] = self.signItemsChoices[i]
+
+            imgui.pop_item_width()
+            imgui.same_line()
+            imgui.set_next_item_width(50)
+            rhsValue = self.constraints[i][-2]
+            rhsChanged, rhs = imgui.input_float(
+                "##RHSC{}{}".format(i, j), rhsValue)
+
+            if rhsChanged:
+                self.constraints[i][-2] = rhs
+
+        if imgui.radio_button("adding activity", self.problemChoice == "activity"):
+            self.problemChoice = "activity"
+
+        imgui.same_line(0, 20)
+
+        if imgui.radio_button("adding constraints", self.problemChoice == "constraints"):
+            self.problemChoice = "constraints"
+
+        imgui.text("the current problem is adding {}".format(self.problemChoice))
+
+        if self.problemType == "Min":
+            isMin = True
+        else:
+            isMin = False
+
+        if self.absProblemType == "abs On":
+            self.absRule = True
+        else:
+            self.absRule = False
+
+        if self.problemChoice == "activity":
+            self.problemState = True
+        else:
+            self.problemState = False
+
+        if self.problemState:
+            try:
+                imgui.new_line()
+                for i in range(len(self.constraints) + 1):
+                    value = (self.activity[i])
+                    imgui.set_next_item_width(50)
+                    imgui.same_line()
+                    imgui.new_line()
+                    changed, self.activity[i] = imgui.input_float(
+                        "##activity {}".format(i + 1), value)
+                    if i == 0:
+                        imgui.same_line()
+                        imgui.text("x")
+                    else:
+                        imgui.same_line()
+                        imgui.text("c{}".format(i))
+            except:
+                pass
+        else:
+            if imgui.button("New Constraint +"):
+                self.amtOfAddingConstraints += 1
+                self.addingConstraints.append([0.0] * self.amtOfObjVars)
+                self.addingConstraints[-1].append(0.0)  # add sign spot
+                self.addingConstraints[-1].append(0.0)  # add rhs spot
+                self.addingSignItemsChoices.append(0)
+
+            imgui.same_line()
+
+            if imgui.button("New Constraint -"):
+                if self.amtOfAddingConstraints != 1:
+                    self.amtOfAddingConstraints += -1
+                    self.addingConstraints.pop()
+                    self.addingSignItemsChoices.pop()
+
+            for i in range(self.amtOfAddingConstraints):
+                imgui.spacing()
+                if len(self.addingConstraints) <= i:
+                    self.addingConstraints.append([0.0] * (self.amtOfObjVars + 2))
+
+                for j in range(self.amtOfObjVars):
+                    value = (self.addingConstraints[i][j])
+                    imgui.set_next_item_width(50)
+                    imgui.same_line()
+                    changed, xValue = imgui.input_float(
+                        "##axC{}{}".format(i, j), value)
+                    imgui.same_line()
+                    imgui.text(f"x{j + 1}")
+                    if changed:
+                        self.addingConstraints[i][j] = xValue
+
+                imgui.same_line()
+                imgui.push_item_width(50)
+                changed, self.selectedItemSign = imgui.combo(
+                    "##acomboC{}{}".format(i, j), self.addingSignItemsChoices[i], self.signItems)
+                if changed:
+                    self.addingSignItemsChoices[i] = self.selectedItemSign
+                    self.addingConstraints[i][-1] = self.addingSignItemsChoices[i]
+
+                imgui.pop_item_width()
+                imgui.same_line()
+                imgui.set_next_item_width(50)
+                rhsValue = (self.addingConstraints[i][-2])
+                rhsChanged, rhs = imgui.input_float(
+                    "##aRHSC{}{}".format(i, j), rhsValue)
+
+                if rhsChanged:
+                    self.addingConstraints[i][-2] = rhs
+
+            if imgui.radio_button("reverse rows on", self.rowsReversed == "on"):
+                self.rowsReversed = "on"
+
+            imgui.same_line(0, 20)
+
+            if imgui.radio_button("reverse rows off", self.rowsReversed == "off"):
+                self.rowsReversed = "off"
+
+            imgui.text("reversing of rows is: {}".format(self.rowsReversed))
+
+            if self.rowsReversed == "on":
+                self.reverseRowsState = True
+            else:
+                self.reverseRowsState = False
+
+            if imgui.radio_button("keep slack basic on", self.negRule == "on"):
+                self.negRule = "on"
+
+            imgui.same_line(0, 20)
+
+            if imgui.radio_button("keep slack basic off", self.negRule == "off"):
+                self.negRule = "off"
+
+            imgui.text("keep slack basic is: {}".format(self.negRule))
+
+            if self.negRule == "on":
+                self.negRuleState = True
+            else:
+                self.negRuleState = False
+
+        imgui.spacing()
+        imgui.spacing()
+        # the solve button =================================================
+        if imgui.button("Solve"):
+            try:
+                if self.testInput(self.testInputSelected) is not None:
+                    self.objFunc, self.constraints, isMin, self.addingConstraints = self.testInput(self.testInputSelected)
+
+                a = copy.deepcopy(self.objFunc)
+                b = copy.deepcopy(self.constraints)
+
+                if self.problemState:
+                    c = copy.deepcopy(self.activity)
+                    self.actDisplayCol, self.changingTable = self.doAddActivity(
+                        a, b, isMin, c, self.absRule)
+                else:
+                    e = copy.deepcopy(self.addingConstraints)
+                    self.addedConstraints = self.addingConstraints
+                    if self.isConsoleOutput:
+                        print(self.addingConstraints)
+                    self.fixedTab, self.unfixedTab = self.doAddConstraint(
+                        a, b, isMin, e, self.absRule, self.reverseRowsState, self.negRuleState)
+
+            except Exception as e:
+                print("math error:", e)
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        if self.problemState:
+            for i in range(len(self.actDisplayCol)):
+                if i == 0:
+                    imgui.text("Activity    ")
+                else:
+                    imgui.text("Constraint {}".format(i))
+                imgui.same_line()
+                imgui.text("{:>15.3f}".format(float(self.actDisplayCol[i])))
+                imgui.new_line()
+        else:
+            imgui.text("unfixed Tab:")
+            for i in range(len(self.unfixedTab)):
+                for j in range(len(self.unfixedTab[i])):
+                    if i >= (len(self.unfixedTab) - len(self.addedConstraints)):
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+                    imgui.text("{:>9.3f}".format(float(self.unfixedTab[i][j])))
+                    if i >= (len(self.unfixedTab) - len(self.addedConstraints)):
+                        imgui.pop_style_color()
+                    imgui.same_line(0, 20)
+                imgui.new_line()
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            imgui.text("fixed Tab:")
+            for i in range(len(self.fixedTab)):
+                for j in range(len(self.fixedTab[i])):
+                    if i >= (len(self.unfixedTab) - len(self.addedConstraints)):
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+                    imgui.text("{:>9.3f}".format(float(self.fixedTab[i][j])))
+                    if i >= (len(self.unfixedTab) - len(self.addedConstraints)):
+                        imgui.pop_style_color()
+                    imgui.same_line(0, 20)
+                imgui.new_line()
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        if imgui.button("Optimize again"):
+            if self.problemState:
+                tab = copy.deepcopy(self.changingTable)
+
+                for i in range(len(tab)):
+                    tab[i].insert(len(self.objFunc), float(self.actDisplayCol[i]))
+                    if self.isConsoleOutput:
+                        print(float(self.actDisplayCol[i]))
+
+                if self.isConsoleOutput:
+                    print()
+                    for i in range(len(tab)):
+                        for j in range(len(tab[i])):
+                            print(tab[i][j], end=" ")
+                        print()
+
+                try:
+                    self.newTableaus, self.changingVars, self.optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow = self.dual.doDualSimplex([
+                    ], [], isMin, tab)
+
+                    self.IMHeaderRow.clear()
+
+                    for i in range(len(self.newTableaus[-1][-1])):
+                        if i < (len(self.objFunc) + 1):
+                            self.IMHeaderRow.append(f"x{i+1}")
+                        elif i == (len(self.newTableaus[-1][-1]) - 1):
+                            self.IMHeaderRow.append(f"rhs")
+                        else:
+                            self.IMHeaderRow.append(f"h{i+1}")
+
+                    if self.isConsoleOutput:
+                        print()
+                        for i in range(len(self.newTableaus[-1])):
+                            for j in range(len(self.newTableaus[-1][i])):
+                                print(
+                                    float(self.newTableaus[-1][i][j]), end=" ")
+                            print()
+
+                except Exception as e:
+                    print("math error in Optimize again:", e)
+            else:
+                if self.isConsoleOutput:
+                    print()
+                    for i in range(len(self.fixedTab)):
+                        for j in range(len(self.fixedTab[i])):
+                            print(float(self.fixedTab[i][j]), end=" ")
+                        print()
+
+                tab = copy.deepcopy(self.fixedTab)
+
+                try:
+                    self.newTableaus, self.changingVars, self.optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow = self.dual.doDualSimplex([
+                    ], [], isMin, tab)
+
+                    self.IMHeaderRow.clear()
+
+                    for i in range(len(self.newTableaus[-1][-1])):
+                        if i <= (len(self.objFunc) - 1):
+                            self.IMHeaderRow.append(f"x{i+1}")
+                        elif i == (len(self.newTableaus[-1][-1]) - 1):
+                            self.IMHeaderRow.append(f"rhs")
+                        else:
+                            self.IMHeaderRow.append(f"h{i+1}")
+
+                except Exception as e:
+                    print("math error in Optimize again:", e)
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        for i in range(len(self.newTableaus)):
+            if i < len(self.IMPivotCols):
+                pivotCol = self.IMPivotCols[i]
+                pivotRow = self.IMPivotRows[i]
+            else:
+                pivotCol = -1
+                pivotRow = -1
+            imgui.text("Tableau {}".format(i + 1))
+            imgui.text("t-" + str(i + 1))
+            imgui.same_line(0, 20)
+            for hCtr in range(len(self.IMHeaderRow)):
+                imgui.text("{:>8}".format(str(self.IMHeaderRow[hCtr])))
+                imgui.same_line(0, 20)
+            imgui.spacing()
+            for j in range(len(self.newTableaus[i])):
+                if j == pivotRow and pivotRow != -1:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                if j == 0:
+                    imgui.text("z  ")
+                else:
+                    imgui.text("c " + str(j))
+                imgui.same_line(0, 20)
+                for k in range(len(self.newTableaus[i][j])):
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    imgui.text("{:>8.3f}".format(self.newTableaus[i][j][k]))
+                    if k < len(self.newTableaus[i][j]) - 1:
+                        imgui.same_line(0, 20)
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.pop_style_color()
+                if j == pivotRow and pivotRow != -1:
+                    imgui.pop_style_color()
+                imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+        imgui.spacing()
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+
+        imgui.end()
 
     def doGui(self):
         pygame.init()
@@ -212,57 +685,6 @@ class AddingActsCons:
         io = imgui.get_io()
         io.display_size = size
 
-        # simplex specific vars
-
-        problemType = "Max"
-        absProblemType = "abs Off"
-
-        # dual constraints
-        amtOfObjVars = 2
-        objFunc = [0.0, 0.0]
-
-        constraints = [[0.0, 0.0, 0.0, 0.0]]
-        signItems = ["<=", ">="]
-        signItemsChoices = [0]
-
-        amtOfConstraints = 1
-
-        activity = [0.0, 0.0]
-
-        absRule = False
-
-        problemChoice = "activity"
-
-        problemState = True
-
-        actDisplayCol = []
-
-        amtOfAddingConstraints = 1
-
-        addingConstraints = []
-
-        addingSignItemsChoices = [0]
-
-        fixedTab = []
-        unfixedTab = []
-
-        changingTable = []
-
-        IMPivotCols = []
-        IMPivotRows = []
-        IMHeaderRow = []
-
-        pivotCol = -1
-        pivotRow = -1
-
-        newTableaus = []
-
-        reverseRowsState = False
-        rowsReversed = "off"
-
-        negRuleState = False
-        negRule = "off"
-
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -270,432 +692,9 @@ class AddingActsCons:
 
                 impl.process_event(event)
 
-            imgui.new_frame()
+            windowSize = pygame.display.get_window_size()
 
-            window_size = pygame.display.get_window_size()
-
-            imgui.set_next_window_position(0, 0)  # Set the window position
-            imgui.set_next_window_size(
-                (window_size[0]), (window_size[1]))  # Set the window size
-            imgui.begin("Tableaus Output",
-                        flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-
-            if imgui.radio_button("Max", problemType == "Max"):
-                problemType = "Max"
-
-            if imgui.radio_button("Min", problemType == "Min"):
-                problemType = "Min"
-
-            imgui.text("Problem is: {}".format(problemType))
-
-            if imgui.radio_button("abs on", absProblemType == "abs On"):
-                absProblemType = "abs On"
-
-            if imgui.radio_button("abs off", absProblemType == "abs Off"):
-                absProblemType = "abs Off"
-
-            imgui.text("absolute rule is: {}".format(absProblemType))
-
-            # obj vars ===========================================
-            if imgui.button("decision variables +"):
-                amtOfObjVars += 1
-                for i in range(len(constraints)):
-                    constraints[i].append(0.0)
-                objFunc.append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("decision variables -"):
-                if amtOfObjVars != 2:
-                    amtOfObjVars += -1
-                    for i in range(len(constraints)):
-                        constraints[i].pop()
-                    objFunc.pop()
-
-            imgui.spacing()
-
-            for i in range(len(objFunc)):
-                value = objFunc[i]
-                imgui.set_next_item_width(50)
-                imgui.same_line()
-                changed, objFunc[i] = imgui.input_float(
-                    "##objFunc {}".format(i + 1), value)
-                imgui.same_line()
-                imgui.text(f"x{i + 1}")
-
-                if changed:
-                    pass
-
-            if imgui.button("Constraint +"):
-                amtOfConstraints += 1
-                constraints.append([0.0] * amtOfObjVars)
-                constraints[-1].append(0.0)  # add sign spot
-                constraints[-1].append(0.0)  # add rhs spot
-                signItemsChoices.append(0)
-
-                activity.append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("Constraint -"):
-                if amtOfConstraints != 1:
-                    amtOfConstraints += -1
-                    constraints.pop()
-                    signItemsChoices.pop()
-
-                    activity.pop()
-
-            for i in range(amtOfConstraints):
-                imgui.spacing()
-                if len(constraints) <= i:
-                    # Fill with default values if needed
-                    constraints.append([0.0] * (amtOfObjVars + 2))
-
-                for j in range(amtOfObjVars):
-                    value = constraints[i][j]
-                    imgui.set_next_item_width(50)
-                    imgui.same_line()
-                    changed, xValue = imgui.input_float(
-                        "##xC{}{}".format(i, j), value)
-                    imgui.same_line()
-                    imgui.text(f"x{j + 1}")
-                    if changed:
-                        constraints[i][j] = xValue
-
-                imgui.same_line()
-                imgui.push_item_width(50)
-                changed, selectedItemSign = imgui.combo(
-                    "##comboC{}{}".format(i, j), signItemsChoices[i], signItems)
-                if changed:
-                    signItemsChoices[i] = selectedItemSign
-                    constraints[i][-1] = signItemsChoices[i]
-
-                imgui.pop_item_width()
-                imgui.same_line()
-                imgui.set_next_item_width(50)
-                rhsValue = constraints[i][-2]
-                rhsChanged, rhs = imgui.input_float(
-                    "##RHSC{}{}".format(i, j), rhsValue)
-
-                if rhsChanged:
-                    constraints[i][-2] = rhs
-
-            if imgui.radio_button("adding activity", problemChoice == "activity"):
-                problemChoice = "activity"
-
-            imgui.same_line(0, 20)
-
-            if imgui.radio_button("adding constraints", problemChoice == "constraints"):
-                problemChoice = "constraints"
-
-            imgui.text("the current problem is adding {}".format(problemChoice))
-
-            if problemType == "Min":
-                isMin = True
-            else:
-                isMin = False
-
-            if absProblemType == "abs On":
-                absRule = True
-            else:
-                absRule = False
-
-            if problemChoice == "activity":
-                problemState = True
-            else:
-                problemState = False
-
-            if problemState:
-                try:
-                    imgui.new_line()
-                    for i in range(len(constraints) + 1):
-                        value = (activity[i])
-                        imgui.set_next_item_width(50)
-                        imgui.same_line()
-                        imgui.new_line()
-                        changed, activity[i] = imgui.input_float(
-                            "##activity {}".format(i + 1), value)
-                        if i == 0:
-                            imgui.same_line()
-                            imgui.text("x")
-                        else:
-                            imgui.same_line()
-                            imgui.text("c{}".format(i))
-                except:
-                    pass
-            else:
-                if imgui.button("New Constraint +"):
-                    amtOfAddingConstraints += 1
-                    addingConstraints.append([0.0] * amtOfObjVars)
-                    addingConstraints[-1].append(0.0)  # add sign spot
-                    addingConstraints[-1].append(0.0)  # add rhs spot
-                    addingSignItemsChoices.append(0)
-
-                imgui.same_line()
-
-                if imgui.button("New Constraint -"):
-                    if amtOfAddingConstraints != 1:
-                        amtOfAddingConstraints += -1
-                        addingConstraints.pop()
-                        addingSignItemsChoices.pop()
-
-                for i in range(amtOfAddingConstraints):
-                    imgui.spacing()
-                    if len(addingConstraints) <= i:
-                        addingConstraints.append([0.0] * (amtOfObjVars + 2))
-
-                    for j in range(amtOfObjVars):
-                        value = (addingConstraints[i][j])
-                        imgui.set_next_item_width(50)
-                        imgui.same_line()
-                        changed, xValue = imgui.input_float(
-                            "##axC{}{}".format(i, j), value)
-                        imgui.same_line()
-                        imgui.text(f"x{j + 1}")
-                        if changed:
-                            addingConstraints[i][j] = xValue
-
-                    imgui.same_line()
-                    imgui.push_item_width(50)
-                    changed, selectedItemSign = imgui.combo(
-                        "##acomboC{}{}".format(i, j), addingSignItemsChoices[i], signItems)
-                    if changed:
-                        addingSignItemsChoices[i] = selectedItemSign
-                        addingConstraints[i][-1] = addingSignItemsChoices[i]
-
-                    imgui.pop_item_width()
-                    imgui.same_line()
-                    imgui.set_next_item_width(50)
-                    rhsValue = (addingConstraints[i][-2])
-                    rhsChanged, rhs = imgui.input_float(
-                        "##aRHSC{}{}".format(i, j), rhsValue)
-
-                    if rhsChanged:
-                        addingConstraints[i][-2] = rhs
-
-                if imgui.radio_button("reverse rows on", rowsReversed == "on"):
-                    rowsReversed = "on"
-
-                imgui.same_line(0, 20)
-
-                if imgui.radio_button("reverse rows off", rowsReversed == "off"):
-                    rowsReversed = "off"
-
-                imgui.text("reversing of rows is: {}".format(rowsReversed))
-
-                if rowsReversed == "on":
-                    reverseRowsState = True
-                else:
-                    reverseRowsState = False
-
-                if imgui.radio_button("keep slack basic on", negRule == "on"):
-                    negRule = "on"
-
-                imgui.same_line(0, 20)
-
-                if imgui.radio_button("keep slack basic off", negRule == "off"):
-                    negRule = "off"
-
-                imgui.text("keep slack basic is: {}".format(negRule))
-
-                if negRule == "on":
-                    negRuleState = True
-                else:
-                    negRuleState = False
-
-            imgui.spacing()
-            imgui.spacing()
-            # the solve button =================================================
-            if imgui.button("Solve"):
-                try:
-                    if self.testInput() is not None:
-                        objFunc, constraints, isMin, addingConstraints = self.testInput()
-                    # objFunc, constraints, isMin, addingConstraints = testInput()
-
-                    a = copy.deepcopy(objFunc)
-                    b = copy.deepcopy(constraints)
-
-                    if problemState:
-                        c = copy.deepcopy(activity)
-                        actDisplayCol, changingTable = self.doAddActivity(
-                            a, b, isMin, c, absRule)
-                    else:
-                        e = copy.deepcopy(addingConstraints)
-                        addedConstraints = addingConstraints
-                        if self.isConsoleOutput:
-                            print(addingConstraints)
-                        fixedTab, unfixedTab = self.doAddConstraint(
-                            a, b, isMin, e, absRule, reverseRowsState, negRuleState)
-
-                except Exception as e:
-                    print("math error:", e)
-
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-
-            if problemState:
-                for i in range(len(actDisplayCol)):
-                    if i == 0:
-                        imgui.text("Activity    ")
-                    else:
-                        imgui.text("Constraint {}".format(i))
-                    imgui.same_line()
-                    imgui.text("{:>15.3f}".format(float(actDisplayCol[i])))
-                    imgui.new_line()
-            else:
-                imgui.text("unfixed Tab:")
-                for i in range(len(unfixedTab)):
-                    for j in range(len(unfixedTab[i])):
-                        if i >= (len(unfixedTab) - len(addedConstraints)):
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-                        imgui.text("{:>9.3f}".format(float(unfixedTab[i][j])))
-                        if i >= (len(unfixedTab) - len(addedConstraints)):
-                            imgui.pop_style_color()
-                        imgui.same_line(0, 20)
-                    imgui.new_line()
-
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-
-                imgui.text("fixed Tab:")
-                for i in range(len(fixedTab)):
-                    for j in range(len(fixedTab[i])):
-                        if i >= (len(unfixedTab) - len(addedConstraints)):
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-                        imgui.text("{:>9.3f}".format(float(fixedTab[i][j])))
-                        if i >= (len(unfixedTab) - len(addedConstraints)):
-                            imgui.pop_style_color()
-                        imgui.same_line(0, 20)
-                    imgui.new_line()
-
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-
-            if imgui.button("Optimize again"):
-                if problemState:
-                    tab = copy.deepcopy(changingTable)
-
-                    for i in range(len(tab)):
-                        tab[i].insert(len(objFunc), float(actDisplayCol[i]))
-                        if self.isConsoleOutput:
-                            print(float(actDisplayCol[i]))
-
-                    if self.isConsoleOutput:
-                        print()
-                        for i in range(len(tab)):
-                            for j in range(len(tab[i])):
-                                print(tab[i][j], end=" ")
-                            print()
-
-                    try:
-                        newTableaus, changingVars, optimalSolution, IMPivotCols, IMPivotRows, IMHeaderRow = self.dual.doDualSimplex([
-                        ], [], isMin, tab)
-
-                        IMHeaderRow.clear()
-
-                        for i in range(len(newTableaus[-1][-1])):
-                            if i < (len(objFunc) + 1):
-                                IMHeaderRow.append(f"x{i+1}")
-                            elif i == (len(newTableaus[-1][-1]) - 1):
-                                IMHeaderRow.append(f"rhs")
-                            else:
-                                IMHeaderRow.append(f"h{i+1}")
-
-                        if self.isConsoleOutput:
-                            print()
-                            for i in range(len(newTableaus[-1])):
-                                for j in range(len(newTableaus[-1][i])):
-                                    print(
-                                        float(newTableaus[-1][i][j]), end=" ")
-                                print()
-
-                    except Exception as e:
-                        print("math error in Optimize again:", e)
-                else:
-                    if self.isConsoleOutput:
-                        print()
-                        for i in range(len(fixedTab)):
-                            for j in range(len(fixedTab[i])):
-                                print(float(fixedTab[i][j]), end=" ")
-                            print()
-
-                    tab = copy.deepcopy(fixedTab)
-
-                    try:
-                        newTableaus, changingVars, optimalSolution, IMPivotCols, IMPivotRows, IMHeaderRow = self.dual.doDualSimplex([
-                        ], [], isMin, tab)
-
-                        IMHeaderRow.clear()
-
-                        for i in range(len(newTableaus[-1][-1])):
-                            if i <= (len(objFunc) - 1):
-                                IMHeaderRow.append(f"x{i+1}")
-                            elif i == (len(newTableaus[-1][-1]) - 1):
-                                IMHeaderRow.append(f"rhs")
-                            else:
-                                IMHeaderRow.append(f"h{i+1}")
-
-                    except Exception as e:
-                        print("math error in Optimize again:", e)
-
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-
-            for i in range(len(newTableaus)):
-                if i < len(IMPivotCols):
-                    pivotCol = IMPivotCols[i]
-                    pivotRow = IMPivotRows[i]
-                else:
-                    pivotCol = -1
-                    pivotRow = -1
-                imgui.text("Tableau {}".format(i + 1))
-                imgui.text("t-" + str(i + 1))
-                imgui.same_line(0, 20)
-                for hCtr in range(len(IMHeaderRow)):
-                    imgui.text("{:>8}".format(str(IMHeaderRow[hCtr])))
-                    imgui.same_line(0, 20)
-                imgui.spacing()
-                for j in range(len(newTableaus[i])):
-                    if j == pivotRow and pivotRow != -1:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                    if j == 0:
-                        imgui.text("z  ")
-                    else:
-                        imgui.text("c " + str(j))
-                    imgui.same_line(0, 20)
-                    for k in range(len(newTableaus[i][j])):
-                        if k == pivotCol and pivotCol != -1:
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                        imgui.text("{:>8.3f}".format(newTableaus[i][j][k]))
-                        if k < len(newTableaus[i][j]) - 1:
-                            imgui.same_line(0, 20)
-                        if k == pivotCol and pivotCol != -1:
-                            imgui.pop_style_color()
-                    if j == pivotRow and pivotRow != -1:
-                        imgui.pop_style_color()
-                    imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-            imgui.spacing()
-
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-            imgui.spacing()
-
-            imgui.end()
+            self.imguiUIElements(windowSize)
 
             imgui.render()
             impl.render(imgui.get_draw_data())

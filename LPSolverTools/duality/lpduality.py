@@ -9,20 +9,52 @@ import sys
 
 try:
     from dualsimplex import DualSimplex as Dual
-    from mathpreliminaries import MathPreliminaries as MathPrelims
 except:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from dual.dualsimplex import DualSimplex as Dual
-    from mathPrelim.mathpreliminaries import MathPreliminaries as MathPrelims   
 
 
 class LPDuality:
-    dual = Dual()
-
-    isConsoleOutput = False
 
     def __init__(self, isConsoleOutput=False):
+        self.dual = Dual()
         self.isConsoleOutput = isConsoleOutput
+        self.testInputSelected = -1
+
+        # simplex specific vars
+        self.problemType = "Max"
+
+        self.objFunc = []
+        self.optimalSolution = 0
+        self.changingVars = []
+        self.constraintsLhs = []
+        self.cellRef = []
+        self.dualObjFunc = []
+        self.dualOptimalSolution = 0
+        self.dualChangingVars = []
+        self.dualConstraintsLhs = []
+        self.dualCellRef = []
+
+        # dual constraints
+        self.amtOfObjVars = 2
+        self.objFunc = [0.0, 0.0]
+
+        self.constraints = [[0.0, 0.0, 0.0, 0.0]]
+        self.signItems = ["<=", ">="]
+        self.signItemsChoices = [0]
+
+        self.amtOfConstraints = 1
+
+        self.headerString = []
+        self.dualHeaderString = []
+
+        self.tObjFunc = []
+        self.tDualObjFunc = []
+
+        self.errorE = ""
+
+        self.strMin = ""
+        self.strDualMin = ""
 
     def testInput(self, testNum=-1):
         isMin = False
@@ -155,18 +187,320 @@ class LPDuality:
 
         return objFunc, optimalSolution, changingVars, constraintsLhs, cellRef, dualObjFunc, dualOptimalSolution, dualChangingVars, dualConstraintsLhs, dualCellRef
 
-    def doGui(self):
-        objFunc = []
-        optimalSolution = 0
-        changingVars = []
-        constraintsLhs = []
-        cellRef = []
-        dualObjFunc = []
-        dualOptimalSolution = 0
-        dualChangingVars = []
-        dualConstraintsLhs = []
-        dualCellRef = []
+    def imguiUIElements(self, windowSize):
+        imgui.new_frame()
 
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (windowSize[0]), (windowSize[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        if imgui.radio_button("Max", self.problemType == "Max"):
+            self.problemType = "Max"
+
+        if imgui.radio_button("Min", self.problemType == "Min"):
+            self.problemType = "Min"
+
+        imgui.text("Problem is: {}".format(self.problemType))
+
+        # obj vars ===========================================
+        if imgui.button("decision variables +"):
+            self.amtOfObjVars += 1
+            for i in range(len(self.constraints)):
+                self.constraints[i].append(0.0)
+            self.objFunc.append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("decision variables -"):
+            if self.amtOfObjVars != 2:
+                self.amtOfObjVars += -1
+                for i in range(len(self.constraints)):
+                    self.constraints[i].pop()
+                self.objFunc.pop()
+
+        imgui.spacing()
+
+        for i in range(len(self.objFunc)):
+            value = self.objFunc[i]
+            imgui.set_next_item_width(50)
+            imgui.same_line()
+            changed, self.objFunc[i] = imgui.input_float(
+                "##objFunc {}".format(i + 1), value)
+            imgui.same_line()
+            imgui.text(f"x{i + 1}")
+
+            if changed:
+                # Value has been updated
+                pass
+
+        if imgui.button("Constraint +"):
+            self.amtOfConstraints += 1
+            self.constraints.append([0.0] * self.amtOfObjVars)
+            self.constraints[-1].append(0.0)  # add sign spot
+            self.constraints[-1].append(0.0)  # add rhs spot
+            self.signItemsChoices.append(0)
+
+        imgui.same_line()
+
+        if imgui.button("Constraint -"):
+            if self.amtOfConstraints != 1:
+                self.amtOfConstraints += -1
+                self.constraints.pop()
+                self.signItemsChoices.pop()
+
+        # spaceGui(6)
+        for i in range(self.amtOfConstraints):
+            imgui.spacing()
+            if len(self.constraints) <= i:
+                # Fill with default values if needed
+                self.constraints.append([0.0] * (self.amtOfObjVars + 2))
+
+            for j in range(self.amtOfObjVars):
+                value = self.constraints[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "##xC{}{}".format(i, j), value)
+                imgui.same_line()
+                imgui.text(f"x{j + 1}")
+                if changed:
+                    self.constraints[i][j] = xValue
+
+            imgui.same_line()
+            imgui.push_item_width(50)
+            changed, self.selectedItemSign = imgui.combo(
+                "##comboC{}{}".format(i, j), self.signItemsChoices[i], self.signItems)
+            if changed:
+                self.signItemsChoices[i] = self.selectedItemSign
+                self.constraints[i][-1] = self.signItemsChoices[i]
+
+            imgui.pop_item_width()
+            imgui.same_line()
+            imgui.set_next_item_width(50)
+            rhsValue = self.constraints[i][-2]
+            rhsChanged, rhs = imgui.input_float(
+                "##RHSC{}{}".format(i, j), rhsValue)
+
+            if rhsChanged:
+                self.constraints[i][-2] = rhs
+
+        if self.problemType == "Min":
+            isMin = True
+        else:
+            isMin = False
+
+        # solve button ==================================================
+        if imgui.button("Solve"):
+            try:
+                if self.testInput(self.testInputSelected) is not None:
+                    self.objFunc, self.constraints, isMin = self.testInput(
+                        self.testInputSelected)
+
+                self.headerString.clear()
+                self.dualHeaderString.clear()
+
+                a = copy.deepcopy(self.objFunc)
+                b = copy.deepcopy(self.constraints)
+                self.objFunc, self.optimalSolution, self.changingVars, self.constraintsLhs, self.cellRef, self.dualObjFunc, self.dualOptimalSolution, self.dualChangingVars, self.dualConstraintsLhs, self.dualCellRef = self.doDuality(
+                    a, b, isMin)
+
+                # for display reasons
+                self.tObjFunc = copy.deepcopy(self.objFunc)
+                self.tDualObjFunc = copy.deepcopy(self.dualObjFunc)
+                self.tObjFunc.append(self.optimalSolution)
+                self.tDualObjFunc.append(self.dualOptimalSolution)
+
+                dualMin = not isMin
+
+                if isMin:
+                    self.strMin = "max"
+                else:
+                    self.strMin = "min"
+
+                if dualMin:
+                    self.strDualMin = "max"
+                else:
+                    self.strDualMin = "min"
+
+                self.headerString.append("Primal")
+                self.dualHeaderString.append("Dual")
+
+                for i in range(len(self.objFunc)):
+                    self.headerString.append("x{}".format(i + 1))
+
+                for i in range(len(self.dualObjFunc)):
+                    self.dualHeaderString.append("y{}".format(i + 1))
+
+                self.headerString.append("Ref")
+                self.headerString.append("Sign")
+                self.headerString.append("Rhs")
+                self.headerString.append("Slack")
+
+                self.dualHeaderString.append("Ref")
+                self.dualHeaderString.append("Sign")
+                self.dualHeaderString.append("Rhs")
+                self.dualHeaderString.append("Slack")
+
+                self.errorE = ""
+            except Exception as e:
+                print("math error:", e)
+                imgui.text("math error: {}".format(e))
+                self.errorE = "math error: {}".format(e)
+
+        imgui.spacing()
+        imgui.text(self.errorE)
+
+        imgui.spacing()
+        imgui.spacing()
+
+        try:
+            for i in range(len(self.headerString)):
+                imgui.text("{:>8}".format(self.headerString[i]))
+                imgui.same_line(0, 20)
+
+            imgui.spacing()
+
+            # display the objective function
+            imgui.text("{:>8}".format(f"{self.strDualMin} z"))
+            imgui.same_line(0, 20)
+            for i in range(len(self.tObjFunc)):
+                if i != len(self.tObjFunc) - 1:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+                else:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                imgui.text("{:>8.3f}".format(self.tObjFunc[i]))
+                # if i != len(objFunc) - 1:
+                imgui.pop_style_color()
+                imgui.same_line(0, 20)
+
+            imgui.spacing()
+
+            displayCons = copy.deepcopy(self.constraintsLhs)
+
+            # build display cons
+            for i in range(len(self.constraintsLhs)):
+                displayCons[i].append(self.cellRef[i])
+                if self.constraints[i][-1] == 0:
+                    displayCons[i].append("<=")
+                else:
+                    displayCons[i].append(">=")
+                displayCons[i].append(self.constraints[i][-2])
+
+                tSlack = displayCons[i][-1] - displayCons[i][-3]
+                displayCons[i].append(tSlack)
+
+            # display the constraints
+            for i in range(len(displayCons)):
+                imgui.text("{:>8}".format("c{}".format(i + 1)))
+                imgui.same_line(0, 20)
+                for j in range(len(displayCons[i])):
+                    if j == len(displayCons[i]) - 2:
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 1.0, 0.0, 1.0)
+                    if isinstance(displayCons[i][j], float):
+                        imgui.text("{:>8.3f}".format(displayCons[i][j]))
+                    else:
+                        imgui.text("{:>8}".format(displayCons[i][j]))
+                    if j == len(displayCons[i]) - 2:
+                        imgui.pop_style_color()
+                    if j < len(displayCons[i]) - 1:
+                        imgui.same_line(0, 20)
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            imgui.text("{:>8}".format("opt"))
+            imgui.same_line(0, 20)
+            for i in range(len(self.changingVars)):
+                imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+                imgui.text("{:>8.3f}".format(self.changingVars[i]))
+                imgui.pop_style_color()
+                imgui.same_line(0, 20)
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            # dual ==============================================
+            imgui.separator()
+            imgui.separator()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            for i in range(len(self.dualHeaderString)):
+                imgui.text("{:>8}".format(self.dualHeaderString[i]))
+                imgui.same_line(0, 20)
+
+            imgui.spacing()
+
+            # display the objective function
+            imgui.text("{:>8}".format(f"{self.strMin} z"))
+            imgui.same_line(0, 20)
+            for i in range(len(self.tDualObjFunc)):
+                if i != len(self.tDualObjFunc) - 1:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 0.0, 1.0)
+                else:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                imgui.text("{:>8.3f}".format(self.tDualObjFunc[i]))
+                # if i != len(objFunc) - 1:
+                imgui.pop_style_color()
+                imgui.same_line(0, 20)
+
+            imgui.spacing()
+
+            dualDisplayCons = copy.deepcopy(self.dualConstraintsLhs)
+
+            # build display cons
+            for i in range(len(self.dualConstraintsLhs)):
+                dualDisplayCons[i].append(self.dualCellRef[i])
+                if self.constraints[i][-1] == 0:
+                    dualDisplayCons[i].append(">=")
+                else:
+                    dualDisplayCons[i].append("<=")
+                dualDisplayCons[i].append(self.objFunc[i])
+
+                tSlack = dualDisplayCons[i][-1] - dualDisplayCons[i][-3]
+                dualDisplayCons[i].append(tSlack)
+
+            # display the constraints
+            for i in range(len(dualDisplayCons)):
+                imgui.text("{:>8}".format("c{}".format(i + 1)))
+                imgui.same_line(0, 20)
+                for j in range(len(dualDisplayCons[i])):
+                    if j == len(dualDisplayCons[i]) - 2:
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
+                    if isinstance(dualDisplayCons[i][j], float):
+                        imgui.text("{:>8.3f}".format(
+                            dualDisplayCons[i][j]))
+                    else:
+                        imgui.text("{:>8}".format(dualDisplayCons[i][j]))
+                    if j == len(dualDisplayCons[i]) - 2:
+                        imgui.pop_style_color()
+                    if j < len(dualDisplayCons[i]) - 1:
+                        imgui.same_line(0, 20)
+
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+
+            imgui.text("{:>8}".format("opt"))
+            imgui.same_line(0, 20)
+            for i in range(len(self.dualChangingVars)):
+                imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
+                imgui.text("{:>8.3f}".format(self.dualChangingVars[i]))
+                imgui.pop_style_color()
+                imgui.same_line(0, 20)
+
+        except Exception as e:
+            pass
+
+        imgui.end()
+
+    def doGui(self):
         pygame.init()
         size = 1920 / 2, 1080 / 2
 
@@ -187,30 +521,6 @@ class LPDuality:
         io = imgui.get_io()
         io.display_size = size
 
-        # simplex specific vars
-        problemType = "Max"
-
-        # dual constraints
-        amtOfObjVars = 2
-        objFunc = [0.0, 0.0]
-
-        constraints = [[0.0, 0.0, 0.0, 0.0]]
-        signItems = ["<=", ">="]
-        signItemsChoices = [0]
-
-        amtOfConstraints = 1
-
-        headerString = []
-        dualHeaderString = []
-
-        tObjFunc = []
-        tDualObjFunc = []
-
-        errorE = ""
-
-        strMin = ""
-        strDualMin = ""
-
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -218,318 +528,9 @@ class LPDuality:
 
                 impl.process_event(event)
 
-            imgui.new_frame()
+            windowSize = pygame.display.get_window_size()
 
-            window_size = pygame.display.get_window_size()
-
-            imgui.set_next_window_position(0, 0)  # Set the window position
-            imgui.set_next_window_size(
-                (window_size[0]), (window_size[1]))  # Set the window size
-            imgui.begin("Tableaus Output",
-                        flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-
-            if imgui.radio_button("Max", problemType == "Max"):
-                problemType = "Max"
-
-            if imgui.radio_button("Min", problemType == "Min"):
-                problemType = "Min"
-
-            imgui.text("Problem is: {}".format(problemType))
-
-            # obj vars ===========================================
-            if imgui.button("decision variables +"):
-                amtOfObjVars += 1
-                for i in range(len(constraints)):
-                    constraints[i].append(0.0)
-                objFunc.append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("decision variables -"):
-                if amtOfObjVars != 2:
-                    amtOfObjVars += -1
-                    for i in range(len(constraints)):
-                        constraints[i].pop()
-                    objFunc.pop()
-
-            imgui.spacing()
-
-            for i in range(len(objFunc)):
-                value = objFunc[i]
-                imgui.set_next_item_width(50)
-                imgui.same_line()
-                changed, objFunc[i] = imgui.input_float(
-                    "##objFunc {}".format(i + 1), value)
-                imgui.same_line()
-                imgui.text(f"x{i + 1}")
-
-                if changed:
-                    # Value has been updated
-                    pass
-
-            if imgui.button("Constraint +"):
-                amtOfConstraints += 1
-                constraints.append([0.0] * amtOfObjVars)
-                constraints[-1].append(0.0)  # add sign spot
-                constraints[-1].append(0.0)  # add rhs spot
-                signItemsChoices.append(0)
-
-            imgui.same_line()
-
-            if imgui.button("Constraint -"):
-                if amtOfConstraints != 1:
-                    amtOfConstraints += -1
-                    constraints.pop()
-                    signItemsChoices.pop()
-
-            # spaceGui(6)
-            for i in range(amtOfConstraints):
-                imgui.spacing()
-                if len(constraints) <= i:
-                    # Fill with default values if needed
-                    constraints.append([0.0] * (amtOfObjVars + 2))
-
-                for j in range(amtOfObjVars):
-                    value = constraints[i][j]
-                    imgui.set_next_item_width(50)
-                    imgui.same_line()
-                    changed, xValue = imgui.input_float(
-                        "##xC{}{}".format(i, j), value)
-                    imgui.same_line()
-                    imgui.text(f"x{j + 1}")
-                    if changed:
-                        constraints[i][j] = xValue
-
-                imgui.same_line()
-                imgui.push_item_width(50)
-                changed, selectedItemSign = imgui.combo(
-                    "##comboC{}{}".format(i, j), signItemsChoices[i], signItems)
-                if changed:
-                    signItemsChoices[i] = selectedItemSign
-                    constraints[i][-1] = signItemsChoices[i]
-
-                imgui.pop_item_width()
-                imgui.same_line()
-                imgui.set_next_item_width(50)
-                rhsValue = constraints[i][-2]
-                rhsChanged, rhs = imgui.input_float(
-                    "##RHSC{}{}".format(i, j), rhsValue)
-
-                if rhsChanged:
-                    constraints[i][-2] = rhs
-
-            if problemType == "Min":
-                isMin = True
-            else:
-                isMin = False
-
-            # solve button ==================================================
-            if imgui.button("Solve"):
-                try:
-                    if self.testInput() is not None:
-                        objFunc, constraints, isMin = self.testInput()
-
-                    headerString.clear()
-                    dualHeaderString.clear()
-
-                    a = copy.deepcopy(objFunc)
-                    b = copy.deepcopy(constraints)
-                    objFunc, optimalSolution, changingVars, constraintsLhs, cellRef, dualObjFunc, dualOptimalSolution, dualChangingVars, dualConstraintsLhs, dualCellRef = self.doDuality(
-                        a, b, isMin)
-
-                    # for display reasons
-                    tObjFunc = copy.deepcopy(objFunc)
-                    tDualObjFunc = copy.deepcopy(dualObjFunc)
-                    tObjFunc.append(optimalSolution)
-                    tDualObjFunc.append(dualOptimalSolution)
-
-                    dualMin = not isMin
-
-                    if isMin:
-                        strMin = "max"
-                    else:
-                        strMin = "min"
-
-                    if dualMin:
-                        strDualMin = "max"
-                    else:
-                        strDualMin = "min"
-
-                    headerString.append("Primal")
-                    dualHeaderString.append("Dual")
-
-                    for i in range(len(objFunc)):
-                        headerString.append("x{}".format(i + 1))
-
-                    for i in range(len(dualObjFunc)):
-                        dualHeaderString.append("y{}".format(i + 1))
-
-                    headerString.append("Ref")
-                    headerString.append("Sign")
-                    headerString.append("Rhs")
-                    headerString.append("Slack")
-
-                    dualHeaderString.append("Ref")
-                    dualHeaderString.append("Sign")
-                    dualHeaderString.append("Rhs")
-                    dualHeaderString.append("Slack")
-
-                    errorE = ""
-                except Exception as e:
-                    print("math error:", e)
-                    imgui.text("math error: {}".format(e))
-                    errorE = "math error: {}".format(e)
-
-            imgui.spacing()
-            imgui.text(errorE)
-
-            imgui.spacing()
-            imgui.spacing()
-
-            try:
-                for i in range(len(headerString)):
-                    imgui.text("{:>8}".format(headerString[i]))
-                    imgui.same_line(0, 20)
-
-                imgui.spacing()
-
-                # display the objective function
-                imgui.text("{:>8}".format(f"{strDualMin} z"))
-                imgui.same_line(0, 20)
-                for i in range(len(tObjFunc)):
-                    if i != len(tObjFunc) - 1:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
-                    else:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                    imgui.text("{:>8.3f}".format(tObjFunc[i]))
-                    # if i != len(objFunc) - 1:
-                    imgui.pop_style_color()
-                    imgui.same_line(0, 20)
-
-                imgui.spacing()
-
-                displayCons = copy.deepcopy(constraintsLhs)
-
-                # build display cons
-                for i in range(len(constraintsLhs)):
-                    displayCons[i].append(cellRef[i])
-                    if constraints[i][-1] == 0:
-                        displayCons[i].append("<=")
-                    else:
-                        displayCons[i].append(">=")
-                    displayCons[i].append(constraints[i][-2])
-
-                    tSlack = displayCons[i][-1] - displayCons[i][-3]
-                    displayCons[i].append(tSlack)
-
-                # display the constraints
-                for i in range(len(displayCons)):
-                    imgui.text("{:>8}".format("c{}".format(i + 1)))
-                    imgui.same_line(0, 20)
-                    for j in range(len(displayCons[i])):
-                        if j == len(displayCons[i]) - 2:
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 1.0, 0.0, 1.0)
-                        if isinstance(displayCons[i][j], float):
-                            imgui.text("{:>8.3f}".format(displayCons[i][j]))
-                        else:
-                            imgui.text("{:>8}".format(displayCons[i][j]))
-                        if j == len(displayCons[i]) - 2:
-                            imgui.pop_style_color()
-                        if j < len(displayCons[i]) - 1:
-                            imgui.same_line(0, 20)
-
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-
-                imgui.text("{:>8}".format("opt"))
-                imgui.same_line(0, 20)
-                for i in range(len(changingVars)):
-                    imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-                    imgui.text("{:>8.3f}".format(changingVars[i]))
-                    imgui.pop_style_color()
-                    imgui.same_line(0, 20)
-
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                # dual ==============================================
-                imgui.text(
-                    "  ______________________________________________________________________________________")
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-
-                for i in range(len(dualHeaderString)):
-                    imgui.text("{:>8}".format(dualHeaderString[i]))
-                    imgui.same_line(0, 20)
-
-                imgui.spacing()
-
-                # display the objective function
-                imgui.text("{:>8}".format(f"{strMin} z"))
-                imgui.same_line(0, 20)
-                for i in range(len(tDualObjFunc)):
-                    if i != len(tDualObjFunc) - 1:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 0.0, 1.0)
-                    else:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                    imgui.text("{:>8.3f}".format(tDualObjFunc[i]))
-                    # if i != len(objFunc) - 1:
-                    imgui.pop_style_color()
-                    imgui.same_line(0, 20)
-
-                imgui.spacing()
-
-                dualDisplayCons = copy.deepcopy(dualConstraintsLhs)
-
-                # build display cons
-                for i in range(len(dualConstraintsLhs)):
-                    dualDisplayCons[i].append(dualCellRef[i])
-                    if constraints[i][-1] == 0:
-                        dualDisplayCons[i].append(">=")
-                    else:
-                        dualDisplayCons[i].append("<=")
-                    dualDisplayCons[i].append(objFunc[i])
-
-                    tSlack = dualDisplayCons[i][-1] - dualDisplayCons[i][-3]
-                    dualDisplayCons[i].append(tSlack)
-
-                # display the constraints
-                for i in range(len(dualDisplayCons)):
-                    imgui.text("{:>8}".format("c{}".format(i + 1)))
-                    imgui.same_line(0, 20)
-                    for j in range(len(dualDisplayCons[i])):
-                        if j == len(dualDisplayCons[i]) - 2:
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
-                        if isinstance(dualDisplayCons[i][j], float):
-                            imgui.text("{:>8.3f}".format(
-                                dualDisplayCons[i][j]))
-                        else:
-                            imgui.text("{:>8}".format(dualDisplayCons[i][j]))
-                        if j == len(dualDisplayCons[i]) - 2:
-                            imgui.pop_style_color()
-                        if j < len(dualDisplayCons[i]) - 1:
-                            imgui.same_line(0, 20)
-
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-
-                imgui.text("{:>8}".format("opt"))
-                imgui.same_line(0, 20)
-                for i in range(len(dualChangingVars)):
-                    imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 1.0, 0.0)
-                    imgui.text("{:>8.3f}".format(dualChangingVars[i]))
-                    imgui.pop_style_color()
-                    imgui.same_line(0, 20)
-
-            except Exception as e:
-                pass
-
-            imgui.end()
+            self.imguiUIElements(windowSize)
 
             imgui.render()
             impl.render(imgui.get_draw_data())

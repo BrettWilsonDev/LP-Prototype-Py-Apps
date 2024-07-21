@@ -7,17 +7,36 @@ from imgui.integrations.pygame import PygameRenderer
 import imgui
 import os
 
-# TODO fix when z is the same twice in a row
 
 class TwoPhaseSimplex:
-    IMPivotCols = []
-    IMPivotRows = []
-    IMHeaderRow = []
-    IMPhaseType = []
 
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
-        self.prevZ = 0
+        self.testInputSelected = -1
+
+        self.IMPivotCols = []
+        self.IMPivotRows = []
+        self.IMHeaderRow = []
+        self.IMPhaseType = []
+
+        self.problemType = "Max"
+
+        self.amtOfObjVars = 2
+        self.objFunc = [0.0, 0.0]
+
+        self.constraints = [[0.0, 0.0, 0.0, 0.0]]
+        self.signItems = ["<=", ">="]
+        self.signItemsChoices = [0]
+
+        self.amtOfConstraints = 1
+
+        self.tableaus = []
+
+        self.pivotCol = -1
+        self.pivotRow = -1
+        self.tCol = -1
+        self.tRow = -1
+        self.tHeader = []
 
     def testInput(self, testNum=-1):
         isMin = False
@@ -34,18 +53,18 @@ class TwoPhaseSimplex:
         elif testNum == 1:
             objFunc = [10, 50, 80, 100]
             constraints = [[1, 4, 4, 8, 140, 0],
-                        [1, 0, 0, 0, 50, 0],
-                        [1, 0, 0, 0, 50, 1],
-                        [1, 1, 1, 1, 70, 1],
-                        ]
+                           [1, 0, 0, 0, 50, 0],
+                           [1, 0, 0, 0, 50, 1],
+                           [1, 1, 1, 1, 70, 1],
+                           ]
         elif testNum == 2:
             objFunc = [48, 20, 8]
 
-            constraints = [[8,4,2,60,1],
-                            [6,2,1.5,30,1],
-                            [1,1.5,0.5,20,1]]
+            constraints = [[8, 4, 2, 60, 1],
+                           [6, 2, 1.5, 30, 1],
+                           [1, 1.5, 0.5, 20, 1]]
             isMin = True
-            
+
         if testNum == -1:
             return None
         else:
@@ -179,7 +198,6 @@ class TwoPhaseSimplex:
 
         return tab, aCols
 
-
     def doPivotOperationsPhase1(self, tab):
         largestW = max(tab[0][:-1])
 
@@ -221,14 +239,14 @@ class TwoPhaseSimplex:
                 if i != pivotRow:
                     newTab[i][j] = tab[i][j] - \
                         (tab[i][pivotCol] * newTab[pivotRow][j])
-                    
+
         for i in range(len(newTab[0])):
             # if newTab[0][i] > 0 and abs(newTab[0][i]) < 1e-16:
             if abs(newTab[0][i]) < 1e-12:
                 newTab[0][i] = 0.0
 
         isAllNegW = all(num <= 0 for num in newTab[0]) if newTab[0] else False
-        
+
         if self.isConsoleOutput:
             print(f"In Phase 1, The pivot row is {
                 pivotRow + 1} and the pivot col is {pivotCol + 1}")
@@ -237,7 +255,6 @@ class TwoPhaseSimplex:
         self.IMPivotRows.append(pivotRow)
 
         return newTab, isAllNegW
-
 
     def doPivotOperationsPhase2(self, tab, isMin):
         if isMin:
@@ -255,17 +272,13 @@ class TwoPhaseSimplex:
                 thetas.append(tab[i][-1] / tab[i][pivotCol])
 
         allNegativeThetas = all(num < 0 for num in thetas)
-        
+
         if allNegativeThetas:
             return None, None
 
         for i in range(len(thetas)):
             if abs(thetas[i]) < 1e-12:
                 thetas[i] = 0.0
-        
-        # if tab[1][-1] == self.prevZ:
-        #     print(tab[1][-1], self.prevZ)
-        # # print(tab[-1][1][-1])
 
         if not any(num > 0 for num in thetas if num not in {0, float('inf')}):
             if 0 in thetas:
@@ -274,11 +287,6 @@ class TwoPhaseSimplex:
                 return None, None
         else:
             theta = min(x for x in thetas if x > 0 and x != float('inf'))
-        # theta = min(x for x in thetas if x >= 0.0 and x != float('inf'))
-        # print(theta)
-
-        # if theta == 0:
-        #     return None, None
 
         pivotRow = thetas.index(theta)
         pivotRow += 2
@@ -322,14 +330,14 @@ class TwoPhaseSimplex:
 
         return newTab, isAllNegZ
 
-
     def doTwoPhase(self, objFunc, constraints, isMin):
         tabs = []
         isAllNegW = False
         tab, aCols = self.formulateFirstTab1(objFunc, constraints)
         tabs.append(tab)
 
-        isAllNegW = all(num <= 0 for num in tabs[-1][0]) if tabs[-1][0] else False
+        isAllNegW = all(
+            num <= 0 for num in tabs[-1][0]) if tabs[-1][0] else False
         phase1Ctr = 0
         while not isAllNegW:
             tab, isAllNegW = self.doPivotOperationsPhase1(tabs[-1])
@@ -379,7 +387,8 @@ class TwoPhaseSimplex:
         del tabs[indexOfDupe]
 
         # final optimal check
-        isAllNegW = all(num <= 0 for num in tabs[-1][0]) if tabs[-1][0] else False
+        isAllNegW = all(
+            num <= 0 for num in tabs[-1][0]) if tabs[-1][0] else False
         if not isAllNegW:
             tabs.pop()
             self.IMPivotCols.pop()
@@ -402,6 +411,195 @@ class TwoPhaseSimplex:
 
         return tabs
 
+    def imguiUIElements(self, windowSize):
+        imgui.new_frame()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (windowSize[0]), (windowSize[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        # simplex stuff
+
+        if imgui.radio_button("Max", self.problemType == "Max"):
+            self.problemType = "Max"
+
+        if imgui.radio_button("Min", self.problemType == "Min"):
+            self.problemType = "Min"
+
+        imgui.text("Problem is: {}".format(self.problemType))
+
+        # obj vars ===========================================
+        if imgui.button("decision variables +"):
+            self.amtOfObjVars += 1
+            for i in range(len(self.constraints)):
+                self.constraints[i].append(0.0)
+            self.objFunc.append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("decision variables -"):
+            if amtOfObjVars != 2:
+                amtOfObjVars += -1
+                for i in range(len(self.constraints)):
+                    self.constraints[i].pop()
+                self.objFunc.pop()
+
+        imgui.spacing()
+
+        for i in range(len(self.objFunc)):
+            value = self.objFunc[i]
+            imgui.set_next_item_width(50)
+            imgui.same_line()
+            changed, self.objFunc[i] = imgui.input_float(
+                "##objFunc {}".format(i + 1), value)
+            imgui.same_line()
+            imgui.text(f"x{i + 1}")
+
+            if changed:
+                # Value has been updated
+                pass
+
+        if imgui.button("Constraint +"):
+            self.amtOfConstraints += 1
+            self.constraints.append([0.0] * self.amtOfObjVars)
+            self.constraints[-1].append(0.0)  # add sign spot
+            self.constraints[-1].append(0.0)  # add rhs spot
+            self.signItemsChoices.append(0)
+
+        imgui.same_line()
+
+        if imgui.button("Constraint -"):
+            if self.amtOfConstraints != 1:
+                self.amtOfConstraints += -1
+                self.constraints.pop()
+                self.signItemsChoices.pop()
+
+        # spaceGui(6)
+        for i in range(self.amtOfConstraints):
+            imgui.spacing()
+            if len(self.constraints) <= i:
+                # Fill with default values if needed
+                self.constraints.append([0.0] * (amtOfObjVars + 2))
+
+            for j in range(self.amtOfObjVars):
+                value = self.constraints[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "##xC{}{}".format(i, j), value)
+                imgui.same_line()
+                imgui.text(f"x{j + 1}")
+                if changed:
+                    self.constraints[i][j] = xValue
+
+            imgui.same_line()
+            imgui.push_item_width(50)
+            changed, self.selectedItemSign = imgui.combo(
+                "##comboC{}{}".format(i, j), self.signItemsChoices[i], self.signItems)
+            if changed:
+                self.signItemsChoices[i] = self.selectedItemSign
+                self.constraints[i][-1] = self.signItemsChoices[i]
+
+            imgui.pop_item_width()
+            imgui.same_line()
+            imgui.set_next_item_width(50)
+            rhsValue = self.constraints[i][-2]
+            rhsChanged, rhs = imgui.input_float(
+                "##RHSC{}{}".format(i, j), rhsValue)
+
+            if rhsChanged:
+                self.constraints[i][-2] = rhs
+
+        if self.problemType == "Min":
+            isMin = True
+        else:
+            isMin = False
+
+        # solve button ============================================================
+        if imgui.button("Solve"):
+            try:
+                # objFunc, constraints, isMin = testInput()
+                if self.testInput(self.testInputSelected) is not None:
+                    self.objFunc, self.constraints, isMin = self.testInput(
+                        self.testInputSelected)
+
+                a = copy.deepcopy(self.objFunc)
+                b = copy.deepcopy(self.constraints)
+                self.tableaus = self.doTwoPhase(a, b, isMin)
+
+                # del tableaus[-2]
+
+                self.IMPivotCols.append(-1)
+                self.IMPivotRows.append(-1)
+
+                self.IMPhaseType.append(0)
+                self.IMPhaseType.append(0)
+
+                self.tRow = copy.deepcopy(self.IMPivotRows)
+                self.tCol = copy.deepcopy(self.IMPivotCols)
+                self.tHeader = copy.deepcopy(self.IMHeaderRow)
+                self.tPhase = copy.deepcopy(self.IMPhaseType)
+                self.tPhase[-1] = 2
+                self.tPhase[-2] = 2
+
+                self.IMHeaderRow.clear()
+                self.IMPivotRows.clear()
+                self.IMPivotCols.clear()
+                self.IMPhaseType.clear()
+
+                self.tCol.append(-1)
+                self.tRow.append(-1)
+
+            except Exception as e:
+                print("math error:", e)
+                raise
+
+        imgui.spacing()
+        imgui.spacing()
+        for i in range(len(self.tableaus)):
+            pivotCol = self.tCol[i]
+            pivotRow = self.tRow[i]
+            if self.tPhase[i] == 0:
+                imgui.text("Phase 1")
+            else:
+                imgui.text("Phase 2")
+            imgui.text("Tableau {}".format(i + 1))
+            imgui.text("t-" + str(i + 1))
+            imgui.same_line(0, 20)
+            for hCtr in range(len(self.tHeader)):
+                imgui.text("{:>8}".format(str(self.tHeader[hCtr])))
+                imgui.same_line(0, 20)
+            imgui.spacing()
+            for j in range(len(self.tableaus[i])):
+                if j == pivotRow and pivotRow != -1:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                if j == 0:
+                    imgui.text("w  ")
+                elif j == 1:
+                    imgui.text("z  ")
+                else:
+                    imgui.text("c " + str(j - 1))
+                imgui.same_line(0, 20)
+                for k in range(len(self.tableaus[i][j])):
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    imgui.text("{:>8.3f}".format(self.tableaus[i][j][k]))
+                    if k < len(self.tableaus[i][j]) - 1:
+                        imgui.same_line(0, 20)
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.pop_style_color()
+                if j == pivotRow and pivotRow != -1:
+                    imgui.pop_style_color()
+                imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+        imgui.spacing()
+
+        imgui.end()
 
     def doGui(self):
         pygame.init()
@@ -426,27 +624,6 @@ class TwoPhaseSimplex:
         io = imgui.get_io()
         io.display_size = size
 
-        # simplex specific vars
-        problemType = "Max"
-
-        # dual constraints
-        amtOfObjVars = 2
-        objFunc = [0.0, 0.0]
-
-        constraints = [[0.0, 0.0, 0.0, 0.0]]
-        signItems = ["<=", ">="]
-        signItemsChoices = [0]
-
-        amtOfConstraints = 1
-
-        tableaus = []
-
-        pivotCol = -1
-        pivotRow = -1
-        tCol = -1
-        tRow = -1
-        tHeader = []
-
         while 1:
             # windowing stuff
             for event in pygame.event.get():
@@ -455,200 +632,15 @@ class TwoPhaseSimplex:
 
                 impl.process_event(event)
 
-            imgui.new_frame()
+            windowSize = pygame.display.get_window_size()
 
-            window_size = pygame.display.get_window_size()
-
-            imgui.set_next_window_position(0, 0)  # Set the window position
-            imgui.set_next_window_size(
-                (window_size[0]), (window_size[1]))  # Set the window size
-            imgui.begin("Tableaus Output",
-                        flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-
-            # simplex stuff
-
-            if imgui.radio_button("Max", problemType == "Max"):
-                problemType = "Max"
-
-            if imgui.radio_button("Min", problemType == "Min"):
-                problemType = "Min"
-
-            imgui.text("Problem is: {}".format(problemType))
-
-            # obj vars ===========================================
-            if imgui.button("decision variables +"):
-                amtOfObjVars += 1
-                for i in range(len(constraints)):
-                    constraints[i].append(0.0)
-                objFunc.append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("decision variables -"):
-                if amtOfObjVars != 2:
-                    amtOfObjVars += -1
-                    for i in range(len(constraints)):
-                        constraints[i].pop()
-                    objFunc.pop()
-
-            imgui.spacing()
-
-            for i in range(len(objFunc)):
-                value = objFunc[i]
-                imgui.set_next_item_width(50)
-                imgui.same_line()
-                changed, objFunc[i] = imgui.input_float(
-                    "##objFunc {}".format(i + 1), value)
-                imgui.same_line()
-                imgui.text(f"x{i + 1}")
-
-                if changed:
-                    # Value has been updated
-                    pass
-
-            if imgui.button("Constraint +"):
-                amtOfConstraints += 1
-                constraints.append([0.0] * amtOfObjVars)
-                constraints[-1].append(0.0)  # add sign spot
-                constraints[-1].append(0.0)  # add rhs spot
-                signItemsChoices.append(0)
-
-            imgui.same_line()
-
-            if imgui.button("Constraint -"):
-                if amtOfConstraints != 1:
-                    amtOfConstraints += -1
-                    constraints.pop()
-                    signItemsChoices.pop()
-
-            # spaceGui(6)
-            for i in range(amtOfConstraints):
-                imgui.spacing()
-                if len(constraints) <= i:
-                    # Fill with default values if needed
-                    constraints.append([0.0] * (amtOfObjVars + 2))
-
-                for j in range(amtOfObjVars):
-                    value = constraints[i][j]
-                    imgui.set_next_item_width(50)
-                    imgui.same_line()
-                    changed, xValue = imgui.input_float(
-                        "##xC{}{}".format(i, j), value)
-                    imgui.same_line()
-                    imgui.text(f"x{j + 1}")
-                    if changed:
-                        constraints[i][j] = xValue
-
-                imgui.same_line()
-                imgui.push_item_width(50)
-                changed, selectedItemSign = imgui.combo(
-                    "##comboC{}{}".format(i, j), signItemsChoices[i], signItems)
-                if changed:
-                    signItemsChoices[i] = selectedItemSign
-                    constraints[i][-1] = signItemsChoices[i]
-
-                imgui.pop_item_width()
-                imgui.same_line()
-                imgui.set_next_item_width(50)
-                rhsValue = constraints[i][-2]
-                rhsChanged, rhs = imgui.input_float(
-                    "##RHSC{}{}".format(i, j), rhsValue)
-
-                if rhsChanged:
-                    constraints[i][-2] = rhs
-
-            if problemType == "Min":
-                isMin = True
-            else:
-                isMin = False
-
-            # solve button ================================================
-            if imgui.button("Solve"):
-                try:
-                    # objFunc, constraints, isMin = testInput()
-                    if self.testInput(2) is not None:
-                        objFunc, constraints, isMin = self.testInput(2)
-
-                    a = copy.deepcopy(objFunc)
-                    b = copy.deepcopy(constraints)
-                    tableaus = self.doTwoPhase(a, b, isMin)
-
-                    # del tableaus[-2]
-
-                    self.IMPivotCols.append(-1)
-                    self.IMPivotRows.append(-1)
-
-                    self.IMPhaseType.append(0)
-                    self.IMPhaseType.append(0)
-
-                    tRow = copy.deepcopy(self.IMPivotRows)
-                    tCol = copy.deepcopy(self.IMPivotCols)
-                    tHeader = copy.deepcopy(self.IMHeaderRow)
-                    tPhase = copy.deepcopy(self.IMPhaseType)
-                    tPhase[-1] = 2
-                    tPhase[-2] = 2
-
-                    self.IMHeaderRow.clear()
-                    self.IMPivotRows.clear()
-                    self.IMPivotCols.clear()
-                    self.IMPhaseType.clear()
-                
-                    tCol.append(-1)
-                    tRow.append(-1)
-
-                except Exception as e:
-                    print("math error:", e)
-                    raise
-
-            imgui.spacing()
-            imgui.spacing()
-            for i in range(len(tableaus)):
-                pivotCol = tCol[i]
-                pivotRow = tRow[i]
-                if tPhase[i] == 0:
-                    imgui.text("Phase 1")
-                else:
-                    imgui.text("Phase 2")                
-                imgui.text("Tableau {}".format(i + 1))
-                imgui.text("t-" + str(i + 1))
-                imgui.same_line(0, 20)
-                for hCtr in range(len(tHeader)):
-                    imgui.text("{:>8}".format(str(tHeader[hCtr])))
-                    imgui.same_line(0, 20)
-                imgui.spacing()
-                for j in range(len(tableaus[i])):
-                    if j == pivotRow and pivotRow != -1:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                    if j == 0:
-                        imgui.text("w  ")
-                    elif j == 1:
-                        imgui.text("z  ")
-                    else:
-                        imgui.text("c " + str(j - 1))
-                    imgui.same_line(0, 20)
-                    for k in range(len(tableaus[i][j])):
-                        if k == pivotCol and pivotCol != -1:
-                            imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                        imgui.text("{:>8.3f}".format(tableaus[i][j][k]))
-                        if k < len(tableaus[i][j]) - 1:
-                            imgui.same_line(0, 20)
-                        if k == pivotCol and pivotCol != -1:
-                            imgui.pop_style_color()
-                    if j == pivotRow and pivotRow != -1:
-                        imgui.pop_style_color()
-                    imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-            imgui.spacing()
-
-            imgui.end()
+            self.imguiUIElements(windowSize)
 
             imgui.render()
             impl.render(imgui.get_draw_data())
 
             pygame.display.flip()
+
 
 def main(isConsoleOutput=False):
     classInstance = TwoPhaseSimplex(isConsoleOutput)

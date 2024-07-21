@@ -2,42 +2,81 @@ import pygame
 from imgui.integrations.pygame import PygameRenderer
 import imgui
 
-# import sys
-# import os
+import sys
+import os
 import copy
 
-class DualSimplex:
-    IMPivotCols = []
-    IMPivotRows = []
-    IMHeaderRow = []
-    isConsoleOutput = False
 
+class DualSimplex:
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
+        self.testInputSelected = -1
+
+        self.IMPivotCols = []
+        self.IMPivotRows = []
+        self.IMHeaderRow = []
+
+        self.problemType = "Max"
+
+        # dual constraints
+        self.amtOfObjVars = 2
+        self.objFunc = [0.0, 0.0]
+
+        self.constraints = [[0.0, 0.0, 0.0, 0.0]]
+        self.signItems = ["<=", ">="]
+        self.signItemsChoices = [0]
+
+        self.amtOfConstraints = 1
+
+        self.tableaus = []
+
+        self.pivotCol = -1
+        self.pivotRow = -1
+        self.tCol = -1
+        self.tRow = -1
+        self.tHeader = []
+
+        self.errorE = ""
 
     def testInput(self, testNum=-1):
         isMin = False
         if testNum == 0:
             objFunc = [100, 30]
 
-            constraints = [[0,1,3,1],[1,1,7,0],[10,4,40,0]]
+            constraints = [[0, 1, 3, 1], [1, 1, 7, 0], [10, 4, 40, 0]]
         elif testNum == 1:
             objFunc = [60, 30, 20]
 
-            constraints = [[8,6,1,48,0],[4,2,1.5,20,0],[2,1.5,0.5,8,0]]
+            constraints = [[8, 6, 1, 48, 0], [
+                4, 2, 1.5, 20, 0], [2, 1.5, 0.5, 8, 0]]
         elif testNum == 2:
             objFunc = [48, 20, 8]
 
-            constraints = [[8,4,2,60,1],
-                            [6,2,1.5,30,1],
-                            [1,1.5,0.5,20,1]]
+            constraints = [[8, 4, 2, 60, 1],
+                           [6, 2, 1.5, 30, 1],
+                           [1, 1.5, 0.5, 20, 1]]
+
+            isMin = True
         elif testNum == 3:
             objFunc = [10, 50, 80, 100]
             constraints = [[1, 4, 4, 8, 140, 0],
-                        [1, 0, 0, 0, 50, 0],
-                        [1, 0, 0, 0, 50, 1],
-                        [1, 1, 1, 1, 70, 1],
-                        ]
+                           [1, 0, 0, 0, 50, 0],
+                           [1, 0, 0, 0, 50, 1],
+                           [1, 1, 1, 1, 70, 1],
+                           ]
+        elif testNum == 4:
+            objFunc = [9, 4, 16, 0, 0, 0]
+            constraints = [[9, 4, 16, -5, -14, 0, 0],
+                           [5, 7, 16, -8, -15, 0, 0],
+                           [4, 9, 13, -7, -12, 0, 0],
+                           [0, 0, 0, 5, 14, 1, 0],
+                           [0, 0, 0, 5, 14, 1, 1],
+                           [1, 0, 0, 0, 0, 0.0001, 1],
+                           [0, 1, 0, 0, 0, 0.0001, 1],
+                           [0, 0, 1, 0, 0, 0.0001, 1],
+                           [0, 0, 0, 1, 0, 0.0001, 1],
+                           [0, 0, 0, 0, 1, 0.0001, 1],
+                           ]
 
         if testNum == -1:
             return None
@@ -175,7 +214,6 @@ class DualSimplex:
         rhsNeg = [row[-1] for row in tab if row[-1] < 0]
 
         minRhsNum = min(rhsNeg)
-        # minRhsNum = max(rhsNeg)
 
         pivotRow = rhs.index(minRhsNum)
 
@@ -199,7 +237,12 @@ class DualSimplex:
 
         thetaRow = dualPivotThetas.copy()
 
-        smallestPosPivotTheta = min(dualPivotThetas)
+        # if zero is the only choice then pivot on it
+        if all(x == 0 or x == float('inf') for x in dualPivotThetas):
+            smallestPosPivotTheta = 0
+        else:
+            smallestPosPivotTheta = min(
+                dualPivotThetas, key=lambda x: x if x > 0 else float('inf'))
 
         rowIndex = pivotRow
         colIndex = dualPivotThetas.index(smallestPosPivotTheta)
@@ -239,7 +282,7 @@ class DualSimplex:
         if self.isConsoleOutput:
             print(f"the pivot col in Dual is {
                 colIndex + 1} and the pivot row is {rowIndex + 1}")
-            
+
         self.IMPivotCols.append(colIndex)
         self.IMPivotRows.append(rowIndex)
 
@@ -276,9 +319,18 @@ class DualSimplex:
         allNegativeThetas = all(num < 0 for num in thetas)
 
         if allNegativeThetas:
-            return None
+            return None, None
 
-        minTheta = min(num for num in thetas if num > 0)
+        if not any(num > 0 for num in thetas if num not in {0, float('inf')}):
+            if 0 in thetas:
+                minTheta = 0.0
+            else:
+                return None, None
+        else:
+            minTheta = min(x for x in thetas if x > 0 and x != float('inf'))
+            # minTheta = min(num for num in thetas if num > 0)
+
+        # minTheta = min(num for num in thetas if num > 0)
 
         if minTheta == float('inf'):
             if 0 in thetas:
@@ -512,11 +564,191 @@ class DualSimplex:
         else:
             return tableaus, changingVars, optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow
 
+    def imguiUIElements(self, windowSize):
+        imgui.new_frame()
+
+        imgui.set_next_window_position(0, 0)  # Set the window position
+        imgui.set_next_window_size(
+            (windowSize[0]), (windowSize[1]))  # Set the window size
+        imgui.begin("Tableaus Output",
+                    flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
+
+        if imgui.radio_button("Max", self.problemType == "Max"):
+            self.problemType = "Max"
+
+        if imgui.radio_button("Min", self.problemType == "Min"):
+            self.problemType = "Min"
+
+        imgui.text("Problem is: {}".format(self.problemType))
+
+        # obj vars ===========================================
+        if imgui.button("decision variables +"):
+            self.amtOfObjVars += 1
+            for i in range(len(self.constraints)):
+                self.constraints[i].append(0.0)
+            self.objFunc.append(0.0)
+
+        imgui.same_line()
+
+        if imgui.button("decision variables -"):
+            if self.amtOfObjVars != 2:
+                self.amtOfObjVars += -1
+                for i in range(len(self.constraints)):
+                    self.constraints[i].pop()
+                self.objFunc.pop()
+
+        imgui.spacing()
+
+        for i in range(len(self.objFunc)):
+            value = self.objFunc[i]
+            imgui.set_next_item_width(50)
+            imgui.same_line()
+            changed, self.objFunc[i] = imgui.input_float(
+                "##objFunc {}".format(i + 1), value)
+            imgui.same_line()
+            imgui.text(f"x{i + 1}")
+            # imgui.same_line()
+
+            if changed:
+                # Value has been updated
+                pass
+
+        if imgui.button("Constraint +"):
+            self.amtOfConstraints += 1
+            self.constraints.append([0.0] * self.amtOfObjVars)
+            self.constraints[-1].append(0.0)  # add sign spot
+            self.constraints[-1].append(0.0)  # add rhs spot
+            self.signItemsChoices.append(0)
+
+        imgui.same_line()
+
+        if imgui.button("Constraint -"):
+            if self.amtOfConstraints != 1:
+                self.amtOfConstraints += -1
+                self.constraints.pop()
+                self.signItemsChoices.pop()
+
+        # spaceGui(6)
+        for i in range(self.amtOfConstraints):
+            imgui.spacing()
+            if len(self.constraints) <= i:
+                # Fill with default values if needed
+                self.constraints.append([0.0] * (self.amtOfObjVars + 2))
+
+            for j in range(self.amtOfObjVars):
+                value = self.constraints[i][j]
+                imgui.set_next_item_width(50)
+                imgui.same_line()
+                changed, xValue = imgui.input_float(
+                    "##xC{}{}".format(i, j), value)
+                imgui.same_line()
+                imgui.text(f"x{j + 1}")
+                if changed:
+                    self.constraints[i][j] = xValue
+
+            imgui.same_line()
+            imgui.push_item_width(50)
+            changed, self.selectedItemSign = imgui.combo(
+                "##comboC{}{}".format(i, j), self.signItemsChoices[i], self.signItems)
+            if changed:
+                self.signItemsChoices[i] = self.selectedItemSign
+                self.constraints[i][-1] = self.signItemsChoices[i]
+
+            imgui.pop_item_width()
+            imgui.same_line()
+            imgui.set_next_item_width(50)
+            rhsValue = self.constraints[i][-2]
+            rhsChanged, rhs = imgui.input_float(
+                "##RHSC{}{}".format(i, j), rhsValue)
+
+            if rhsChanged:
+                self.constraints[i][-2] = rhs
+
+        if self.problemType == "Min":
+            isMin = True
+        else:
+            isMin = False
+
+        # solve button =======================================================================================
+        if imgui.button("Solve"):
+            try:
+                if self.testInput(self.testInputSelected) is not None:
+                    self.objFunc, self.constraints, isMin = self.testInput(
+                        self.testInputSelected)
+
+                a = copy.deepcopy(self.objFunc)
+                b = copy.deepcopy(self.constraints)
+                self.tableaus, self.changingVars, self.optimalSolution = self.doDualSimplex(
+                    a, b, isMin)
+
+                self.IMPivotCols.append(-1)
+                self.IMPivotRows.append(-1)
+
+                self.tRow = copy.deepcopy(self.IMPivotRows)
+                self.tCol = copy.deepcopy(self.IMPivotCols)
+                self.tHeader = copy.deepcopy(self.IMHeaderRow)
+
+                self.IMHeaderRow.clear()
+                self.IMPivotRows.clear()
+                self.IMPivotCols.clear()
+
+                self.errorE = ""
+            except Exception as e:
+                print("math error:", e)
+                imgui.text("math error: {}".format(e))
+                self.errorE = "math error: {}".format(e)
+                raise
+
+        imgui.spacing()
+        imgui.spacing()
+
+        imgui.text(self.errorE)
+
+        imgui.spacing()
+        imgui.spacing()
+        for i in range(len(self.tableaus)):
+            pivotCol = self.tCol[i]
+            pivotRow = self.tRow[i]
+            imgui.text("Tableau {}".format(i + 1))
+            imgui.text("t-" + str(i + 1))
+            imgui.same_line(0, 20)
+            for hCtr in range(len(self.tHeader)):
+                imgui.text("{:>8}".format(str(self.tHeader[hCtr])))
+                imgui.same_line(0, 20)
+            imgui.spacing()
+            for j in range(len(self.tableaus[i])):
+                if j == pivotRow and pivotRow != -1:
+                    imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                if j == 0:
+                    imgui.text("z  ")
+                else:
+                    imgui.text("c " + str(j))
+                imgui.same_line(0, 20)
+                for k in range(len(self.tableaus[i][j])):
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    imgui.text("{:>8.3f}".format(self.tableaus[i][j][k]))
+                    if k < len(self.tableaus[i][j]) - 1:
+                        imgui.same_line(0, 20)
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.pop_style_color()
+                if j == pivotRow and pivotRow != -1:
+                    imgui.pop_style_color()
+                imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+            imgui.spacing()
+        imgui.spacing()
+
+        imgui.end()
+
     def doGui(self):
         pygame.init()
         size = 1920 / 2, 1080 / 2
 
-        # os.system('cls' if os.name == 'nt' else 'clear')
+        os.system('cls' if os.name == 'nt' else 'clear')
         if self.isConsoleOutput:
             print("\nBrett's simplex prototype tool for dual simplex problems\n")
 
@@ -535,30 +767,6 @@ class DualSimplex:
         io = imgui.get_io()
         io.display_size = size
 
-        # simplex specific vars
-
-        problemType = "Max"
-
-        # dual constraints
-        amtOfObjVars = 2
-        objFunc = [0.0, 0.0]
-
-        constraints = [[0.0, 0.0, 0.0, 0.0]]
-        signItems = ["<=", ">="]
-        signItemsChoices = [0]
-
-        amtOfConstraints = 1
-
-        tableaus = []
-
-        pivotCol = -1
-        pivotRow = -1
-        tCol = -1
-        tRow = -1
-        tHeader = []
-
-        errorE = ""
-
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -566,184 +774,9 @@ class DualSimplex:
 
                 impl.process_event(event)
 
-            imgui.new_frame()
+            windowSize = pygame.display.get_window_size()
 
-            window_size = pygame.display.get_window_size()
-
-            imgui.set_next_window_position(0, 0)  # Set the window position
-            imgui.set_next_window_size(
-                (window_size[0]), (window_size[1]))  # Set the window size
-            imgui.begin("Tableaus Output",
-                        flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
-
-            if imgui.radio_button("Max", problemType == "Max"):
-                problemType = "Max"
-
-            if imgui.radio_button("Min", problemType == "Min"):
-                problemType = "Min"
-
-            imgui.text("Problem is: {}".format(problemType))
-
-            # obj vars ===========================================
-            if imgui.button("decision variables +"):
-                amtOfObjVars += 1
-                for i in range(len(constraints)):
-                    constraints[i].append(0.0)
-                objFunc.append(0.0)
-
-            imgui.same_line()
-
-            if imgui.button("decision variables -"):
-                if amtOfObjVars != 2:
-                    amtOfObjVars += -1
-                    for i in range(len(constraints)):
-                        constraints[i].pop()
-                    objFunc.pop()
-
-            imgui.spacing()
-
-            for i in range(len(objFunc)):
-                value = objFunc[i]
-                imgui.set_next_item_width(50)
-                imgui.same_line()
-                changed, objFunc[i] = imgui.input_float(
-                    "##objFunc {}".format(i + 1), value)
-                imgui.same_line()
-                imgui.text(f"x{i + 1}")
-                # imgui.same_line()
-
-                if changed:
-                    # Value has been updated
-                    pass
-
-            if imgui.button("Constraint +"):
-                amtOfConstraints += 1
-                constraints.append([0.0] * amtOfObjVars)
-                constraints[-1].append(0.0)  # add sign spot
-                constraints[-1].append(0.0)  # add rhs spot
-                signItemsChoices.append(0)
-
-            imgui.same_line()
-
-            if imgui.button("Constraint -"):
-                if amtOfConstraints != 1:
-                    amtOfConstraints += -1
-                    constraints.pop()
-                    signItemsChoices.pop()
-
-            # spaceGui(6)
-            for i in range(amtOfConstraints):
-                imgui.spacing()
-                if len(constraints) <= i:
-                    # Fill with default values if needed
-                    constraints.append([0.0] * (amtOfObjVars + 2))
-
-                for j in range(amtOfObjVars):
-                    value = constraints[i][j]
-                    imgui.set_next_item_width(50)
-                    imgui.same_line()
-                    changed, xValue = imgui.input_float(
-                        "##xC{}{}".format(i, j), value)
-                    imgui.same_line()
-                    imgui.text(f"x{j + 1}")
-                    if changed:
-                        constraints[i][j] = xValue
-
-                imgui.same_line()
-                imgui.push_item_width(50)
-                changed, selectedItemSign = imgui.combo(
-                    "##comboC{}{}".format(i, j), signItemsChoices[i], signItems)
-                if changed:
-                    signItemsChoices[i] = selectedItemSign
-                    constraints[i][-1] = signItemsChoices[i]
-
-                imgui.pop_item_width()
-                imgui.same_line()
-                imgui.set_next_item_width(50)
-                rhsValue = constraints[i][-2]
-                rhsChanged, rhs = imgui.input_float(
-                    "##RHSC{}{}".format(i, j), rhsValue)
-
-                if rhsChanged:
-                    constraints[i][-2] = rhs
-
-            if problemType == "Min":
-                isMin = True
-            else:
-                isMin = False
-
-            # solve button =======================================================================================
-            if imgui.button("Solve"):
-                try:
-                    if self.testInput() is not None:
-                        objFunc, constraints, isMin = self.testInput()
-
-                    a = copy.deepcopy(objFunc)
-                    b = copy.deepcopy(constraints)
-                    tableaus, changingVars, optimalSolution = self.doDualSimplex(
-                        a, b, isMin)
-
-                    self.IMPivotCols.append(-1)
-                    self.IMPivotRows.append(-1)
-
-                    tRow = copy.deepcopy(self.IMPivotRows)
-                    tCol = copy.deepcopy(self.IMPivotCols)
-                    tHeader = copy.deepcopy(self.IMHeaderRow)
-
-                    self.IMHeaderRow.clear()
-                    self.IMPivotRows.clear()
-                    self.IMPivotCols.clear()
-
-                    errorE = ""
-                except Exception as e:
-                    print("math error:", e)
-                    imgui.text("math error: {}".format(e))
-                    errorE = "math error: {}".format(e)
-
-            imgui.spacing()
-            imgui.spacing()
-
-            imgui.text(errorE)
-
-            imgui.spacing()
-            imgui.spacing()
-            for i in range(len(tableaus)):
-                pivotCol = tCol[i]
-                pivotRow = tRow[i]
-                imgui.text("Tableau {}".format(i + 1))
-                imgui.text("t-" + str(i + 1))
-                imgui.same_line(0, 20)
-                for hCtr in range(len(tHeader)):
-                    imgui.text("{:>8}".format(str(tHeader[hCtr])))
-                    imgui.same_line(0, 20)
-                imgui.spacing()
-                for j in range(len(tableaus[i])):
-                    if j == pivotRow and pivotRow != -1:
-                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                    if j == 0:
-                        imgui.text("z  ")
-                    else:
-                        imgui.text("c " + str(j))
-                    imgui.same_line(0, 20)
-                    for k in range(len(tableaus[i][j])):
-                        if k == pivotCol and pivotCol != -1:
-                            imgui.push_style_color(
-                                imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
-                        imgui.text("{:>8.3f}".format(tableaus[i][j][k]))
-                        if k < len(tableaus[i][j]) - 1:
-                            imgui.same_line(0, 20)
-                        if k == pivotCol and pivotCol != -1:
-                            imgui.pop_style_color()
-                    if j == pivotRow and pivotRow != -1:
-                        imgui.pop_style_color()
-                    imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-                imgui.spacing()
-            imgui.spacing()
-
-            imgui.end()
+            self.imguiUIElements(windowSize)
 
             imgui.render()
             impl.render(imgui.get_draw_data())

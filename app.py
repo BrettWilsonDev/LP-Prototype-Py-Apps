@@ -79,6 +79,14 @@ class App:
         imgui.begin("Main Menu",
                     flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE)
 
+        midX = (windowSize[0] / 2) - 100
+        midY = windowSize[1] / 2
+
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.spacing()
+        imgui.set_cursor_pos_x(midX - 100)
         imgui.text(
             "Welcome To Linier Programming Tool Prototypes!\nBy Brett Wilson")
 
@@ -87,11 +95,13 @@ class App:
         for i in range(1, len(self.buttonLabels)):
             imgui.spacing()
             imgui.spacing()
+            imgui.set_cursor_pos_x(midX)
             if imgui.button(self.buttonLabels[i]):
                 self.currentTool = i
 
         imgui.spacing()
         imgui.spacing()
+        imgui.set_cursor_pos_x(midX - 20)
         imgui.text("See Help for more info!")
 
         imgui.end()

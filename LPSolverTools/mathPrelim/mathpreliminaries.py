@@ -806,7 +806,7 @@ class MathPreliminaries:
                     try:
                         imgui.text("{:>15.3f}".format(self.changingTable[i][j]))
                     except:
-                        imgui.text("{:>15}".format(self.changingTable[i][j]))
+                        pass
                 else:
                     imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
                     imgui.text("{:>15}".format(str(self.changingTable[i][j])))

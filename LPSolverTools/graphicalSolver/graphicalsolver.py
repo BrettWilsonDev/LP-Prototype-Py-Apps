@@ -14,7 +14,7 @@ class GraphicalSolver:
         self.reset()
 
     def reset(self):
-        self.testInputSelected = -1
+        self.testInputSelected = 3
 
         # var setup
         self.problemType = "Max"
@@ -57,6 +57,11 @@ class GraphicalSolver:
                            [1, -1, 0, 1],
                            [1, -4, 0, 0],
                            ]
+        elif testNum == 3:
+            isMin = True
+            objFunc = [50, 100]
+            constraints = [[7, 2, 28, 1],
+                           [2, 12, 24, 1]]
 
         if testNum == -1:
             return None
@@ -121,8 +126,8 @@ class GraphicalSolver:
         feasiblePoints = []
         for point in allPoints:
             x, y = point
-            if all((a * x + b * y <= c if eq == 0 else a * x + b * y >= c if eq == 1 else a * x + b * y == c)
-                   for a, b, c, eq in constraints) and x >= 0 and y >= 0:
+            if all((a * x + b * y <= c + 1e-9 if eq == 0 else a * x + b * y >= c - 1e-9 if eq == 1 else abs(a * x + b * y - c) < 1e-9)
+                for a, b, c, eq in constraints) and x >= 0 and y >= 0:
                 feasiblePoints.append((x, y))
 
         # Remove duplicates and sort

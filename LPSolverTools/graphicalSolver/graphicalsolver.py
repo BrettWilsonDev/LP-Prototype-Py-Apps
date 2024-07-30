@@ -14,7 +14,7 @@ class GraphicalSolver:
         self.reset()
 
     def reset(self):
-        self.testInputSelected = 3
+        self.testInputSelected = -1
 
         # var setup
         self.problemType = "Max"

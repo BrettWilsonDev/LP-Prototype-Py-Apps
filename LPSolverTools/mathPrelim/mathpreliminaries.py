@@ -68,6 +68,15 @@ class MathPreliminaries:
         self.solveDelta = False
         self.deltaSolve = "off"
 
+        self.isAllDeltaCRow = False
+        self.isSingleDeltaCRow = False
+        self.isSingleDeltaARow = False
+        self.singleCIndex = -1
+        self.singleAIndex = -1
+        self.isDeltaZCol = False
+        self.isAllDeltaRows = False
+        self.isFormulaDeltaChanged = False
+
     def testInput(self, testNum=-1):
         isMin = False
         if testNum == 0:
@@ -399,14 +408,15 @@ class MathPreliminaries:
         except TypeError:
             return float("inf")
 
-    def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
-        imgui.set_next_window_position(windowPosX, windowPosY)  # Set the window position
+    def imguiUIElements(self, windowSize, windowPosX=0, windowPosY=0):
+        imgui.set_next_window_position(
+            windowPosX, windowPosY)  # Set the window position
         imgui.set_next_window_size(
             (windowSize[0]), (windowSize[1]))  # Set the window size
         imgui.begin("Tableaus Output",
                     flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
         imgui.begin_child("Scrollable Child", width=0, height=0,
-            border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
+                          border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
 
         if imgui.radio_button("Max", self.problemType == "Max"):
             self.problemType = "Max"
@@ -553,7 +563,10 @@ class MathPreliminaries:
         else:
             self.solveDelta = False
 
-        # solve button ==================================================================
+        if optTabLockState:
+            self.isFormulaDeltaChanged = False
+
+        # solve button ===============================================================================================
         if imgui.button("Solve"):
             try:
                 if self.testInput(self.testInputSelected) is not None:
@@ -618,6 +631,71 @@ class MathPreliminaries:
                                 self.changingTable[i][j] = f"d = {
                                     round(float(sp.solve(self.changingTable[i][j], self.d)[0]), 6)}"
 
+                self.isAllDeltaCRow = False
+                self.isSingleDeltaCRow = False
+                self.isSingleDeltaARow = False
+                self.isDeltaZCol = False
+                self.isAllDeltaRows = False
+                self.isFormulaDeltaChanged = False
+
+                for i in range(len(self.changingTable)):
+                    for j in range(len(self.changingTable[i])):
+                        if isinstance(self.changingTable[i][j], (sp.Add, sp.Mul)):
+                            self.isFormulaDeltaChanged = True
+
+                if self.isFormulaDeltaChanged:
+                    print("\nMathematical Preliminary formulas that will be influenced")
+
+                    for i in range(len(self.matB)):
+                        for j in range(len(self.matB[i])):
+                            if isinstance(self.matB[i][j], (sp.Add, sp.Mul)):
+                                self.isAllDeltaRows = True
+
+                    if self.isAllDeltaRows:
+                        print("All formulas are influenced")
+
+                    # print(self.matCbvNegOne)
+                    if not self.isAllDeltaRows:
+                        for i in range(len(self.matCbvNegOne)):
+                            if isinstance(self.matCbvNegOne[i], (sp.Add, sp.Mul)):
+                                self.isAllDeltaCRow = True
+
+                        if self.isAllDeltaCRow:
+                            print(f"CBVB^-1")
+                            print(f"Z* = CBVB^-1.b")
+                            for i in range(len(self.changingTable[-1]) - 1):
+                                if i < len(self.objFunc):
+                                    print(
+                                        f"C{i+1}* = (CBVB^-1.A{i+1}) - C{i+1}")
+                                else:
+                                    print(f"S{i - len(self.objFunc) +
+                                              1}* = (CBVB^-1.A{i+1}) - C{i+1}")
+
+                        if not self.isAllDeltaCRow:
+                            for i in range(1, len(self.changingTable)):
+                                for j in range(len(self.changingTable[i]) - 1):
+                                    if isinstance(self.changingTable[0][j], (sp.Add, sp.Mul)):
+                                        self.isSingleDeltaCRow = True
+                                        self.singleCIndex = j+1
+                                    if isinstance(self.changingTable[i][j], (sp.Add, sp.Mul)):
+                                        self.isSingleDeltaARow = True
+                                        self.singleAIndex = j+1
+
+                        if self.isSingleDeltaCRow:
+                            print(
+                                f"C{self.singleCIndex}* = (CBVB^-1.A{self.singleCIndex}) - C{self.singleCIndex}")
+                        if self.isSingleDeltaARow:
+                            print(
+                                f"A{self.singleAIndex}* = B^-1.A{self.singleAIndex}")
+
+                        for i in range(len(self.changingTable)):
+                            if isinstance(self.changingTable[i][-1], (sp.Add, sp.Mul)):
+                                self.isDeltaZCol = True
+
+                        if self.isDeltaZCol:
+                            print("Z* = CBVB^-1.b")
+                            print("b* = B^-1.b")
+
             except Exception as e:
                 print("math error:", e)
 
@@ -626,7 +704,6 @@ class MathPreliminaries:
         if imgui.button("Reset"):
             self.reset()
         imgui.pop_style_color()
-
 
         imgui.spacing()
         imgui.spacing()
@@ -726,7 +803,10 @@ class MathPreliminaries:
         for i in range(len(self.changingTable)):
             for j in range(len(self.changingTable[i])):
                 if isinstance(self.changingTable[i][j], float) or self.absF(self.changingTable[i][j]) == 0.0 or self.absF(self.changingTable[i][j]) == 1:
-                    imgui.text("{:>15.3f}".format(self.changingTable[i][j]))
+                    try:
+                        imgui.text("{:>15.3f}".format(self.changingTable[i][j]))
+                    except:
+                        imgui.text("{:>15}".format(self.changingTable[i][j]))
                 else:
                     imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
                     imgui.text("{:>15}".format(str(self.changingTable[i][j])))
@@ -800,7 +880,33 @@ class MathPreliminaries:
         imgui.spacing()
         imgui.spacing()
         imgui.spacing()
-        
+
+        if self.isFormulaDeltaChanged:
+            imgui.text(f"{' ':<10}{'Mathematical Preliminary formulas that will be influenced':<40}")
+            imgui.spacing()
+            imgui.spacing()
+
+            if self.isAllDeltaRows:
+                imgui.text(f"{' ':<15}{'All formulas are influenced':<40}")
+
+            if self.isAllDeltaCRow:
+                imgui.text(f"{' ':<15}{'CBVB^-1':<40}")
+                imgui.text(f"{' ':<15}{'Z* = CBVB^-1.b':<40}")
+                for i in range(len(self.changingTable[-1]) - 1):
+                    if i < len(self.objFunc):
+                        imgui.text(f"{' ':<15}{f'C{i+1}* = (CBVB^-1.A{i+1}) - C{i+1}':<40}")
+                    else:
+                        imgui.text(f"{' ':<15}{f'S{i - len(self.objFunc) + 1}* = (CBVB^-1.A{i+1}) - C{i+1}':<40}")
+
+            if self.isSingleDeltaCRow:
+                imgui.text(f"{' ':<15}{f'C{self.singleCIndex}* = (CBVB^-1.A{self.singleCIndex}) - C{self.singleCIndex}':<40}")
+            if self.isSingleDeltaARow:
+                imgui.text(f"{' ':<15}{f'A{self.singleAIndex}* = B^-1.A{self.singleAIndex}':<40}")
+
+            if self.isDeltaZCol:
+                imgui.text(f"{' ':<15}{'Z* = CBVB^-1.b':<40}")
+                imgui.text(f"{' ':<15}{'b* = B^-1.b':<40}")
+
         imgui.end_child()
         imgui.end()
 

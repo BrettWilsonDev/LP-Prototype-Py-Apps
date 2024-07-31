@@ -105,6 +105,23 @@ class MathPreliminaries:
                            [1, 0, 0, 0, 50, 1],
                            [1, 1, 1, 1, 70, 1],
                            ]
+        elif testNum == 4:
+            objFunc = [3, 2]
+            constraints = [[2, 1, 100, 0],
+                           [1, 1, 80, 0],
+                           [1, 0, 40, 0],
+                           ]
+        elif testNum == 5:
+            objFunc = [120, 80]
+            constraints = [[8, 4, 160, 0],
+                           [4, 4, 100+self.d, 0],
+                           [1, 0, 17, 0],
+                           [1, 0, 5, 1],
+                           [0, 1, 17, 0],
+                           [0, 1, 2, 1],
+                           [1, -1, 0, 1],
+                           [1, -4, 0, 0],
+                           ]
 
         if testNum == -1:
             return None
@@ -625,11 +642,24 @@ class MathPreliminaries:
                 self.matCbvNegOne = tMatCbvNegOne
 
                 if self.solveDelta:
+                    for i in range(len(self.matCbv)):
+                        if isinstance(self.matCbv[i], (sp.Add, sp.Mul)):
+                            self.matCbv[i] = f"d = {
+                                round(float(sp.solve(self.matCbv[i], self.d)[0]), 6)}"
+
+                    for i in range(len(self.matCbvNegOne)):
+                            if isinstance(self.matCbvNegOne[i], (sp.Add, sp.Mul)):
+                                self.matCbvNegOne[i] = f"d = {
+                                    round(float(sp.solve(self.matCbvNegOne[i], self.d)[0]), 6)}"
+                                
+
                     for i in range(len(self.changingTable)):
                         for j in range(len(self.changingTable[i])):
                             if isinstance(self.changingTable[i][j], (sp.Add, sp.Mul)):
                                 self.changingTable[i][j] = f"d = {
                                     round(float(sp.solve(self.changingTable[i][j], self.d)[0]), 6)}"
+                    
+
 
                 self.isAllDeltaCRow = False
                 self.isSingleDeltaCRow = False

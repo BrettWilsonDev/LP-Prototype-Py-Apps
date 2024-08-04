@@ -1,7 +1,4 @@
 TODO:
-Finish graphical sensitivity analysis and normal sensitivity analysis
-
-TODO:
 Extend duality add missing cases with uneven number of constraints and uneven number of variables
 
 TODO:

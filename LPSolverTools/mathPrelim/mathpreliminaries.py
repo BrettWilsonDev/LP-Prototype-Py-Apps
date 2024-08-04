@@ -114,7 +114,7 @@ class MathPreliminaries:
         elif testNum == 5:
             objFunc = [120, 80]
             constraints = [[8, 4, 160, 0],
-                           [4, 4, 100+self.d, 0],
+                           [4, 4, 100, 0],
                            [1, 0, 17, 0],
                            [1, 0, 5, 1],
                            [0, 1, 17, 0],
@@ -129,20 +129,20 @@ class MathPreliminaries:
             return objFunc, constraints, isMin
 
     def scrubDelta(self, lst):
-        cleaned_list = []
+        cleanedList = []
 
         for elem in lst:
             if isinstance(elem, (sp.Add, sp.Mul)):
                 # Remove terms involving `d` and keep only the constant term
                 termWithoutd = elem.as_independent(self.d, as_Add=True)[0]
-                cleaned_list.append(termWithoutd)
+                cleanedList.append(termWithoutd)
             elif hasattr(elem, 'has') and elem.has(self.d):
                 # If the entire element is `d`, replace with 0
-                cleaned_list.append(0)
+                cleanedList.append(0)
             else:
-                cleaned_list.append(elem)
+                cleanedList.append(elem)
 
-        return cleaned_list
+        return cleanedList
 
     def doFormulationOperation(self, objFunc, constraints, absRule=False):
         excessCount = 0
@@ -242,7 +242,7 @@ class MathPreliminaries:
 
         return opTable
 
-    def doSensitivityAnalysis(self, objFunc, constraints, isMin, absRule=False, optTabLockState=False):
+    def doPreliminaries(self, objFunc, constraints, isMin, absRule=False, optTabLockState=False):
         # get list spots for later use =========================
 
         # objFunc, constraints, isMin = testInput()
@@ -624,7 +624,7 @@ class MathPreliminaries:
                         except Exception as e:
                             pass
 
-                self.changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.doSensitivityAnalysis(
+                self.changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.doPreliminaries(
                     a, b, isMin, absRule, optTabLockState)
 
                 self.matCbv = matrixCbv.tolist()
@@ -659,8 +659,6 @@ class MathPreliminaries:
                                 self.changingTable[i][j] = f"d = {
                                     round(float(sp.solve(self.changingTable[i][j], self.d)[0]), 6)}"
                     
-
-
                 self.isAllDeltaCRow = False
                 self.isSingleDeltaCRow = False
                 self.isSingleDeltaARow = False

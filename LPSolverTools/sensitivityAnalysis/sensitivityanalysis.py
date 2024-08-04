@@ -13,6 +13,7 @@ except:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from mathPrelim.mathpreliminaries import MathPreliminaries as MathPrelims
 
+
 class SensitivityAnalysis:
 
     def __init__(self, isConsoleOutput=False):
@@ -107,7 +108,8 @@ class SensitivityAnalysis:
         # get the changing table with deltas in it
         a = copy.deepcopy(objfunc)
         b = copy.deepcopy(constraints)
-        self.changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.mathPrelim.doPreliminaries(a, b, isMin, absRule, optTabLockState)
+        self.changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.mathPrelim.doPreliminaries(
+            a, b, isMin, absRule, optTabLockState)
 
         termWithoutdelta = None
 
@@ -116,35 +118,38 @@ class SensitivityAnalysis:
         for i in range(len(objfunc)):
             if isinstance(objfunc[i], (sp.Add, sp.Mul)):
                 self.termPos = f"c{i+1}"
-                termWithoutdelta = objfunc[i].as_independent(self.d, as_Add=True)[0]
+                termWithoutdelta = objfunc[i].as_independent(
+                    self.d, as_Add=True)[0]
                 objFuncHasDelta = True
         rhsHasDelta = False
         for i in range(len(constraints)):
             if isinstance(constraints[i][-2], (sp.Add, sp.Mul)):
                 self.termPos = f"b{i+1}"
-                termWithoutdelta = constraints[i][-2].as_independent(self.d, as_Add=True)[0]
+                termWithoutdelta = constraints[i][-2].as_independent(self.d, as_Add=True)[
+                    0]
                 rhsHasDelta = True
         constraintsHasDelta = False
         for i in range(len(constraints)):
             for j in range(len(constraints[i]) - 2):
                 if isinstance(constraints[i][j], (sp.Add, sp.Mul)):
                     self.termPos = f"c{i+1}"
-                    termWithoutdelta = constraints[i][j].as_independent(self.d, as_Add=True)[0]
+                    termWithoutdelta = constraints[i][j].as_independent(self.d, as_Add=True)[
+                        0]
                     constraintsHasDelta = True
-
-        print(constraintsHasDelta)
 
         # solve the delta equations
         deltasList = []
         if objFuncHasDelta:
             for i in range(len(self.changingTable[0]) - 1):
                 if isinstance(self.changingTable[0][i], (sp.Add, sp.Mul)):
-                    deltasList.append(float(sp.solve(self.changingTable[0][i], self.d)[0]))
+                    deltasList.append(
+                        float(sp.solve(self.changingTable[0][i], self.d)[0]))
         if rhsHasDelta:
             deltasList = []
             for i in range(len(self.changingTable)):
                 if isinstance(self.changingTable[i][-1], (sp.Add, sp.Mul)):
-                    deltasList.append(float(sp.solve(self.changingTable[i][-1], self.d)[0]))
+                    deltasList.append(
+                        float(sp.solve(self.changingTable[i][-1], self.d)[0]))
         conStraintDeltaCol = -1
         if constraintsHasDelta:
             for i in range(len(self.changingTable)):
@@ -153,14 +158,11 @@ class SensitivityAnalysis:
                         # deltasList.append(float(sp.solve(self.changingTable[i][j], self.d)[0]))
                         conStraintDeltaCol = j
 
-
-        
         # if constraintsHasDelta:
         #     for i in range(len(self.changingTable)):
         #         for j in range(len(self.changingTable[i]) - 1):
         #             if isinstance(self.changingTable[i][j], (sp.Add, sp.Mul)):
         #                 deltasList.append(float(sp.solve(self.changingTable[i][j], self.d)[0]))
-
 
         # rules of how to choose form multiple deltas
         # smallest delta impact for rhs 20 -20 60 -40 we would pick 20 and -20
@@ -173,14 +175,14 @@ class SensitivityAnalysis:
         if constraintsHasDelta:
             if isinstance(self.changingTable[0][conStraintDeltaCol], (sp.Add, sp.Mul)):
                 try:
-                    deltasList.append(float(sp.solve(self.changingTable[0][conStraintDeltaCol], self.d)[0]))
+                    deltasList.append(
+                        float(sp.solve(self.changingTable[0][conStraintDeltaCol], self.d)[0]))
                 except:
                     self.termPos = "unsolvable"
             else:
                 self.negDelta = float('inf')
                 self.posDelta = float('inf')
                 self.termPos = self.changingTable[0][conStraintDeltaCol]
-
 
         # extract the delta
         if not len(deltasList) == 0:
@@ -192,16 +194,19 @@ class SensitivityAnalysis:
                     self.posDelta = deltasList[0]
                     self.negDelta = float('inf')
             else:
-                if(all(x < 0 for x in deltasList)):
+                if (all(x < 0 for x in deltasList)):
                     self.posDelta = float('inf')
-                    self.negDelta = min(filter(lambda x: x < 0, deltasList), key=lambda x: abs(x))
-                elif(all(x > 0 for x in deltasList)):
-                    self.posDelta = min(filter(lambda x: x > 0, deltasList), key=lambda x: abs(x))
+                    self.negDelta = min(
+                        filter(lambda x: x < 0, deltasList), key=lambda x: abs(x))
+                elif (all(x > 0 for x in deltasList)):
+                    self.posDelta = min(
+                        filter(lambda x: x > 0, deltasList), key=lambda x: abs(x))
                     self.negDelta = float('inf')
                 else:
-                    self.posDelta = min(filter(lambda x: x > 0, deltasList), key=lambda x: abs(x))
-                    self.negDelta = min(filter(lambda x: x < 0, deltasList), key=lambda x: abs(x))
-
+                    self.posDelta = min(
+                        filter(lambda x: x > 0, deltasList), key=lambda x: abs(x))
+                    self.negDelta = min(
+                        filter(lambda x: x < 0, deltasList), key=lambda x: abs(x))
 
         # get the range
         self.posRange = float(termWithoutdelta) + float(self.posDelta)
@@ -220,7 +225,7 @@ class SensitivityAnalysis:
                     flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
         imgui.begin_child("Scrollable Child", width=0, height=0,
                           border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
-        
+
         if imgui.radio_button("Max", self.problemType == "Max"):
             self.problemType = "Max"
 
@@ -346,36 +351,38 @@ class SensitivityAnalysis:
         else:
             isMin = False
 
-        #solve button =========================================================
+        # solve button =========================================================
         if imgui.button("Solve"):
             try:
                 if self.testInput(self.testInputSelected) is not None:
                     self.objFunc, self.constraints, isMin = self.testInput(
                         self.testInputSelected)
-                
+
                 bkupObjFunc = copy.deepcopy(self.objFunc)
                 bkupConstraints = copy.deepcopy(self.constraints)
 
                 for i in range(len(self.objFunc)):
                     if self.currentDeltaSelection == f"o{i}":
-                        self.objFunc[i] = sp.Add(float(self.objFunc[i]), self.d)
+                        self.objFunc[i] = sp.Add(
+                            float(self.objFunc[i]), self.d)
 
                 for i in range(len(self.constraints)):
                     for j in range(len(self.constraints[i])):
                         if self.currentDeltaSelection == f"c{i}{j}":
-                            self.constraints[i][j] = sp.Add(float(self.constraints[i][j]), self.d)
+                            self.constraints[i][j] = sp.Add(
+                                float(self.constraints[i][j]), self.d)
 
                 for i in range(len(self.constraints)):
                     if self.currentDeltaSelection == f"cRhs{i}{len(self.objFunc) - 1}":
-                        self.constraints[i][-2] = sp.Add(float(self.constraints[i][-2]), self.d)
-                    
-                # print(objFunc, constraints, isMin)
+                        self.constraints[i][-2] = sp.Add(
+                            float(self.constraints[i][-2]), self.d)
+
                 a = copy.deepcopy(self.objFunc)
                 b = copy.deepcopy(self.constraints)
 
                 self.objFunc = copy.deepcopy(bkupObjFunc)
                 self.constraints = copy.deepcopy(bkupConstraints)
-                    
+
                 # convert obj func to numbers
                 for i in range(len(a)):
                     try:
@@ -405,8 +412,6 @@ class SensitivityAnalysis:
                             b[i][j] = sp.parse_expr(b[i][j])
                         except Exception as e:
                             pass
-                    
-                print(self.objFunc, self.constraints, isMin)
 
                 self.doSensitivityAnalysis(a, b, isMin, False, False)
             except Exception as e:
@@ -439,7 +444,7 @@ class SensitivityAnalysis:
             return
 
         window = glfw.create_window(
-        int(1920 / 2), int(1080 / 2), "Sensitivity Analysis Prototype", None, None)
+            int(1920 / 2), int(1080 / 2), "Sensitivity Analysis Prototype", None, None)
         if not window:
             glfw.terminate()
             return
@@ -466,6 +471,7 @@ class SensitivityAnalysis:
         # Cleanup
         impl.shutdown()
         glfw.terminate()
+
 
 def main(isConsoleOutput=False):
     classInstance = SensitivityAnalysis(isConsoleOutput)

@@ -11,6 +11,7 @@ This repository contains a collection of prototype linear programming (LP) appli
 - Goal Simplex
 - Graphical Method
 - Mathematical Preliminaries
+- Sensitivity Analysis
 - Two-Phase Simplex
 
 ## pip packages used

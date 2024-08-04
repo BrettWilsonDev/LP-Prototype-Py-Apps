@@ -12,6 +12,7 @@ try:
     from preemptivesimplex import PreemptiveSimplex
     from graphicalsolver import GraphicalSolver
     from mathpreliminaries import MathPreliminaries
+    from sensitivityAnalysis import SensitivityAnalysis
     from twophasesimplex import TwoPhaseSimplex
 except:
     try:
@@ -23,6 +24,7 @@ except:
         from LPSolverTools.goal.preemptivesimplex import PreemptiveSimplex
         from LPSolverTools.graphicalSolver.graphicalsolver import GraphicalSolver
         from LPSolverTools.mathPrelim.mathpreliminaries import MathPreliminaries
+        from LPSolverTools.sensitivityAnalysis.sensitivityanalysis import SensitivityAnalysis
         from LPSolverTools.twoPhase.twophasesimplex import TwoPhaseSimplex
     except:
         print("Could not import modules")
@@ -39,6 +41,7 @@ class App:
         self.preemptiveSimplex = PreemptiveSimplex()
         self.graphicalSolver = GraphicalSolver()
         self.mathPreliminaries = MathPreliminaries()
+        self.sensitivityAnalysis = SensitivityAnalysis()
         self.twoPhaseSimplex = TwoPhaseSimplex()
 
         self.currentTool = 0
@@ -49,7 +52,7 @@ class App:
             "Menu", "Adding Acts, Cons", "DEA Solver",
             "Dual Simplex", "Duality", "Goal Penalties",
             "Goal Preemptive", "Graphical Solver",
-            "Preliminaries", "Two Phase Simplex", "Help"
+            "Preliminaries", "Sensitivity Analysis", "Two Phase Simplex", "Help"
         ]
 
         self.originalButtonColor = ()
@@ -67,8 +70,9 @@ class App:
             6: self.preemptiveSimplex.imguiUIElements,
             7: self.graphicalSolver.imguiUIElements,
             8: self.mathPreliminaries.imguiUIElements,
-            9: self.twoPhaseSimplex.imguiUIElements,
-            10: self.imguiHelpMenu
+            9: self.sensitivityAnalysis.imguiUIElements,
+            10: self.twoPhaseSimplex.imguiUIElements,
+            11: self.imguiHelpMenu
         }
 
     def imguiMainMenu(self, windowSize, windowPosX=0, windowPosY=0):
@@ -215,29 +219,24 @@ class App:
 
             imgui.new_frame()
 
-            style = imgui.get_style()
-
-            self.originalButtonColor = style.colors[imgui.COLOR_BUTTON]
-            self.hoveredButtonColor = style.colors[imgui.COLOR_BUTTON_HOVERED]
-            self.selectedButtonColor = style.colors[imgui.COLOR_BUTTON_ACTIVE]
-            self.activeButtonColor = style.colors[imgui.COLOR_BUTTON_ACTIVE]
-
-            style.colors[imgui.COLOR_BUTTON] = self.originalButtonColor
-            style.colors[imgui.COLOR_BUTTON_HOVERED] = self.hoveredButtonColor
-            style.colors[imgui.COLOR_BUTTON_ACTIVE] = self.selectedButtonColor
-
             if imgui.begin_main_menu_bar():
 
-                for i, label in enumerate(self.buttonLabels):
-                    if i == self.currentTool:
-                        style.colors[imgui.COLOR_BUTTON] = self.activeButtonColor
-                    else:
-                        style.colors[imgui.COLOR_BUTTON] = self.originalButtonColor
+                if imgui.button(self.buttonLabels[0]):
+                    self.currentTool = 0
 
-                    if imgui.button(label):
-                        self.currentTool = i
+                if imgui.button("LP Tools"):
+                    imgui.open_popup("LP Tools")
 
-                style.colors[imgui.COLOR_BUTTON] = self.originalButtonColor
+                imgui.set_next_window_position(0, self.paddingTop)
+                if imgui.begin_popup("LP Tools"):
+                    for i, label in enumerate(self.buttonLabels[1:-1], start=1):
+                        clicked, _ = imgui.menu_item(label, "", self.currentTool == i)
+                        if clicked:
+                            self.currentTool = i
+                    imgui.end_popup()
+
+                if imgui.button(self.buttonLabels[-1]):
+                    self.currentTool = len(self.buttonLabels) - 1
 
                 imgui.end_main_menu_bar()
 

@@ -1,6 +1,6 @@
-import imgui
-from imgui.integrations.glfw import GlfwRenderer
-import glfw
+# import imgui
+# from imgui.integrations.glfw import GlfwRenderer
+# import glfw
 
 import copy
 import sys
@@ -644,20 +644,17 @@ class MathPreliminaries:
                 if self.solveDelta:
                     for i in range(len(self.matCbv)):
                         if isinstance(self.matCbv[i], (sp.Add, sp.Mul)):
-                            self.matCbv[i] = f"d = {
-                                round(float(sp.solve(self.matCbv[i], self.d)[0]), 6)}"
+                            self.matCbv[i] = f"d = {round(float(sp.solve(self.matCbv[i], self.d)[0]), 6)}"
 
                     for i in range(len(self.matCbvNegOne)):
                             if isinstance(self.matCbvNegOne[i], (sp.Add, sp.Mul)):
-                                self.matCbvNegOne[i] = f"d = {
-                                    round(float(sp.solve(self.matCbvNegOne[i], self.d)[0]), 6)}"
+                                self.matCbvNegOne[i] = f"d = {round(float(sp.solve(self.matCbvNegOne[i], self.d)[0]), 6)}"
                                 
 
                     for i in range(len(self.changingTable)):
                         for j in range(len(self.changingTable[i])):
                             if isinstance(self.changingTable[i][j], (sp.Add, sp.Mul)):
-                                self.changingTable[i][j] = f"d = {
-                                    round(float(sp.solve(self.changingTable[i][j], self.d)[0]), 6)}"
+                                self.changingTable[i][j] = f"d = {round(float(sp.solve(self.changingTable[i][j], self.d)[0]), 6)}"
                     
                 self.isAllDeltaCRow = False
                 self.isSingleDeltaCRow = False
@@ -696,8 +693,7 @@ class MathPreliminaries:
                                     print(
                                         f"C{i+1}* = (CBVB^-1.A{i+1}) - C{i+1}")
                                 else:
-                                    print(f"S{i - len(self.objFunc) +
-                                              1}* = (CBVB^-1.A{i+1}) - C{i+1}")
+                                    print(f"S{i - len(self.objFunc) +1}* = (CBVB^-1.A{i+1}) - C{i+1}")
 
                         if not self.isAllDeltaCRow:
                             for i in range(1, len(self.changingTable)):

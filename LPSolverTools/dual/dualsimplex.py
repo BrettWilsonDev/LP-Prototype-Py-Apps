@@ -1,6 +1,6 @@
-import imgui
-from imgui.integrations.glfw import GlfwRenderer
-import glfw
+# import imgui
+# from imgui.integrations.glfw import GlfwRenderer
+# import glfw
 
 import copy
 import sys
@@ -284,8 +284,7 @@ class DualSimplex:
         newTab[rowIndex] = pivotMathRow
 
         if self.isConsoleOutput:
-            print(f"the pivot col in Dual is {
-                colIndex + 1} and the pivot row is {rowIndex + 1}")
+            print(f"the pivot col in Dual is {colIndex + 1} and the pivot row is {rowIndex + 1}")
 
         self.IMPivotCols.append(colIndex)
         self.IMPivotRows.append(rowIndex)
@@ -371,8 +370,7 @@ class DualSimplex:
                 operationTab[i][j] = mathItem
 
         if self.isConsoleOutput:
-            print(f"the pivot col in primal is {
-                colIndex + 1} and the pivot row is {rowIndex + 1}")
+            print(f"the pivot col in primal is {colIndex + 1} and the pivot row is {rowIndex + 1}")
 
         self.IMPivotCols.append(colIndex)
         self.IMPivotRows.append(rowIndex)

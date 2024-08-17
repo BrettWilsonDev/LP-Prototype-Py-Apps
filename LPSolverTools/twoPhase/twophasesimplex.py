@@ -1,6 +1,6 @@
-import imgui
-from imgui.integrations.glfw import GlfwRenderer
-import glfw
+# import imgui
+# from imgui.integrations.glfw import GlfwRenderer
+# import glfw
 
 import copy
 import sys
@@ -251,8 +251,7 @@ class TwoPhaseSimplex:
         isAllNegW = all(num <= 0 for num in newTab[0]) if newTab[0] else False
 
         if self.isConsoleOutput:
-            print(f"In Phase 1, The pivot row is {
-                pivotRow + 1} and the pivot col is {pivotCol + 1}")
+            print(f"In Phase 1, The pivot row is {pivotRow + 1} and the pivot col is {pivotCol + 1}")
 
         self.IMPivotCols.append(pivotCol)
         self.IMPivotRows.append(pivotRow)
@@ -325,8 +324,7 @@ class TwoPhaseSimplex:
             isAllNegZ = all(num >= 0 for num in newTab[1][:-1])
 
         if self.isConsoleOutput:
-            print(f"In Phase 2, The pivot row is {
-                pivotRow + 1} and the pivot col is {pivotCol + 1}")
+            print(f"In Phase 2, The pivot row is {pivotRow + 1} and the pivot col is {pivotCol + 1}")
 
         self.IMPivotCols.append(pivotCol)
         self.IMPivotRows.append(pivotRow)

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <title>Sensitivity Analysis</title>
+    <style>
+        html {
+            background-color: #151617;
+            color: white;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        button {
+            background-color: #20324d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 2px 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        input {
+            width: 50px;
+            margin-right: 5px;
+            background-color: #212425;
+            border: 1px solid #444;
+            color: white;
+            margin-left: 10px;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        select {
+            margin-left: 5px;
+            background-color: #212425;
+            border: 1px solid #444;
+            color: white;
+        }
+
+        .row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .cell {
+            width: 80px;
+            text-align: right;
+            margin-right: 5px;
+            box-sizing: border-box;
+        }
+
+        .highlight {
+            color: green;
+        }
+
+        .header-row {
+            font-weight: bold;
+        }
+
+        label {
+            margin-right: 20px;
+        }
+
+        input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        p {
+            font-weight: bold;
+            color: white;
+        }
+
+        .constraint {
+            margin-bottom: 10px;
+        }
+
+        .tableau-container {
+            margin-bottom: 20px;
+            overflow-y: auto;
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .tableau-container .row {
+            flex-wrap: nowrap;
+        }
+
+        .tableau-container .cell {
+            min-width: 80px;
+        }
+
+        #objectiveFunction,
+        #constraintsContainer {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Sensitivity Analysis</h1>
+
+    <h3 id="loadingStatus">Loading...</h3>
+
+    <div hidden id="hiddenUntilLoad">
+
+        <div>
+            <label><input type="radio" name="problemType" value="Max" checked> Max</label>
+            <label><input type="radio" name="problemType" value="Min"> Min</label>
+        </div>
+
+        <p id="problemTypeText">Problem is: Max</p>
+
+        <div class="row">
+            <button id="addDecisionVar">decision variables +</button>
+            <button id="removeDecisionVar">decision variables -</button>
+        </div>
+
+        <p>Use + to mark the item for analysis. O is the current selection.</p>
+
+        <div id="objectiveFunction" class="row"></div>
+
+        <div id="rowDiv" class="row">
+            <button id="addConstraint">Constraint +</button>
+            <button id="removeConstraint">Constraint -</button>
+        </div>
+
+        <div id="constraintsContainer"></div>
+
+        <div class="row">
+            <button id="solveButton">Solve</button>
+            <button id="resetButton" style="margin-left: 25px; background-color: red">Reset</button>
+        </div>
+
+        <div id="analysisSection"></div>
+
+    </div>
+    <script>
+        let problemType = "Max";
+        let amtOfObjVars = 2;
+        let amtOfConstraints = 1;
+        let objFunc = [0.0, 0.0];
+        let constraints = [[0.0, 0.0, 0.0, 0.0]];
+        let signItems = ["<=", ">="];
+        let signItemsChoices = [0];
+        let currentDeltaSelection = "o0";
+
+        function updateProblemType() {
+            problemType = document.querySelector('input[name="problemType"]:checked').value;
+            document.getElementById("problemTypeText").innerText = "Problem is: " + problemType;
+        }
+
+        function updateObjectiveFunction() {
+            const objectiveFunctionContainer = document.getElementById("objectiveFunction");
+            objectiveFunctionContainer.innerHTML = "";
+
+            const rowDiv = document.createElement("div");
+            rowDiv.className = "row";
+
+            for (let i = 0; i < amtOfObjVars; i++) {
+                const value = objFunc[i];
+
+                const button = document.createElement("button");
+                button.innerText = currentDeltaSelection === `o${i}` ? "O" : "+";
+                button.addEventListener("click", () => {
+                    currentDeltaSelection = `o${i}`;
+                    updateObjectiveFunction();
+                    updateConstraints();
+                });
+                rowDiv.appendChild(button);
+
+                const input = document.createElement("input");
+                input.type = "number";
+                input.value = value;
+                input.addEventListener("input", (e) => {
+                    objFunc[i] = parseFloat(e.target.value);
+                });
+                rowDiv.appendChild(input);
+
+                const label = document.createElement("span");
+                label.innerText = `x${i + 1}`;
+                rowDiv.appendChild(label);
+            }
+
+            objectiveFunctionContainer.appendChild(rowDiv);
+        }
+
+        function updateConstraints() {
+            const constraintsContainer = document.getElementById("constraintsContainer");
+            constraintsContainer.innerHTML = "";
+
+            for (let i = 0; i < amtOfConstraints; i++) {
+                const rowDiv = document.createElement("div");
+                rowDiv.className = "row";
+
+                const constraintRow = constraints[i];
+
+                for (let j = 0; j < amtOfObjVars; j++) {
+                    const value = constraintRow[j];
+
+                    const button = document.createElement("button");
+                    button.innerText = currentDeltaSelection === `c${i}${j}` ? "O" : "+";
+                    button.addEventListener("click", () => {
+                        currentDeltaSelection = `c${i}${j}`;
+                        updateObjectiveFunction();
+                        updateConstraints();
+                    });
+                    rowDiv.appendChild(button);
+
+                    const input = document.createElement("input");
+                    input.type = "number";
+                    input.value = value;
+                    input.addEventListener("input", (e) => {
+                        constraints[i][j] = parseFloat(e.target.value);
+                    });
+                    rowDiv.appendChild(input);
+
+                    const label = document.createElement("span");
+                    label.innerText = `x${j + 1}`;
+                    rowDiv.appendChild(label);
+                }
+
+                const signSelect = document.createElement("select");
+                signItems.forEach((sign, index) => {
+                    const option = document.createElement("option");
+                    option.value = index;
+                    option.text = sign;
+                    signSelect.appendChild(option);
+                });
+                signSelect.value = signItemsChoices[i];
+                signSelect.addEventListener("change", (e) => {
+                    signItemsChoices[i] = parseInt(e.target.value);
+                    constraints[i][amtOfObjVars + 1] = signItemsChoices[i];
+                });
+                rowDiv.appendChild(signSelect);
+
+                // RHS button for delta selection
+                const rhsButton = document.createElement("button");
+                rhsButton.innerText = currentDeltaSelection === `cRhs${i}` ? "O" : "+";
+                rhsButton.addEventListener("click", () => {
+                    currentDeltaSelection = `cRhs${i}`;
+                    updateObjectiveFunction();
+                    updateConstraints();
+                });
+                rowDiv.appendChild(rhsButton);
+
+                const rhsInput = document.createElement("input");
+                rhsInput.type = "number";
+                rhsInput.value = constraintRow[amtOfObjVars];
+                rhsInput.addEventListener("input", (e) => {
+                    constraints[i][amtOfObjVars] = parseFloat(e.target.value);
+                });
+                rowDiv.appendChild(rhsInput);
+
+                constraintsContainer.appendChild(rowDiv);
+            }
+        }
+
+        document.querySelectorAll('input[name="problemType"]').forEach(radio => {
+            radio.onchange = updateProblemType;
+        });
+
+        document.getElementById("addDecisionVar").addEventListener("click", () => {
+            amtOfObjVars++;
+            objFunc.push(0.0);
+            constraints.forEach(c => c.push(0.0));
+            updateObjectiveFunction();
+            updateConstraints();
+        });
+
+        document.getElementById("removeDecisionVar").addEventListener("click", () => {
+            if (amtOfObjVars > 2) {
+                amtOfObjVars--;
+                objFunc.pop();
+                constraints.forEach(c => c.pop());
+                updateObjectiveFunction();
+                updateConstraints();
+            }
+        });
+
+        document.getElementById("addConstraint").onclick = () => {
+            amtOfConstraints++;
+            const newConstraint = new Array(amtOfObjVars).fill(0.0);
+            newConstraint.push(0.0);  // for sign
+            newConstraint.push(0.0);  // for rhs
+            constraints.push(newConstraint);
+            signItemsChoices.push(0);
+            updateConstraints();
+        };
+
+        document.getElementById("removeConstraint").onclick = () => {
+            if (amtOfConstraints > 1) {
+                amtOfConstraints--;
+                constraints.pop();
+                signItemsChoices.pop();
+                updateConstraints();
+            }
+        };
+
+        document.getElementById("resetButton").onclick = () => {
+            problemType = "Max";
+            amtOfObjVars = 2;
+            amtOfConstraints = 1;
+            objFunc = [0.0, 0.0];
+            constraints = [[0.0, 0.0, 0.0]];
+            signItems = ["<=", ">="];
+            signItemsChoices = [0];
+            currentDeltaSelection = "o0";
+
+            updateObjectiveFunction();
+            updateConstraints();
+        };
+
+        function getObjFunc() {
+            return objFunc;
+        }
+
+        function getConstraints() {
+            return constraints;
+        }
+
+        function getProblemType() {
+            return problemType;
+        }
+
+        function getCurrentDeltaSelection() {
+            return currentDeltaSelection;
+        }
+
+        // Initial render
+        updateObjectiveFunction();
+        updateConstraints();
+
+    </script>
+
+    <py-config>
+        packages = [
+        "matplotlib",
+        "sympy",
+        ]
+        [[fetch]]
+        files = [
+        "./sensitivityanalysis.py",
+        "../mathPrelim/mathpreliminaries.py",
+        "../dual/dualsimplex.py",
+        ]
+    </py-config>
+
+    <script type="py">
+        from pyscript import document, display, when
+        from js import console, getObjFunc, getConstraints, getProblemType, getCurrentDeltaSelection
+        import copy
+
+        import sympy as sp
+
+        from sensitivityanalysis import SensitivityAnalysis
+
+        d = sp.symbols('d')
+
+        document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
+        document.getElementById("loadingStatus").hidden = True;
+        
+        console.clear();
+
+        # Initialize object
+        sensitivityAnalysis = SensitivityAnalysis()
+        
+        def renderOutput():
+            # Example variables, replace these with your actual values
+            negRange = sensitivityAnalysis.negRange
+            termPos = sensitivityAnalysis.termPos
+            posRange = sensitivityAnalysis.posRange
+            negDelta = sensitivityAnalysis.negDelta
+            posDelta = sensitivityAnalysis.posDelta
+        
+            # Clear previous content
+            analysisSection = document.getElementById('analysisSection')
+            analysisSection.innerHTML = ''
+    
+            # Add spacing
+            for _ in range(4):
+                spacer = document.createElement('div')
+                spacer.style.marginBottom = '1em'
+                analysisSection.appendChild(spacer)
+    
+            # Add Sensitivity Analysis title and content
+            title = document.createElement('div')
+            title.innerText = 'Sensitivity Analysis:'
+            title.style.fontWeight = 'bold'
+            analysisSection.appendChild(title)
+    
+            # Add range information
+            rangeInfo = document.createElement('div')
+            rangeInfo.innerText = f"   {negRange} <= {termPos} <= {posRange}"
+            analysisSection.appendChild(rangeInfo)
+    
+            # Add more spacing
+            spacer = document.createElement('div')
+            spacer.style.marginBottom = '1em'
+            analysisSection.appendChild(spacer)
+    
+            # Add Delta Range title and content
+            deltaTitle = document.createElement('div')
+            deltaTitle.innerText = 'Delta Range:'
+            deltaTitle.style.fontWeight = 'bold'
+            analysisSection.appendChild(deltaTitle)
+    
+            # Add delta range information
+            deltaInfo = document.createElement('div')
+            deltaInfo.innerText = f"   {negDelta} <= d <= {posDelta}"
+            analysisSection.appendChild(deltaInfo)
+
+        @when("click", "#solveButton")
+        def solve(event):
+            try:
+                analysisSection = document.getElementById('analysisSection')
+                analysisSection.innerHTML = 'Solving...'
+
+                objFunc = getObjFunc().to_py()
+
+                constraints = getConstraints().to_py()
+
+                if getProblemType() == "Max":
+                    isMin = False
+                else:
+                    isMin = True
+
+                currentDeltaSelection = getCurrentDeltaSelection()
+
+                bkupObjFunc = copy.deepcopy(objFunc)
+                bkupConstraints = copy.deepcopy(constraints)
+
+                for i in range(len(objFunc)):
+                    if currentDeltaSelection == f"o{i}":
+                        objFunc[i] = sp.Add(
+                            float(objFunc[i]), d)
+
+                for i in range(len(constraints)):
+                    for j in range(len(constraints[i])):
+                        if currentDeltaSelection == f"c{i}{j}":
+                            constraints[i][j] = sp.Add(
+                                float(constraints[i][j]), d)
+
+                for i in range(len(constraints)):
+                    if currentDeltaSelection == f"cRhs{i}":
+                        constraints[i][-2] = sp.Add(
+                            float(constraints[i][-2]), d)
+
+                # Copy and compute
+                a = copy.deepcopy(objFunc)
+                b = copy.deepcopy(constraints)
+
+                objFunc = copy.deepcopy(bkupObjFunc)
+                constraints = copy.deepcopy(bkupConstraints)
+
+                # convert obj func to numbers
+                for i in range(len(a)):
+                    try:
+                        a[i] = float(a[i])
+                    except Exception as e:
+                        pass
+
+                # obj func to expressions
+                for i in range(len(a)):
+                    try:
+                        a[i] = sp.parse_expr(a[i])
+                    except Exception as e:
+                        pass
+
+                # convert constraints to numbers
+                for i in range(len(b)):
+                    for j in range(len(b[i])):
+                        try:
+                            b[i][j] = float(b[i][j])
+                        except Exception as e:
+                            pass
+
+                # convert constraints to expressions
+                for i in range(len(b)):
+                    for j in range(len(b[i])):
+                        try:
+                            b[i][j] = sp.parse_expr(b[i][j])
+                        except Exception as e:
+                            pass
+
+                sensitivityAnalysis.doSensitivityAnalysis(a, b, isMin, False, False)
+
+                renderOutput()
+            except Exception as e:
+                analysisSection = document.getElementById('analysisSection')
+                analysisSection.innerHTML = 'math error'
+
+        @when("click", "#resetButton")
+        def reset(event):
+            sensitivityAnalysis.reset()
+            analysisSection = document.getElementById('analysisSection')
+            analysisSection.innerHTML = ''
+
+    </script>
+</body>
+
+</html>

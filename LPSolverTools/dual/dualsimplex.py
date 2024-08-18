@@ -85,6 +85,11 @@ class DualSimplex:
             objFunc = [-3, 7, 40]
             constraints = [[0, 1, 10, 100, 1], [-1, 1, 4, 30, 1], [0, 1, 0, 0, 1], [0, 0, 1, 0, 1]]
             isMin = True
+        
+        elif testNum == 6:
+            objFunc = [140, 50, -50, -70]
+            constraints = [[1, 1, -1, -1, 10, 1], [4, 0, 0, -1, 50, 1], [4, 0, 0, -1, 80, 1], [8, 0, 0, -1, 100, 1]]
+            isMin = True
 
         if testNum == -1:
             return None
@@ -288,8 +293,7 @@ class DualSimplex:
         newTab[rowIndex] = pivotMathRow
 
         if self.isConsoleOutput:
-            print(f"the pivot col in Dual is {
-                colIndex + 1} and the pivot row is {rowIndex + 1}")
+            print(f"the pivot col in Dual is {colIndex + 1} and the pivot row is {rowIndex + 1}")
 
         self.IMPivotCols.append(colIndex)
         self.IMPivotRows.append(rowIndex)
@@ -375,8 +379,7 @@ class DualSimplex:
                 operationTab[i][j] = mathItem
 
         if self.isConsoleOutput:
-            print(f"the pivot col in primal is {
-                colIndex + 1} and the pivot row is {rowIndex + 1}")
+            print(f"the pivot col in primal is {colIndex + 1} and the pivot row is {rowIndex + 1}")
 
         self.IMPivotCols.append(colIndex)
         self.IMPivotRows.append(rowIndex)
@@ -539,12 +542,11 @@ class DualSimplex:
 
         tSCVars = []
         for k in range(lenObj):
-            columnIndex = k  # Index of the column you want to work with
+            columnIndex = k
             tCVars = []
 
             for i in range(len(tableaus[-1])):
                 columnValue = tableaus[-1][i][columnIndex]
-                # Now you can work with the value in the column
                 tCVars.append(columnValue)
             if (sum(1 for num in tCVars if num != 0) == 1):
                 tSCVars.append(tCVars)
@@ -554,7 +556,8 @@ class DualSimplex:
         changingVars = []
         for i in range(len(tSCVars)):
             if tSCVars[i] is not None:
-                changingVars.append(tableaus[-1][tSCVars[i].index(1.0)][-1])
+                tSCVars[i] = [abs(x) for x in tSCVars[i]]
+                changingVars.append(tableaus[-1][(tSCVars[i].index(1.0))][-1])
             else:
                 changingVars.append(0)
 
@@ -705,6 +708,7 @@ class DualSimplex:
                 print("math error:", e)
                 imgui.text("math error: {}".format(e))
                 self.errorE = "math error: {}".format(e)
+                raise
 
         imgui.same_line(0, 30)
         imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 0.0, 0.0)

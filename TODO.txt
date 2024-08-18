@@ -1,11 +1,5 @@
 TODO:
-Extend duality add missing cases with uneven number of constraints and uneven number of variables
-
-TODO:
 Make gui look better or swap it out for something else
 
 TODO:
 Add demo examples
-
-TODO:
-web support - look at pyscript for that

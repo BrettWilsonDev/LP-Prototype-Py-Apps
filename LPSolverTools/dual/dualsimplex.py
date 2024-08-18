@@ -81,6 +81,10 @@ class DualSimplex:
                            [0, 0, 0, 1, 0, 0.0001, 1],
                            [0, 0, 0, 0, 1, 0.0001, 1],
                            ]
+        elif testNum == 5:
+            objFunc = [-3, 7, 40]
+            constraints = [[0, 1, 10, 100, 1], [-1, 1, 4, 30, 1], [0, 1, 0, 0, 1], [0, 0, 1, 0, 1]]
+            isMin = True
 
         if testNum == -1:
             return None
@@ -299,7 +303,7 @@ class DualSimplex:
 
         if isMin:
             largestNegativeNumber = min(
-                num for num in testRow if num < 0 and num != 0)
+                num for num in testRow if num > 0 and num != 0)
         else:
             largestNegativeNumber = min(
                 num for num in testRow if num < 0 and num != 0)

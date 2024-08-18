@@ -77,6 +77,8 @@ class MathPreliminaries:
         self.isAllDeltaRows = False
         self.isFormulaDeltaChanged = False
 
+        self.currentDeltaSelection = "dStore0"
+
     def testInput(self, testNum=-1):
         isMin = False
         if testNum == 0:
@@ -469,17 +471,39 @@ class MathPreliminaries:
 
         imgui.spacing()
         imgui.text(
-            "you can use +d to represent the delta variable ex: 60+d")
+            "Use + to mark the item for delta analysis O is the current selection.")
+        imgui.spacing()
+        # imgui.spacing()
+        imgui.text(
+            "For no selection select:")
+
+        imgui.same_line()
+        imgui.push_id("##deltaButtonStore {}{}".format(0, 1))
+        if self.currentDeltaSelection == f"dStore0":
+            deltaSelectText = "O"
+        else:
+            deltaSelectText = "+"
+        if imgui.button(f"{deltaSelectText}"):
+            self.currentDeltaSelection = f"dStore0"
+        imgui.pop_id()
+        imgui.spacing()
         imgui.spacing()
         imgui.spacing()
 
         for i in range(len(self.objFunc)):
-            # value = objFunc[i]
-            value = str(self.objFunc[i])
+            value = (self.objFunc[i])
+            imgui.same_line()
+            imgui.push_id("##deltaButtonO {}".format(i + 1))
+            if self.currentDeltaSelection == f"o{i}":
+                deltaSelectText = "O"
+            else:
+                deltaSelectText = "+"
+            if imgui.button(f"{deltaSelectText}"):
+                self.currentDeltaSelection = f"o{i}"
+            imgui.pop_id()
             imgui.set_next_item_width(50)
             imgui.same_line()
-            # changed, objFunc[i] = imgui.input_float(
-            changed, self.objFunc[i] = imgui.input_text(
+            changed, self.objFunc[i] = imgui.input_float(
                 "##objFunc {}".format(i + 1), value)
             imgui.same_line()
             imgui.text(f"x{i + 1}")
@@ -510,12 +534,19 @@ class MathPreliminaries:
                 self.constraints.append([0.0] * (self.amtOfObjVars + 2))
 
             for j in range(self.amtOfObjVars):
-                # value = constraints[i][j]
-                value = str(self.constraints[i][j])
-                imgui.set_next_item_width(50)
+                value = (self.constraints[i][j])
                 imgui.same_line()
-                # changed, xValue = imgui.input_float(
-                changed, xValue = imgui.input_text(
+                imgui.push_id("##deltaButtonC {}{}".format(i + 1, j + 1))
+                if self.currentDeltaSelection == f"c{i}{j}":
+                    deltaSelectText = "O"
+                else:
+                    deltaSelectText = "+"
+                if imgui.button(f"{deltaSelectText}"):
+                    self.currentDeltaSelection = f"c{i}{j}"
+                imgui.pop_id()
+                imgui.same_line()
+                imgui.set_next_item_width(50)
+                changed, xValue = imgui.input_float(
                     "##xC{}{}".format(i, j), value)
                 imgui.same_line()
                 imgui.text(f"x{j + 1}")
@@ -532,12 +563,22 @@ class MathPreliminaries:
 
             imgui.pop_item_width()
             imgui.same_line()
+            imgui.push_id("##deltaButtonRhs {}{}".format(i + 1, j + 1))
+            if self.currentDeltaSelection == f"cRhs{i}{j}":
+                deltaSelectText = "O"
+            else:
+                deltaSelectText = "+"
+            if imgui.button(f"{deltaSelectText}"):
+                self.currentDeltaSelection = f"cRhs{i}{j}"
+            imgui.pop_id()
+            imgui.same_line()
             imgui.set_next_item_width(50)
-            # rhsValue = constraints[i][-2]
-            rhsValue = str(self.constraints[i][-2])
-            # rhsChanged, rhs = imgui.input_float(
-            rhsChanged, rhs = imgui.input_text(
+            rhsValue = (self.constraints[i][-2])
+            rhsChanged, rhs = imgui.input_float(
                 "##RHSC{}{}".format(i, j), rhsValue)
+
+            if rhsChanged:
+                self.constraints[i][-2] = rhs
 
             if rhsChanged:
                 self.constraints[i][-2] = rhs
@@ -589,10 +630,34 @@ class MathPreliminaries:
                 if self.testInput(self.testInputSelected) is not None:
                     self.objFunc, self.constraints, isMin = self.testInput(
                         self.testInputSelected)
+                    
+                bkupObjFunc = copy.deepcopy(self.objFunc)
+                bkupConstraints = copy.deepcopy(self.constraints)
+
+                if self.currentDeltaSelection != "dStore0":
+                    for i in range(len(self.objFunc)):
+                        if self.currentDeltaSelection == f"o{i}":
+                            self.objFunc[i] = sp.Add(
+                                float(self.objFunc[i]), self.d)
+
+                    for i in range(len(self.constraints)):
+                        for j in range(len(self.constraints[i])):
+                            if self.currentDeltaSelection == f"c{i}{j}":
+                                self.constraints[i][j] = sp.Add(
+                                    float(self.constraints[i][j]), self.d)
+
+                    for i in range(len(self.constraints)):
+                        if self.currentDeltaSelection == f"cRhs{i}{len(self.objFunc) - 1}":
+                            self.constraints[i][-2] = sp.Add(
+                                float(self.constraints[i][-2]), self.d)
 
                 # print(objFunc, constraints, isMin)
                 a = copy.deepcopy(self.objFunc)
                 b = copy.deepcopy(self.constraints)
+
+                self.objFunc = copy.deepcopy(bkupObjFunc)
+                self.constraints = copy.deepcopy(bkupConstraints)
+
 
                 # convert obj func to numbers
                 for i in range(len(a)):

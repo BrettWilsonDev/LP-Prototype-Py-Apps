@@ -540,6 +540,7 @@ class DualSimplex:
                     print()
                 print()
 
+        # part of changing vars used in duality
         tSCVars = []
         for k in range(lenObj):
             columnIndex = k
@@ -553,6 +554,7 @@ class DualSimplex:
             else:
                 tSCVars.append(None)
 
+        # used to find the vars that are changing typical to excel solver
         changingVars = []
         for i in range(len(tSCVars)):
             if tSCVars[i] is not None:
@@ -708,7 +710,6 @@ class DualSimplex:
                 print("math error:", e)
                 imgui.text("math error: {}".format(e))
                 self.errorE = "math error: {}".format(e)
-                raise
 
         imgui.same_line(0, 30)
         imgui.push_style_color(imgui.COLOR_TEXT, 1.0, 0.0, 0.0)

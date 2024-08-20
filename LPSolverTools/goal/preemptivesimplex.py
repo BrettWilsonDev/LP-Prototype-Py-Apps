@@ -2,6 +2,7 @@ import imgui
 from imgui.integrations.glfw import GlfwRenderer
 import glfw
 
+import math
 import copy
 import sys
 import os

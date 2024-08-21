@@ -785,9 +785,17 @@ class PenaltiesSimplex:
                 # for i in range(len(goalConstraints)):
                 if self.goalConstraints[i][-1] == 2:
                     self.penalties.append(0.0)
-                else:
-                    if len(self.penalties) > len(self.goalConstraints):
-                        self.penalties.pop()
+
+                equalCount = 0
+                notEqualCount = 0
+                for eqCtr in range(len(self.goalConstraints)):
+                    if (self.goalConstraints[eqCtr][-1] == 2):
+                        equalCount += 2
+                    else:
+                        notEqualCount += 1
+
+                if ((equalCount + notEqualCount) != len(self.penalties)):
+                    self.penalties.pop()
 
             imgui.pop_item_width()
             imgui.same_line()

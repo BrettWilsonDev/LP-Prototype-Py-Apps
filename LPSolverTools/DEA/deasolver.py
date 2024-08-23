@@ -200,6 +200,7 @@ class DEASolver:
         allRangesI = []
         allOutputTotals = []
         allInputTotals = []
+        allChangingVars = []
 
         for i in range(len(LpInputs)):
             table, objfunc, constraints, conRow = self.buildTable(
@@ -212,6 +213,8 @@ class DEASolver:
 
             allOutputTotals.append(outputTotal)
             allInputTotals.append(inputTotal)
+
+            allChangingVars.append(changingVars)
 
             # add the cell ref to the table
             for j in range(len(cellRef) - 1):
@@ -245,8 +248,8 @@ class DEASolver:
 
         if self.isConsoleOutput:
             for i in range(len(tables)):
-                for cvCtr in range(len(changingVars)):
-                    print("{:10.4f}".format(changingVars[cvCtr]), end=" ")
+                for cvCtr in range(len(allChangingVars[i])):
+                    print("{:10.4f}".format(allChangingVars[i][cvCtr]), end=" ")
                 print()
                 for hctr in range(len(header)):
                     print("    {:6}".format(header[hctr]), end=" ")
@@ -287,7 +290,7 @@ class DEASolver:
                     allInputTotals[i]}\n\n= {allOutputTotals[i] / allInputTotals[i]}")
                 print()
 
-        return tables, header, allInputTotals, allOutputTotals, allRangesO, allRangesI, changingVars
+        return tables, header, allInputTotals, allOutputTotals, allRangesO, allRangesI, allChangingVars
 
     def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
         imgui.set_next_window_position(windowPosX, windowPosY)  # Set the window position
@@ -428,8 +431,8 @@ class DEASolver:
                 imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
                 imgui.text("cv   ")
                 imgui.same_line()
-                for cvCtr in range(len(self.changingVars)):
-                    imgui.text("{:10.4f}".format(self.changingVars[cvCtr]))
+                for cvCtr in range(len(self.changingVars[i])):
+                    imgui.text("{:10.4f}".format(self.changingVars[i][cvCtr]))
                     imgui.same_line()
                 imgui.pop_style_color()
                 imgui.spacing()

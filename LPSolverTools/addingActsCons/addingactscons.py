@@ -113,7 +113,7 @@ class AddingActsCons:
             return objFunc, constraints, isMin, addedConstraints
 
     def getMathPrelims(self, objFunc, constraints, isMin, absRule=False):
-        changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.mathPrelim.doSensitivityAnalysis(
+        changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.mathPrelim.doPreliminaries(
             objFunc, constraints, isMin, absRule)
         return changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots
 

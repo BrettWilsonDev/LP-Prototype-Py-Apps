@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <title>Mathematical Preliminaries</title>
+    <style>
+        html {
+            background-color: #151617;
+            color: white;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        button {
+            background-color: #20324d;
+            color: white;
+            border: none;
+            /* border-radius: 5px; */
+            padding: 2px 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:active {
+            /* transform: scale(0.98); */
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        input {
+            width: 50px;
+            margin-right: 5px;
+            background-color: #212425;
+            border: 1px solid #444;
+            color: white;
+            margin-left: 10px;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        select {
+            margin-left: 5px;
+            background-color: #212425;
+            border: 1px solid #444;
+            color: white;
+        }
+
+        .row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .cell {
+            width: 150px;
+            text-align: right;
+            margin-right: 5px;
+            box-sizing: border-box;
+        }
+
+        .highlight {
+            color: greenyellow;
+        }
+
+        .header-row {
+            font-weight: bold;
+        }
+
+        label {
+            margin-right: 20px;
+        }
+
+        input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        p {
+            font-weight: bold;
+            color: white;
+        }
+
+        .constraint {
+            margin-bottom: 10px;
+        }
+
+        .tableauContainer,
+        .tableauContainer2 {
+            margin: 30px 0 20px;
+            overflow: auto;
+            width: 100%;
+        }
+
+        .tableauContainer .row,
+        .tableauContainer2 .row {
+            flex-wrap: nowrap;
+        }
+
+        .tableauContainer .cell,
+        .tableauContainer2 .cell {
+            min-width: 150px;
+        }
+
+        #objectiveFunction,
+        #constraintsContainer {
+            margin-top: 20px;
+        }
+
+        .yellowText {
+            color: yellow;
+        }
+
+        /* .matrixContent { white-space: pre; } */
+        /* .centerMatHeader { 
+            text-align: center; 
+            margin-left: 70px;
+        } */
+    </style>
+</head>
+
+<body>
+    <h1>Mathematical Preliminaries</h1>
+
+    <h3 id="loadingStatus">Loading...</h3>
+
+    <div hidden id="hiddenUntilLoad">
+
+        <div>
+            <label><input type="radio" name="problemType" value="Max" checked> Max</label>
+            <label><input type="radio" name="problemType" value="Min"> Min</label>
+        </div>
+        <p id="problemTypeText">Problem is: Max</p>
+        <div>
+            <label><input type="radio" name="absProblemType" value="On"> Abs On</label>
+            <label><input type="radio" name="absProblemType" value="Off" checked> Abs Off</label>
+        </div>
+        <p id="absProblemTypeText">absolute rule is: Off</p>
+
+        <div class="row">
+            <button id="addDecisionVar">decision variables +</button>
+            <button id="removeDecisionVar">decision variables -</button>
+        </div>
+
+        <p>Use + to mark the item for delta analysis. O is the current selection.</p>
+        <div id="dStoreContainer" style="display: inline-flex; align-items: center;">
+            <p style="margin-right: 5px;">For no selection select:</p>
+            <div id="dStore"></div>
+        </div>
+
+        <div id="objectiveFunction" class="row"></div>
+
+        <div id="rowDiv" class="row">
+            <button id="addConstraint">Constraint +</button>
+            <button id="removeConstraint">Constraint -</button>
+        </div>
+
+        <div id="constraintsContainer"></div>
+
+        <div>
+            <label><input type="radio" name="lockOptTab" value="On"> lock optimal tab</label>
+            <label><input type="radio" name="lockOptTab" value="Off" checked> unlock optimal tab</label>
+        </div>
+        <p id="lockOptTabText">Optimal tab lock: Off</p>
+
+        <div>
+            <label><input type="radio" name="solveDelta" value="On"> solve Delta On</label>
+            <label><input type="radio" name="solveDelta" value="Off" checked> Solve Delta Off</label>
+        </div>
+        <p id="solveDeltaText">Is Delta being solved: Off</p>
+
+        <div class="row">
+            <button id="solveButton">Solve</button>
+            <button id="resetButton" style="margin-left: 25px; background-color: red">Reset</button>
+        </div>
+
+        <div id="outputSection"></div>
+
+        <button hidden id="reoptimizeBtn">Optimize again</button>
+
+    </div>
+    <script>
+        let problemType = "Max";
+        let absProblemType = "Off";
+        let lockOptimalTab = "Off";
+        let solveDelta = "Off";
+        let amtOfObjVars = 2;
+        let amtOfConstraints = 1;
+        let objFunc = [0.0, 0.0];
+        let constraints = [[0.0, 0.0, 0.0, 0.0]];
+        let signItems = ["<=", ">="];
+        let signItemsChoices = [0];
+        let currentDeltaSelection = "dStore0";
+
+        function updateProblemType() {
+            problemType = document.querySelector('input[name="problemType"]:checked').value;
+            document.getElementById("problemTypeText").innerText = "Problem is: " + problemType;
+        }
+
+        function updateAbsProblemType() {
+            absProblemType = document.querySelector('input[name="absProblemType"]:checked').value;
+            document.getElementById("absProblemTypeText").innerText = "absolute rule is: " + absProblemType;
+        }
+
+        function updateLockOptTab() {
+            lockOptimalTab = document.querySelector('input[name="lockOptTab"]:checked').value;
+            document.getElementById("lockOptTabText").innerText = "Optimal tab lock: " + lockOptimalTab;
+        }
+
+        function updateSolveDelta() {
+            solveDelta = document.querySelector('input[name="solveDelta"]:checked').value;
+            document.getElementById("solveDeltaText").innerText = "Is Delta being solved: " + solveDelta;
+        }
+
+        function updateObjectiveFunction() {
+
+            document.getElementById("dStore").innerHTML = "";
+            const button = document.createElement("button");
+            button.innerText = currentDeltaSelection === `dStore0` ? "O" : "+";
+            button.addEventListener("click", () => {
+                currentDeltaSelection = `dStore0`;
+                updateObjectiveFunction();
+                updateConstraints();
+            });
+            document.getElementById("dStore").appendChild(button);
+
+
+            const objectiveFunctionContainer = document.getElementById("objectiveFunction");
+            objectiveFunctionContainer.innerHTML = "";
+
+            const rowDiv = document.createElement("div");
+            rowDiv.className = "row";
+
+            for (let i = 0; i < amtOfObjVars; i++) {
+                const value = objFunc[i];
+
+                const button = document.createElement("button");
+                button.innerText = currentDeltaSelection === `o${i}` ? "O" : "+";
+                button.addEventListener("click", () => {
+                    currentDeltaSelection = `o${i}`;
+                    updateObjectiveFunction();
+                    updateConstraints();
+                });
+                rowDiv.appendChild(button);
+
+                const input = document.createElement("input");
+                input.type = "number";
+                input.value = value;
+                input.addEventListener("input", (e) => {
+                    objFunc[i] = parseFloat(e.target.value);
+                });
+                rowDiv.appendChild(input);
+
+                const label = document.createElement("span");
+                label.innerText = `x${i + 1}`;
+                rowDiv.appendChild(label);
+            }
+
+            objectiveFunctionContainer.appendChild(rowDiv);
+        }
+
+        function updateConstraints() {
+            const constraintsContainer = document.getElementById("constraintsContainer");
+            constraintsContainer.innerHTML = "";
+
+            for (let i = 0; i < amtOfConstraints; i++) {
+                const rowDiv = document.createElement("div");
+                rowDiv.className = "row";
+
+                const constraintRow = constraints[i];
+
+                for (let j = 0; j < amtOfObjVars; j++) {
+                    const value = constraintRow[j];
+
+                    const button = document.createElement("button");
+                    button.innerText = currentDeltaSelection === `c${i}${j}` ? "O" : "+";
+                    button.addEventListener("click", () => {
+                        currentDeltaSelection = `c${i}${j}`;
+                        updateObjectiveFunction();
+                        updateConstraints();
+                    });
+                    rowDiv.appendChild(button);
+
+                    const input = document.createElement("input");
+                    input.type = "number";
+                    input.value = value;
+                    input.addEventListener("input", (e) => {
+                        constraints[i][j] = parseFloat(e.target.value);
+                    });
+                    rowDiv.appendChild(input);
+
+                    const label = document.createElement("span");
+                    label.innerText = `x${j + 1}`;
+                    rowDiv.appendChild(label);
+                }
+
+                const signSelect = document.createElement("select");
+                signItems.forEach((sign, index) => {
+                    const option = document.createElement("option");
+                    option.value = index;
+                    option.text = sign;
+                    signSelect.appendChild(option);
+                });
+                signSelect.value = signItemsChoices[i];
+                signSelect.addEventListener("change", (e) => {
+                    signItemsChoices[i] = parseInt(e.target.value);
+                    constraints[i][amtOfObjVars + 1] = signItemsChoices[i];
+                });
+                rowDiv.appendChild(signSelect);
+
+                // RHS button for delta selection
+                const rhsButton = document.createElement("button");
+                rhsButton.innerText = currentDeltaSelection === `cRhs${i}` ? "O" : "+";
+                rhsButton.addEventListener("click", () => {
+                    currentDeltaSelection = `cRhs${i}`;
+                    updateObjectiveFunction();
+                    updateConstraints();
+                });
+                rowDiv.appendChild(rhsButton);
+
+                const rhsInput = document.createElement("input");
+                rhsInput.type = "number";
+                rhsInput.value = constraintRow[amtOfObjVars];
+                rhsInput.addEventListener("input", (e) => {
+                    constraints[i][amtOfObjVars] = parseFloat(e.target.value);
+                });
+                rowDiv.appendChild(rhsInput);
+
+                constraintsContainer.appendChild(rowDiv);
+            }
+        }
+
+        document.querySelectorAll('input[name="problemType"]').forEach(radio => {
+            radio.onchange = updateProblemType;
+        });
+
+        document.querySelectorAll('input[name="absProblemType"]').forEach(radio => {
+            radio.onchange = updateAbsProblemType;
+        });
+
+
+        document.querySelectorAll('input[name="lockOptTab"]').forEach(radio => {
+            radio.onchange = updateLockOptTab;
+        });
+
+        document.querySelectorAll('input[name="solveDelta"]').forEach(radio => {
+            radio.onchange = updateSolveDelta;
+        });
+
+        document.getElementById("addDecisionVar").addEventListener("click", () => {
+            amtOfObjVars++;
+            objFunc.push(0.0);
+            constraints.forEach(c => c.push(0.0));
+            updateObjectiveFunction();
+            updateConstraints();
+        });
+
+        document.getElementById("removeDecisionVar").addEventListener("click", () => {
+            if (amtOfObjVars > 2) {
+                amtOfObjVars--;
+                objFunc.pop();
+                constraints.forEach(c => c.pop());
+                updateObjectiveFunction();
+                updateConstraints();
+            }
+        });
+
+        document.getElementById("addConstraint").onclick = () => {
+            amtOfConstraints++;
+            const newConstraint = new Array(amtOfObjVars).fill(0.0);
+            newConstraint.push(0.0);  // for sign
+            newConstraint.push(0.0);  // for rhs
+            constraints.push(newConstraint);
+            signItemsChoices.push(0);
+            updateConstraints();
+        };
+
+        document.getElementById("removeConstraint").onclick = () => {
+            if (amtOfConstraints > 1) {
+                amtOfConstraints--;
+                constraints.pop();
+                signItemsChoices.pop();
+                updateConstraints();
+            }
+        };
+
+        function resetRadios() {
+            document.querySelector('input[value="Max"]').checked = true;
+            const radioButtons = document.querySelectorAll('input[value="Off"]');
+            radioButtons.forEach(radioButton => {
+                radioButton.checked = true;
+            });
+        }
+
+        document.getElementById("resetButton").onclick = () => {
+            problemType = "Max";
+            absProblemType = "Off";
+            lockOptimalTab = "Off";
+            solveDelta = "Off";
+            amtOfObjVars = 2;
+            amtOfConstraints = 1;
+            objFunc = [0.0, 0.0];
+            constraints = [[0.0, 0.0, 0.0, 0.0]];
+            signItems = ["<=", ">="];
+            signItemsChoices = [0];
+            currentDeltaSelection = "dStore0";
+
+            updateObjectiveFunction();
+            updateConstraints();
+            resetRadios();
+        };
+
+        document.querySelectorAll('input[name="lockOptTab"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const value = radio.value;
+                if (value === "On") {
+                    document.getElementById("reoptimizeBtn").removeAttribute("hidden");
+                } else {
+                    document.getElementById("reoptimizeBtn").hidden = true;
+                }
+            });
+        });
+
+        function getObjFunc() {
+            return objFunc;
+        }
+
+        function getConstraints() {
+            return constraints;
+        }
+
+        function getProblemType() {
+            return problemType;
+        }
+
+        function getAbsProblemType() {
+            return absProblemType;
+        }
+
+        function getLockOptTab() {
+            return lockOptimalTab;
+        }
+
+        function getSolveDelta() {
+            return solveDelta;
+        }
+
+        function getCurrentDeltaSelection() {
+            return currentDeltaSelection;
+        }
+
+        // Initial render
+        updateObjectiveFunction();
+        updateConstraints();
+        resetRadios();
+    </script>
+
+    <py-config>
+        packages = [
+        "sympy",
+        ]
+        [[fetch]]
+        files = [
+        "./mathpreliminaries.py",
+        "../dual/dualsimplex.py",
+        ]
+    </py-config>
+
+    <script type="py">
+        from pyscript import document, display, when
+        from js import console, getObjFunc, getConstraints, getProblemType, getCurrentDeltaSelection, getAbsProblemType, getLockOptTab, getSolveDelta
+        import copy
+        import math
+        
+        document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
+        document.getElementById("loadingStatus").hidden = True;
+
+        from mathpreliminaries import MathPreliminaries
+
+        import sympy as sp
+
+        
+        console.clear();
+        
+        # Initialize object
+        mathPreliminaries = MathPreliminaries()
+        
+        outputSection = document.getElementById('outputSection')
+
+        def absF(val):
+            try:
+                return abs(val)
+            except TypeError:
+                return float("inf")
+        
+        def renderMatrixes():
+            container = document.createElement('div')
+            container.className = 'matrixOutput'
+
+            try:
+                # Dummy matrices for demonstration purposes
+                matCbv = mathPreliminaries.matCbv
+                matB = mathPreliminaries.matB
+                matBNegOne = mathPreliminaries.matBNegOne
+                matCbvNegOne = mathPreliminaries.matCbvNegOne
+
+                # Remove existing elements
+                for elem in document.querySelectorAll('.matrixOutput'):
+                    elem.remove()
+
+                outputSection.innerHTML = ''
+
+                # Prepare HTML content
+                MatrixOutput = ""
+
+                MatrixOutput += '<br><br><br>'
+
+                # cbv matrix
+                MatrixOutput += '<span class="yellowText centerMatHeader">{:>30}</span><br>'.format("CBv")
+                for value in matCbv:
+                    if type(value).__name__ == "Float" or absF(value) == 0.0 or absF(value) == 1:
+                        MatrixOutput += '{:>15.3f}'.format(float(value))
+                    else:
+                        MatrixOutput += '<span class="highlight">{:>15}</span>'.format(str(value))
+                    MatrixOutput += '&nbsp;&nbsp;&nbsp;&nbsp;'
+                MatrixOutput += '<br><br><br><br>'
+
+                # b matrix
+                MatrixOutput += '<span class="yellowText">{:>29}</span><br>'.format("B")
+                for row in matB:
+                    for value in row:
+                        if type(value).__name__ == "Float" or absF(value) == 0.0 or absF(value) == 1:
+                            MatrixOutput += '{:>15.3f}'.format(float(value))
+                        else:
+                            MatrixOutput += '<span class="highlight">{:>15}</span>'.format(str(value))
+                        MatrixOutput += '&nbsp;&nbsp;&nbsp;&nbsp;'
+                    MatrixOutput += '<br>'
+                MatrixOutput += '<br><br><br><br>'
+        
+                # b^-1 matrix
+                MatrixOutput += '<span class="yellowText">{:>31}</span><br>'.format("B^-1")
+                for row in matBNegOne:
+                    for value in row:
+                        if type(value).__name__ == "Float" or absF(value) == 0.0 or absF(value) == 1:
+                            MatrixOutput += '{:>15.3f}'.format(float(value))
+                        else:
+                            MatrixOutput += '<span class="highlight">{:>15}</span>'.format(str(value))
+                        MatrixOutput += '&nbsp;&nbsp;&nbsp;&nbsp;'
+                    MatrixOutput += '<br>'
+                MatrixOutput += '<br><br><br><br>'
+        
+                # cbv^-1 matrix
+                MatrixOutput += '<span class="yellowText">{:>35}</span><br>'.format("CbvB^-1 or q")
+                for value in matCbvNegOne:
+                    if type(value).__name__ == "Float" or absF(value) == 0.0 or absF(value) == 1:
+                        MatrixOutput += '{:>15.3f}'.format(float(value))
+                    else:
+                        MatrixOutput += '<span class="highlight">{:>15}</span>'.format(str(value))
+                    MatrixOutput += '&nbsp;&nbsp;&nbsp;&nbsp;'
+
+                # Output HTML content
+                # container.style = 'text-align: center;';
+                # container.style = 'text-align: center;';
+                # container.innerHTML = MatrixOutput
+
+                innerDiv = document.createElement('div')
+                innerDiv.innerHTML = MatrixOutput
+
+                # container.style = 'width: 500px;'
+
+                # innerDiv.style = 'text-align: center; margin-left: 1px';
+
+                container.style.width = '500px';
+
+                innerDiv.style.textAlign = 'center';
+                
+                container.appendChild(innerDiv)
+                
+                # document.body.appendChild(container)
+
+                document.getElementById("outputSection").appendChild(container)
+                
+                # document.getElementById('matrixOutput').innerHTML = MatrixOutput
+
+            except Exception as e:
+                pass
+
+
+        def renderChangingTable():
+            # Define sample data
+            tHeader = mathPreliminaries.globalHeaderRow
+            changingTable = mathPreliminaries.changingTable
+
+
+            # Remove existing tableaus
+            for elem in document.querySelectorAll('.tableauContainer'):
+                elem.remove()
+
+            container = document.createElement('div')
+            container.className = 'tableauContainer'
+
+            tableauHeader = document.createElement('h3')
+            tableauHeader.textContent = f"Changing Optimal Tableau"
+            container.appendChild(tableauHeader)
+
+            # Create header row
+            tHeader.insert(0, f"t - *")
+            headerRow = document.createElement('div')
+            headerRow.className = 'row header-row'
+            for header in tHeader:
+                headerCell = document.createElement('div')
+                headerCell.className = 'cell'
+                headerCell.textContent = header
+                headerRow.appendChild(headerCell)
+            container.appendChild(headerRow)
+
+            # Create tableau rows
+            for j, row in enumerate(changingTable):
+                rowDiv = document.createElement('div')
+                rowDiv.className = 'row'
+
+                rowLabel = document.createElement('div')
+                rowLabel.className = 'cell'
+                rowLabel.textContent = 'w' if j == 0 else f'c {j}'
+                rowDiv.appendChild(rowLabel)
+
+                for k, value in enumerate(row):
+                    cell = document.createElement('div')
+                    cell.className = 'cell'
+                    if isinstance(value, float) or absF(value) == 0.0 or absF(value) == 1:
+                        try:
+                            cell.textContent = f"{value:.3f}"
+                        except:
+                            pass
+                    else:
+                        cell.textContent = f"{str(value)}"
+                        cell.classList.add('highlight')                        
+                    rowDiv.appendChild(cell)
+                container.appendChild(rowDiv)
+            # document.body.appendChild(container)
+            document.getElementById("outputSection").appendChild(container)
+
+        def renderReOpTables():
+            # Remove existing tableaus
+            for elem in document.querySelectorAll('.tableauContainer2'):
+                elem.remove()
+
+            container = document.createElement('div')
+            container.className = 'tableauContainer2'
+
+            tableaus = copy.deepcopy(mathPreliminaries.newTableaus) 
+            tHeader = copy.deepcopy(mathPreliminaries.IMHeaderRow)
+            tCol = copy.deepcopy(mathPreliminaries.IMPivotCols)
+            tRow = copy.deepcopy(mathPreliminaries.IMPivotRows)
+
+            tCol.append(-1)
+            tRow.append(-1)
+
+            tHeader.insert(0, f"t - 0")
+
+            for i, tableau in enumerate(tableaus):
+                tableauHeader = document.createElement('h3')
+                tableauHeader.textContent = f"Tableau {i + 1}"
+                container.appendChild(tableauHeader)
+
+                # Create header row
+                del tHeader[0]
+                tHeader.insert(0, f"t - {i+1}")
+                headerRow = document.createElement('div')
+                headerRow.className = 'row header-row'
+                for header in tHeader:
+                    headerCell = document.createElement('div')
+                    headerCell.className = 'cell'
+                    headerCell.textContent = header
+                    headerRow.appendChild(headerCell)
+                container.appendChild(headerRow)
+
+                # Create tableau rows
+                for j, row in enumerate(tableau):
+                    rowDiv = document.createElement('div')
+                    rowDiv.className = 'row'
+                    if j == tRow[i] and tRow[i] != -1:
+                        rowDiv.classList.add('highlight')
+
+                    rowLabel = document.createElement('div')
+                    rowLabel.className = 'cell'
+                    rowLabel.textContent = 'w' if j == 0 else f'c {j}'
+                    rowDiv.appendChild(rowLabel)
+
+                    for k, value in enumerate(row):
+                        cell = document.createElement('div')
+                        cell.className = 'cell'
+                        # value = f"{value:.3f}"
+                        cell.textContent = f"{value:.3f}"
+
+                        if k == tCol[i] and tCol[i] != -1:
+                            cell.classList.add('highlight')
+                        rowDiv.appendChild(cell)
+                    container.appendChild(rowDiv)
+                document.body.appendChild(container)
+
+        def renderFormulas():
+            isFormulaDeltaChanged = mathPreliminaries.isFormulaDeltaChanged
+            isAllDeltaRows = mathPreliminaries.isAllDeltaRows
+            isAllDeltaCRow = mathPreliminaries.isAllDeltaCRow
+            isSingleDeltaCRow = mathPreliminaries.isSingleDeltaCRow 
+            isSingleDeltaARow = mathPreliminaries.isSingleDeltaARow
+            isDeltaZCol = mathPreliminaries.isDeltaZCol
+            singleCIndex = mathPreliminaries.singleCIndex
+            singleAIndex = mathPreliminaries.singleAIndex
+            changingTable = mathPreliminaries.changingTable
+            objFunc = mathPreliminaries.objFunc
+        
+            outputSection = document.getElementById("outputSection")
+
+            if isFormulaDeltaChanged:
+                # Main formula header
+                header = document.createElement("div")
+                header.className = "textSection"
+                header.innerHTML = " " * 10 + "Mathematical Preliminary formulas that will be influenced"
+                outputSection.appendChild(header)
+
+                # Add spacing
+                spacing1 = document.createElement("div")
+                spacing1.className = "spacing"
+                outputSection.appendChild(spacing1)
+                spacing2 = document.createElement("div")
+                spacing2.className = "spacing"
+                outputSection.appendChild(spacing2)
+
+                # All formulas influenced
+                if isAllDeltaRows:
+                    allFormulas = document.createElement("div")
+                    allFormulas.className = "textSection"
+                    allFormulas.innerHTML = " " * 15 + "All formulas are influenced"
+                    outputSection.appendChild(allFormulas)
+
+                # Specific formulas influenced by C row changes
+                if isAllDeltaCRow:
+                    formulas = [
+                        "CBVB^-1",
+                        "Z* = CBVB^-1.b"
+                    ]
+                    for formula in formulas:
+                        formulaDiv = document.createElement("div")
+                        formulaDiv.className = "textSection"
+                        formulaDiv.innerHTML = " " * 15 + formula
+                        outputSection.appendChild(formulaDiv)
+
+                    for i in range(len(changingTable[-1]) - 1):
+                        formulaDiv = document.createElement("div")
+                        formulaDiv.className = "textSection"
+                        if i < len(objFunc):
+                            formulaDiv.innerHTML = f"{' ':<15}{f'C{i+1}* = (CBVB^-1.A{i+1}) - C{i+1}':<40}"
+                        else:
+                            formulaDiv.innerHTML = f"{' ':<15}{f'S{i - len(objFunc) + 1}* = (CBVB^-1.A{i+1}) - C{i+1}':<40}"
+                        outputSection.appendChild(formulaDiv)
+
+                # Single C row change
+                if isSingleDeltaCRow:
+                    singleCRow = document.createElement("div")
+                    singleCRow.className = "textSection"
+                    singleCRow.innerHTML = f"{' ':<15}{f'C{singleCIndex}* = (CBVB^-1.A{singleCIndex}) - C{singleCIndex}':<40}"
+                    outputSection.appendChild(singleCRow)
+
+                # Single A row change
+                if isSingleDeltaARow:
+                    singleARow = document.createElement("div")
+                    singleARow.className = "textSection"
+                    singleARow.innerHTML = f"{' ':<15}{f'A{singleAIndex}* = B^-1.A{singleAIndex}':<40}"
+                    outputSection.appendChild(singleARow)
+
+                # Delta Z column changes
+                if isDeltaZCol:
+                    deltaZFormulas = [
+                        "Z* = CBVB^-1.b",
+                        "b* = B^-1.b"
+                    ]
+                    for formula in deltaZFormulas:
+                        formulaDiv = document.createElement("div")
+                        formulaDiv.className = "textSection"
+                        formulaDiv.innerHTML = " " * 15 + formula
+                        outputSection.appendChild(formulaDiv)
+
+                        
+
+        def renderOutput():
+            renderMatrixes()
+            renderChangingTable()
+            renderFormulas()
+
+        @when("click", "#solveButton")
+        def solve(event):
+            try:
+                mathPreliminaries.reset()
+                outputSection.innerHTML = 'Solving...'
+
+                objFunc = getObjFunc().to_py()
+
+                constraints = getConstraints().to_py()
+
+                mathPreliminaries.objFunc = objFunc
+
+                if getProblemType() == "Max":
+                    isMin = False
+                else:
+                    isMin = True
+
+                if getAbsProblemType() == "On":
+                    absRule = True
+                else:
+                    absRule = False
+
+                if getLockOptTab() == "On":
+                    optTabLockState = True
+                else:
+                    optTabLockState = False
+                mathPreliminaries.optTabLockState = optTabLockState
+
+                if getSolveDelta() == "On":
+                    solveDelta = True
+                else:
+                    solveDelta = False
+
+                # objFunc, constraints, isMin = mathPreliminaries.testInput(2)
+
+                currentDeltaSelection = getCurrentDeltaSelection()
+
+                bkupObjFunc = copy.deepcopy(objFunc)
+                bkupConstraints = copy.deepcopy(constraints)
+
+                if currentDeltaSelection != "dStore0":
+                    for i in range(len(objFunc)):
+                        if currentDeltaSelection == f"o{i}":
+                            objFunc[i] = sp.Add(
+                                float(objFunc[i]), mathPreliminaries.d)
+
+                    for i in range(len(constraints)):
+                        for j in range(len(constraints[i])):
+                            if currentDeltaSelection == f"c{i}{j}":
+                                constraints[i][j] = sp.Add(
+                                    float(constraints[i][j]), mathPreliminaries.d)
+
+                    for i in range(len(constraints)):
+                        if currentDeltaSelection == f"cRhs{i}":
+                            constraints[i][-2] = sp.Add(
+                                float(constraints[i][-2]), mathPreliminaries.d)
+
+                # Copy and compute
+                a = copy.deepcopy(objFunc)
+                b = copy.deepcopy(constraints)
+
+                objFunc = copy.deepcopy(bkupObjFunc)
+                constraints = copy.deepcopy(bkupConstraints)
+
+                # convert obj func to numbers
+                for i in range(len(a)):
+                    try:
+                        a[i] = float(a[i])
+                    except Exception as e:
+                        pass
+
+                # obj func to expressions
+                for i in range(len(a)):
+                    try:
+                        a[i] = sp.parse_expr(a[i])
+                    except Exception as e:
+                        pass
+
+                # convert constraints to numbers
+                for i in range(len(b)):
+                    for j in range(len(b[i])):
+                        try:
+                            b[i][j] = float(b[i][j])
+                        except Exception as e:
+                            pass
+
+                # convert constraints to expressions
+                for i in range(len(b)):
+                    for j in range(len(b[i])):
+                        try:
+                            b[i][j] = sp.parse_expr(b[i][j])
+                        except Exception as e:
+                            pass
+
+                mathPreliminaries.changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = mathPreliminaries.doPreliminaries(
+                    a, b, isMin, absRule, optTabLockState)
+
+                mathPreliminaries.matCbv = matrixCbv.tolist()
+                mathPreliminaries.matB = matrixB.transpose().tolist()
+                mathPreliminaries.matBNegOne = matrixBNegOne.transpose().tolist()
+                mathPreliminaries.matCbvNegOne = matrixCbvNegOne.tolist()
+    
+                # make matrix in to a 2d list
+                tMatCbv = []
+                tMatCbvNegOne = []
+                for i in range(len(mathPreliminaries.matCbv)):
+                    tMatCbv.append(mathPreliminaries.matCbv[i][0])
+                    tMatCbvNegOne.append(mathPreliminaries.matCbvNegOne[i][0])
+                mathPreliminaries.matCbv = tMatCbv
+                mathPreliminaries.matCbvNegOne = tMatCbvNegOne
+
+                mathPreliminaries.solveDelta = solveDelta
+                if mathPreliminaries.solveDelta:
+                    for i in range(len(mathPreliminaries.matCbv)):
+                        if isinstance(mathPreliminaries.matCbv[i], (sp.Add, sp.Mul)):
+                            mathPreliminaries.matCbv[i] = f"d = {round(float(sp.solve(mathPreliminaries.matCbv[i], mathPreliminaries.d)[0]), 6)}"
+
+                    for i in range(len(mathPreliminaries.matCbvNegOne)):
+                            if isinstance(mathPreliminaries.matCbvNegOne[i], (sp.Add, sp.Mul)):
+                                mathPreliminaries.matCbvNegOne[i] = f"d = {round(float(sp.solve(mathPreliminaries.matCbvNegOne[i], mathPreliminaries.d)[0]), 6)}"
+                                
+
+                    for i in range(len(mathPreliminaries.changingTable)):
+                        for j in range(len(mathPreliminaries.changingTable[i])):
+                            if isinstance(mathPreliminaries.changingTable[i][j], (sp.Add, sp.Mul)):
+                                mathPreliminaries.changingTable[i][j] = f"d = {round(float(sp.solve(mathPreliminaries.changingTable[i][j], mathPreliminaries.d)[0]), 6)}"
+                    
+                mathPreliminaries.isAllDeltaCRow = False
+                mathPreliminaries.isSingleDeltaCRow = False
+                mathPreliminaries.isSingleDeltaARow = False
+                mathPreliminaries.isDeltaZCol = False
+                mathPreliminaries.isAllDeltaRows = False
+                mathPreliminaries.isFormulaDeltaChanged = False
+
+                for i in range(len(mathPreliminaries.changingTable)):
+                    for j in range(len(mathPreliminaries.changingTable[i])):
+                        if isinstance(mathPreliminaries.changingTable[i][j], (sp.Add, sp.Mul)):
+                            mathPreliminaries.isFormulaDeltaChanged = True
+
+                # if mathPreliminaries.isFormulaDeltaChanged:
+                    # print("\nMathematical Preliminary formulas that will be influenced")
+
+                    for i in range(len(mathPreliminaries.matB)):
+                        for j in range(len(mathPreliminaries.matB[i])):
+                            if isinstance(mathPreliminaries.matB[i][j], (sp.Add, sp.Mul)):
+                                mathPreliminaries.isAllDeltaRows = True
+
+                    # if mathPreliminaries.isAllDeltaRows:
+                        # print("All formulas are influenced")
+
+                    # print(mathPreliminaries.matCbvNegOne)
+                    if not mathPreliminaries.isAllDeltaRows:
+                        for i in range(len(mathPreliminaries.matCbvNegOne)):
+                            if isinstance(mathPreliminaries.matCbvNegOne[i], (sp.Add, sp.Mul)):
+                                mathPreliminaries.isAllDeltaCRow = True
+
+                        # if mathPreliminaries.isAllDeltaCRow:
+                            # print(f"CBVB^-1")
+                            # print(f"Z* = CBVB^-1.b")
+                            # for i in range(len(mathPreliminaries.changingTable[-1]) - 1):
+                                # if i < len(mathPreliminaries.objFunc):
+                                    # print(f"C{i+1}* = (CBVB^-1.A{i+1}) - C{i+1}")
+                                # else:
+                                    # print(f"S{i - len(mathPreliminaries.objFunc) + 1}* = (CBVB^-1.A{i+1}) - C{i+1}")
+
+                        if not mathPreliminaries.isAllDeltaCRow:
+                            for i in range(1, len(mathPreliminaries.changingTable)):
+                                for j in range(len(mathPreliminaries.changingTable[i]) - 1):
+                                    if isinstance(mathPreliminaries.changingTable[0][j], (sp.Add, sp.Mul)):
+                                        mathPreliminaries.isSingleDeltaCRow = True
+                                        mathPreliminaries.singleCIndex = j+1
+                                    if isinstance(mathPreliminaries.changingTable[i][j], (sp.Add, sp.Mul)):
+                                        mathPreliminaries.isSingleDeltaARow = True
+                                        mathPreliminaries.singleAIndex = j+1
+
+                        # if mathPreliminaries.isSingleDeltaCRow:
+                            # print(f"C{mathPreliminaries.singleCIndex}* = (CBVB^-1.A{mathPreliminaries.singleCIndex}) - C{mathPreliminaries.singleCIndex}")
+                        # if mathPreliminaries.isSingleDeltaARow:
+                            # print(f"A{mathPreliminaries.singleAIndex}* = B^-1.A{mathPreliminaries.singleAIndex}")
+
+                        for i in range(len(mathPreliminaries.changingTable)):
+                            if isinstance(mathPreliminaries.changingTable[i][-1], (sp.Add, sp.Mul)):
+                                mathPreliminaries.isDeltaZCol = True
+
+                        # if mathPreliminaries.isDeltaZCol:
+                            # print("Z* = CBVB^-1.b")
+                            # print("b* = B^-1.b")
+
+                for elem in document.querySelectorAll('.tableauContainer2'):
+                    elem.remove()
+
+                renderOutput()
+            except Exception as e:
+                outputSection.innerHTML = 'math error'
+                raise
+
+        @when("click", "#resetButton")
+        def reset(event):
+            mathPreliminaries.reset()
+            outputSection.innerHTML = ''
+            for elem in document.querySelectorAll('.matrixOutput'):
+                elem.remove()
+            for elem in document.querySelectorAll('.tableauContainer'):
+                elem.remove()
+            for elem in document.querySelectorAll('.tableauContainer2'):
+                elem.remove()
+
+        @when("click", "#reoptimizeBtn")
+        def reoptimize(event):
+            try:
+                if getProblemType() == "Max":
+                    isMin = False
+                else:
+                    isMin = True
+
+                mathPreliminaries.newTableaus, changingVars, optimalSolution, mathPreliminaries.IMPivotCols, mathPreliminaries.IMPivotRows, mathPreliminaries.IMHeaderRow = mathPreliminaries.dual.doDualSimplex([
+                ], [], isMin, mathPreliminaries.changingTable)
+
+            except Exception as e:
+                print("math error in Optimize again:", e)
+
+            renderReOpTables()
+
+    </script>
+</body>
+
+</html>

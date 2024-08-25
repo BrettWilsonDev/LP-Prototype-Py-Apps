@@ -1,7 +1,9 @@
-import imgui
-from imgui.integrations.glfw import GlfwRenderer
-import glfw
+if __name__ == "__main__":  
+    import imgui
+    from imgui.integrations.glfw import GlfwRenderer
+    import glfw
 
+import math
 import copy
 import sys
 import os
@@ -146,8 +148,7 @@ class GraphicalSolver:
         for i in range(len(lineSegmentPoints)):
             try:
                 if self.isConsoleOutput:
-                    print(f" (start: {lineSegmentPoints[i]} end: {
-                        lineSegmentPoints[i + 1]})")
+                    print(f" (start: {lineSegmentPoints[i]} end: {lineSegmentPoints[i + 1]})")
             except:
                 pass
 
@@ -221,8 +222,7 @@ class GraphicalSolver:
                   'goldenrod', 'salmon']
 
         # set up the plot
-        plt.figure(figsize=(8, 6), num=f"Optimal Value: {
-            optimalValue} at point: {optimalPoint}")
+        plt.figure(figsize=(8, 6), num=f"Optimal Value: {optimalValue} at point: {optimalPoint}")
 
         # Plotting each segment individually
         i = 1
@@ -261,8 +261,7 @@ class GraphicalSolver:
         # the optimal point
         if optimalPoint is not None:
             x, y = optimalPoint
-            plt.scatter(x, y, color='green', marker='o', label=f"Optimal Point at\n{
-                        optimalPoint}\n: {optimalValue}", s=150)
+            plt.scatter(x, y, color='greenyellow', marker='o', label=f"Optimal Point at\n{optimalPoint}\n: {optimalValue}", s=150)
 
         # the origin point 0, 0
         plt.plot(0, 0, color='black', marker='o')

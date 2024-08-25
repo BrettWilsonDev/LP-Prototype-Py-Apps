@@ -20,8 +20,8 @@ except:
         from LPSolverTools.DEA.deasolver import DEASolver
         from LPSolverTools.dual.dualsimplex import DualSimplex
         from LPSolverTools.duality.lpduality import LPDuality
-        from LPSolverTools.goal.penaltiessimplex import PenaltiesSimplex
-        from LPSolverTools.goal.preemptivesimplex import PreemptiveSimplex
+        from LPSolverTools.goal.penaltiessimplex.penaltiessimplex import PenaltiesSimplex
+        from LPSolverTools.goal.preemptivesimplex.preemptivesimplex import PreemptiveSimplex
         from LPSolverTools.graphicalSolver.graphicalsolver import GraphicalSolver
         from LPSolverTools.mathPrelim.mathpreliminaries import MathPreliminaries
         from LPSolverTools.sensitivityAnalysis.sensitivityanalysis import SensitivityAnalysis

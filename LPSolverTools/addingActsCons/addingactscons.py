@@ -1,7 +1,9 @@
-import imgui
-from imgui.integrations.glfw import GlfwRenderer
-import glfw
+if __name__ == "__main__":
+    import imgui
+    from imgui.integrations.glfw import GlfwRenderer
+    import glfw
 
+import math
 import copy
 import sys
 import os
@@ -112,7 +114,7 @@ class AddingActsCons:
             return objFunc, constraints, isMin, addedConstraints
 
     def getMathPrelims(self, objFunc, constraints, isMin, absRule=False):
-        changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.mathPrelim.doSensitivityAnalysis(
+        changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.mathPrelim.doPreliminaries(
             objFunc, constraints, isMin, absRule)
         return changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots
 
@@ -276,8 +278,8 @@ class AddingActsCons:
         imgui.same_line()
 
         if imgui.button("decision variables -"):
-            if amtOfObjVars != 2:
-                amtOfObjVars += -1
+            if self.amtOfObjVars != 2:
+                self.amtOfObjVars += -1
                 for i in range(len(self.constraints)):
                     self.constraints[i].pop()
                 self.objFunc.pop()
@@ -576,6 +578,9 @@ class AddingActsCons:
                 try:
                     self.newTableaus, self.changingVars, self.optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow = self.dual.doDualSimplex([
                     ], [], isMin, tab)
+
+                    print("len")
+                    print(len(self.changingTable))
 
                     self.IMHeaderRow.clear()
 

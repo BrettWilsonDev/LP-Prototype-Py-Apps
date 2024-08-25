@@ -1,7 +1,9 @@
-# import imgui
-# from imgui.integrations.glfw import GlfwRenderer
-# import glfw
+if __name__ == "__main__":
+    import imgui
+    from imgui.integrations.glfw import GlfwRenderer
+    import glfw
 
+import math
 import copy
 import sys
 import os

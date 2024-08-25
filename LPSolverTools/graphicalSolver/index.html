@@ -6,132 +6,134 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
-    <title>Two-Phase Simplex</title>
-    <style>
-        html {
-            background-color: #151617;
-            color: white;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-
-        button {
-            background-color: #20324d;
-            color: white;
-            border: none;
-            /* border-radius: 5px; */
-            padding: 2px 10px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-            margin-right: 10px;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        button:active {
-            /* transform: scale(0.98); */
-        }
-
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-
-        input {
-            width: 50px;
-            margin-right: 5px;
-            background-color: #212425;
-            border: 1px solid #444;
-            color: white;
-            margin-left: 10px;
-        }
-
-        input[type="number"] {
-            -moz-appearance: textfield;
-        }
-
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        select {
-            margin-left: 5px;
-            background-color: #212425;
-            border: 1px solid #444;
-            color: white;
-        }
-
-        .row {
-            display: flex;
-            margin-bottom: 10px;
-            align-items: center;
-        }
-
-        .cell {
-            width: 80px;
-            text-align: right;
-            margin-right: 5px;
-            box-sizing: border-box;
-        }
-
-        .highlight {
-            color: greenyellow;
-        }
-
-        .header-row {
-            font-weight: bold;
-        }
-
-        label {
-            margin-right: 20px;
-        }
-
-        input[type="radio"] {
-            margin-right: 5px;
-        }
-
-        p {
-            font-weight: bold;
-            color: white;
-        }
-
-        .constraint {
-            margin-bottom: 10px;
-        }
-
-        .tableauContainer {
-            margin-bottom: 20px;
-            /* height: 300px; */
-            overflow-y: auto;
-            overflow-x: auto;
-            width: 100%;
-        }
-
-        .tableauContainer .row {
-            flex-wrap: nowrap;
-        }
-
-        .tableauContainer .cell {
-            min-width: 80px;
-        }
-
-        #objectiveFunction,
-        #constraintsContainer {
-            margin-top: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <title>Graphical Solver</title>
 </head>
 
+<style>
+    html {
+        background-color: #151617;
+        color: white;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+
+    button {
+        background-color: #20324d;
+        color: white;
+        border: none;
+        /* border-radius: 5px; */
+        padding: 2px 10px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.2s;
+        margin-right: 10px;
+    }
+
+    button:hover {
+        background-color: #0056b3;
+    }
+
+    button:active {
+        /* transform: scale(0.98); */
+    }
+
+    button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+
+    input {
+        width: 50px;
+        margin-right: 5px;
+        background-color: #212425;
+        border: 1px solid #444;
+        color: white;
+        margin-left: 10px;
+    }
+
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    select {
+        margin-left: 5px;
+        background-color: #212425;
+        border: 1px solid #444;
+        color: white;
+    }
+
+    .row {
+        display: flex;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+
+    .cell {
+        width: 80px;
+        text-align: right;
+        margin-right: 5px;
+        box-sizing: border-box;
+    }
+
+    .highlight {
+        color: greenyellow;
+    }
+
+    .header-row {
+        font-weight: bold;
+    }
+
+    label {
+        margin-right: 20px;
+    }
+
+    input[type="radio"] {
+        margin-right: 5px;
+    }
+
+    p {
+        font-weight: bold;
+        color: white;
+    }
+
+    .constraint {
+        margin-bottom: 10px;
+    }
+
+    .tableauContainer {
+        margin-bottom: 20px;
+        /* height: 300px; */
+        overflow-y: auto;
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .tableauContainer .row {
+        flex-wrap: nowrap;
+    }
+
+    .tableauContainer .cell {
+        min-width: 80px;
+    }
+
+    #objectiveFunction,
+    #constraintsContainer {
+        margin-top: 20px;
+    }
+</style>
+
 <body>
-    <h1>Two-Phase Simplex</h1>
+    <h1>Graphical Solver</h1>
 
     <h3 id="loadingStatus">Loading...</h3>
 
@@ -142,11 +144,6 @@
         </div>
 
         <p id="problemTypeText">Problem is: Max</p>
-
-        <div class="row">
-            <button id="addDecisionVar">decision variables +</button>
-            <button id="removeDecisionVar">decision variables -</button>
-        </div>
 
         <div id="objectiveFunction" class="row"></div>
 
@@ -171,7 +168,7 @@
         let amtOfConstraints = 1;
         let objFunc = [0.0, 0.0];
         let constraints = [[0.0, 0.0, 0.0, 0.0]];
-        let signItems = ["<=", ">="];
+        let signItems = ["<=", ">=", "="];
         let signItemsChoices = [0];
 
         function updateProblemType() {
@@ -253,24 +250,6 @@
             radio.onchange = updateProblemType;
         });
 
-        document.getElementById("addDecisionVar").onclick = () => {
-            amtOfObjVars++;
-            objFunc.push(0.0);
-            constraints.forEach(constraint => constraint.splice(amtOfObjVars - 1, 0, 0.0));
-            updateObjectiveFunction();
-            updateConstraints();
-        };
-
-        document.getElementById("removeDecisionVar").onclick = () => {
-            if (amtOfObjVars > 2) {
-                amtOfObjVars--;
-                objFunc.pop();
-                constraints.forEach(constraint => constraint.splice(amtOfObjVars, 1));
-                updateObjectiveFunction();
-                updateConstraints();
-            }
-        };
-
         document.getElementById("addConstraint").onclick = () => {
             amtOfConstraints++;
             const newConstraint = new Array(amtOfObjVars).fill(0.0);
@@ -300,7 +279,7 @@
             amtOfConstraints = 1;
             objFunc = [0.0, 0.0];
             constraints = [[0.0, 0.0, 0.0, 0.0]];
-            signItems = ["<=", ">="];
+            signItems = ["<=", ">=", "="];
             signItemsChoices = [0];
 
             updateObjectiveFunction();
@@ -328,84 +307,62 @@
 
     <py-config>
         packages = [
+        "matplotlib"
         ]
         [[fetch]]
-        files = ["./twophasesimplex.py"]
+        files = ["./graphicalsolver.py"]
     </py-config>
+
     <script type="py">
         from pyscript import document, display, when
         from js import console, getObjFunc, getConstraints, getProblemType
         import copy
-    
+
         document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
         document.getElementById("loadingStatus").hidden = True;
         
-        from twophasesimplex import TwoPhaseSimplex
+        import matplotlib.pyplot as plt
+        import matplotlib.tri as tri
+        import numpy as np
+        
+        from graphicalsolver import GraphicalSolver
 
         console.clear();
-        
+
         # Initialize object
-        twoPhaseSimplex = TwoPhaseSimplex()
+        graphicalSolver = GraphicalSolver()
 
-        # Placeholder for tableaus
-        tableaus = []
 
-        def renderTableaus():
-            # Remove existing tableaus
-            for elem in document.querySelectorAll('.tableauContainer'):
+        def renderGraph():
+            for elem in document.querySelectorAll('[id^="matplotlib_"]'):
                 elem.remove()
 
-            container = document.createElement('div')
-            container.className = 'tableauContainer'
+            plt.clf()
 
-            for i, tableau in enumerate(tableaus):
-                phaseText = "Phase 1" if tPhase[i] == 0 else "Phase 2"
-                tableauHeader = document.createElement('h3')
-                tableauHeader.textContent = f"Tableau {i + 1}"
-                container.appendChild(tableauHeader)
+            if getProblemType() == "Max":
+                isMin = False
+            else:
+                isMin = True
 
-                phaseElem = document.createElement('p')
-                phaseElem.textContent = phaseText
-                container.appendChild(phaseElem)
+            try:
+                graphicalSolver.feasiblePoints, graphicalSolver.lineSegmentPoints, graphicalSolver.intersectionPoints = graphicalSolver.getSortedPoints(
+                    graphicalSolver.constraints)
 
-                # Create header row
-                del tHeader[0]
-                tHeader.insert(0, f"t - {i+1}")
-                headerRow = document.createElement('div')
-                headerRow.className = 'row header-row'
-                for header in tHeader:
-                    headerCell = document.createElement('div')
-                    headerCell.className = 'cell'
-                    headerCell.textContent = header
-                    headerRow.appendChild(headerCell)
-                container.appendChild(headerRow)
+                graphicalSolver.optimalValue, graphicalSolver.optimalPoint = graphicalSolver.solveGraphical(
+                    graphicalSolver.objFunc, graphicalSolver.feasiblePoints, isMin)
 
-                # Create tableau rows
-                for j, row in enumerate(tableau):
-                    rowDiv = document.createElement('div')
-                    rowDiv.className = 'row'
-                    if j == tRow[i] and tRow[i] != -1:
-                        rowDiv.classList.add('highlight')
+                graphicalSolver.drawGraph(graphicalSolver.feasiblePoints, graphicalSolver.lineSegmentPoints,
+                    graphicalSolver.intersectionPoints, graphicalSolver.optimalPoint, graphicalSolver.optimalValue)
+            except Exception as e:
+                raise
 
-                    rowLabel = document.createElement('div')
-                    rowLabel.className = 'cell'
-                    rowLabel.textContent = 'w' if j == 0 else 'z' if j == 1 else f'c {j - 1}'
-                    rowDiv.appendChild(rowLabel)
-
-                    for k, value in enumerate(row):
-                        cell = document.createElement('div')
-                        cell.className = 'cell'
-                        cell.textContent = f"{value:.3f}"
-                        if k == tCol[i] and tCol[i] != -1:
-                            cell.classList.add('highlight')
-                        rowDiv.appendChild(cell)
-                    container.appendChild(rowDiv)
-                document.body.appendChild(container)
+        def renderOutput():
+            renderGraph()
 
         @when("click", "#solveButton")
         def solve(event):
             try:
-                twoPhaseSimplex.reset()
+                graphicalSolver.reset()
                 for elem in document.querySelectorAll('.error'):
                     elem.remove()
 
@@ -421,35 +378,11 @@
                 # Copy and compute
                 a = copy.deepcopy(objFunc)
                 b = copy.deepcopy(constraints)
-
-                global tableaus, tCol, tRow, tPhase, tHeader
-                tableaus = twoPhaseSimplex.doTwoPhase(a, b, isMin)
-
-                twoPhaseSimplex.IMPivotCols.append(-1)
-                twoPhaseSimplex.IMPivotRows.append(-1)
-
-                twoPhaseSimplex.IMPhaseType.append(0)
-                twoPhaseSimplex.IMPhaseType.append(0)
-
-                tRow = copy.deepcopy(twoPhaseSimplex.IMPivotRows)
-                tCol = copy.deepcopy(twoPhaseSimplex.IMPivotCols)
-                tHeader = copy.deepcopy(twoPhaseSimplex.IMHeaderRow)
-                tPhase = copy.deepcopy(twoPhaseSimplex.IMPhaseType)
-                tPhase[-1] = 2
-                tPhase[-2] = 2
-
-                twoPhaseSimplex.IMHeaderRow.clear()
-                twoPhaseSimplex.IMPivotRows.clear()
-                twoPhaseSimplex.IMPivotCols.clear()
-                twoPhaseSimplex.IMPhaseType.clear()
-
-                tCol.append(-1)
-                tRow.append(-1)
-
-                tHeader.insert(0, "t")
-
-                renderTableaus()
-
+                    
+                graphicalSolver.objFunc = a
+                graphicalSolver.constraints = b
+                
+                renderOutput()
             except Exception as e:
                 for elem in document.querySelectorAll('.error'):
                     elem.remove()
@@ -458,17 +391,18 @@
                 errorDiv.textContent = "Math Error"
                 document.body.appendChild(errorDiv)
 
+                raise
+
         @when("click", "#resetButton")
         def reset(event):
-            twoPhaseSimplex.reset()
+            graphicalSolver.reset()
             # Remove existing tableaus
-            for elem in document.querySelectorAll('.tableauContainer'):
+            for elem in document.querySelectorAll('[id^="matplotlib_"]'):
                 elem.remove()
             for elem in document.querySelectorAll('.error'):
                 elem.remove()
-
+            
     </script>
-
 </body>
 
 </html>

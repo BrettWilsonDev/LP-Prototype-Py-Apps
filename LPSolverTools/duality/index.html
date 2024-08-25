@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
-    <title>Two-Phase Simplex</title>
+    <title>Linier Programming Duality</title>
     <style>
         html {
             background-color: #151617;
@@ -127,11 +127,24 @@
         #constraintsContainer {
             margin-top: 20px;
         }
+
+        .highlight {
+            color: cyan;
+        }
+        .objective-function {
+            color: greenyellow;
+        }
+        .slack-highlight {
+            color: magenta;
+        }
+        .opt-highlight {
+            color: yellow;
+        }
     </style>
 </head>
 
 <body>
-    <h1>Two-Phase Simplex</h1>
+    <h1>Linier Programming Duality</h1>
 
     <h3 id="loadingStatus">Loading...</h3>
 
@@ -162,6 +175,9 @@
             <button id="solveButton">Solve</button>
             <button id="resetButton" style="margin-left: 25px; background-color: red">Reset</button>
         </div>
+
+        <br>
+        <div id="tableauContainer"></div>
 
     </div>
 
@@ -330,7 +346,10 @@
         packages = [
         ]
         [[fetch]]
-        files = ["./twophasesimplex.py"]
+        files = [
+        "./lpduality.py",
+        "../dual/dualsimplex.py",
+        ]
     </py-config>
     <script type="py">
         from pyscript import document, display, when
@@ -340,74 +359,190 @@
         document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
         document.getElementById("loadingStatus").hidden = True;
         
-        from twophasesimplex import TwoPhaseSimplex
+        from lpduality import LPDuality
 
         console.clear();
         
         # Initialize object
-        twoPhaseSimplex = TwoPhaseSimplex()
+        lPDuality = LPDuality()
 
-        # Placeholder for tableaus
-        tableaus = []
-
-        def renderTableaus():
-            # Remove existing tableaus
+        def renderTableau():
             for elem in document.querySelectorAll('.tableauContainer'):
                 elem.remove()
 
             container = document.createElement('div')
             container.className = 'tableauContainer'
 
-            for i, tableau in enumerate(tableaus):
-                phaseText = "Phase 1" if tPhase[i] == 0 else "Phase 2"
-                tableauHeader = document.createElement('h3')
-                tableauHeader.textContent = f"Tableau {i + 1}"
-                container.appendChild(tableauHeader)
+            try:
+                # Example data; replace with actual data
+                headerString = lPDuality.headerString
+                tObjFunc = lPDuality.tObjFunc
+                constraintsLhs = lPDuality.constraintsLhs
+                cellRef = lPDuality.cellRef
+                constraints = lPDuality.constraints
+                changingVars = lPDuality.changingVars
+                strDualMin = lPDuality.strDualMin
 
-                phaseElem = document.createElement('p')
-                phaseElem.textContent = phaseText
-                container.appendChild(phaseElem)
+                dualHeaderString = lPDuality.dualHeaderString
+                tDualObjFunc = lPDuality.tDualObjFunc
+                dualConstraintsLhs = lPDuality.dualConstraintsLhs
+                dualCellRef = lPDuality.dualCellRef
+                dualConstraints = lPDuality.dualConstraints
+                dualChangingVars = lPDuality.dualChangingVars
+                strMin = lPDuality.strMin
 
-                # Create header row
-                del tHeader[0]
-                tHeader.insert(0, f"t - {i+1}")
+                # Header Strings
                 headerRow = document.createElement('div')
-                headerRow.className = 'row header-row'
-                for header in tHeader:
+                headerRow.className = 'row'
+                for h in headerString:
                     headerCell = document.createElement('div')
-                    headerCell.className = 'cell'
-                    headerCell.textContent = header
+                    headerCell.className = 'cell header-cell'
+                    headerCell.textContent = h
                     headerRow.appendChild(headerCell)
                 container.appendChild(headerRow)
 
-                # Create tableau rows
-                for j, row in enumerate(tableau):
-                    rowDiv = document.createElement('div')
-                    rowDiv.className = 'row'
-                    if j == tRow[i] and tRow[i] != -1:
-                        rowDiv.classList.add('highlight')
+                # Objective Function
+                objectiveRow = document.createElement('div')
+                objectiveRow.className = 'row'
+                objectiveLabel = document.createElement('div')
+                objectiveLabel.className = 'cell'
+                objectiveLabel.textContent = f"{strDualMin} z"
+                objectiveRow.appendChild(objectiveLabel)
+
+                for i, value in enumerate(tObjFunc):
+                    valueCell = document.createElement('div')
+                    valueCell.className = f'cell {"highlight" if i != len(tObjFunc) - 1 else "objective-function"}'
+                    valueCell.textContent = f"{value:.3f}"
+                    objectiveRow.appendChild(valueCell)
+                container.appendChild(objectiveRow)
+
+                displayCons = copy.deepcopy(constraintsLhs)
+
+                # Build display constraints
+                for i in range(len(constraintsLhs)):
+                    displayCons[i].append(cellRef[i])
+                    displayCons[i].append("<=" if constraints[i][-1] == 0 else ">=")
+                    displayCons[i].append(constraints[i][-2])
+                    tSlack = displayCons[i][-1] - displayCons[i][-3]
+                    displayCons[i].append(tSlack)
+
+                # Display the Constraints
+                for i, cons in enumerate(displayCons):
+                    consRow = document.createElement('div')
+                    consRow.className = 'row'
 
                     rowLabel = document.createElement('div')
-                    rowLabel.className = 'cell'
-                    rowLabel.textContent = 'w' if j == 0 else 'z' if j == 1 else f'c {j - 1}'
-                    rowDiv.appendChild(rowLabel)
+                    rowLabel.className = 'cell header-cell'
+                    rowLabel.textContent = f"c{i + 1}"
+                    consRow.appendChild(rowLabel)
 
-                    for k, value in enumerate(row):
-                        cell = document.createElement('div')
-                        cell.className = 'cell'
-                        cell.textContent = f"{value:.3f}"
-                        if k == tCol[i] and tCol[i] != -1:
-                            cell.classList.add('highlight')
-                        rowDiv.appendChild(cell)
-                    container.appendChild(rowDiv)
+                    for j, value in enumerate(cons):
+                        valueCell = document.createElement('div')
+                        valueCell.className = f'cell {"slack-highlight" if j == len(cons) - 2 else ""}'
+                        valueCell.textContent = f"{value:.3f}" if isinstance(value, float) else f"{value}"
+                        consRow.appendChild(valueCell)
+                    container.appendChild(consRow)
+
+                # Optimal Values
+                optRow = document.createElement('div')
+                optRow.className = 'row'
+
+                optLabel = document.createElement('div')
+                optLabel.className = 'cell header-cell'
+                optLabel.textContent = "opt"
+                optRow.appendChild(optLabel)
+
+                for value in changingVars:
+                    valueCell = document.createElement('div')
+                    valueCell.className = 'cell opt-highlight'
+                    valueCell.textContent = f"{value:.3f}"
+                    optRow.appendChild(valueCell)
+                container.appendChild(optRow)
+
+                # Separator
+                separator = document.createElement('hr')
+                container.appendChild(separator)
+
+                # Dual Header Strings
+                dualHeaderRow = document.createElement('div')
+                dualHeaderRow.className = 'row'
+                for h in dualHeaderString:
+                    dualHeaderCell = document.createElement('div')
+                    dualHeaderCell.className = 'cell header-cell'
+                    dualHeaderCell.textContent = h
+                    dualHeaderRow.appendChild(dualHeaderCell)
+                container.appendChild(dualHeaderRow)
+
+                # Dual Objective Function
+                dualObjectiveRow = document.createElement('div')
+                dualObjectiveRow.className = 'row'
+                dualObjectiveLabel = document.createElement('div')
+                dualObjectiveLabel.className = 'cell'
+                dualObjectiveLabel.textContent = f"{strMin} z"
+                dualObjectiveRow.appendChild(dualObjectiveLabel)
+
+                for i, value in enumerate(tDualObjFunc):
+                    valueCell = document.createElement('div')
+                    valueCell.className = f'cell {"slack-highlight" if i != len(tDualObjFunc) - 1 else "objective-function"}'
+                    valueCell.textContent = f"{value:.3f}"
+                    dualObjectiveRow.appendChild(valueCell)
+                container.appendChild(dualObjectiveRow)
+
+                dualDisplayCons = copy.deepcopy(dualConstraintsLhs)
+
+                # Build dual display constraints
+                for i in range(len(dualConstraintsLhs)):
+                    dualDisplayCons[i].append(dualCellRef[i])
+                    dualDisplayCons[i].append(">=" if dualConstraints[i][-1] == 0 else "<=")
+                    dualDisplayCons[i].append(tDualObjFunc[i])
+                    tSlack = dualDisplayCons[i][-1] - dualDisplayCons[i][-3]
+                    dualDisplayCons[i].append(tSlack)
+
+                # Display the Dual Constraints
+                for i, cons in enumerate(dualDisplayCons):
+                    dualConsRow = document.createElement('div')
+                    dualConsRow.className = 'row'
+
+                    rowLabel = document.createElement('div')
+                    rowLabel.className = 'cell header-cell'
+                    rowLabel.textContent = f"c{i + 1}"
+                    dualConsRow.appendChild(rowLabel)
+
+                    for j, value in enumerate(cons):
+                        valueCell = document.createElement('div')
+                        valueCell.className = f'cell {"highlight" if j == len(cons) - 2 else ""}'
+                        valueCell.textContent = f"{value:.3f}" if isinstance(value, float) else f"{value}"
+                        dualConsRow.appendChild(valueCell)
+                    container.appendChild(dualConsRow)
+
+                # Dual Optimal Values
+                dualOptRow = document.createElement('div')
+                dualOptRow.className = 'row'
+
+                dualOptLabel = document.createElement('div')
+                dualOptLabel.className = 'cell header-cell'
+                dualOptLabel.textContent = "opt"
+                dualOptRow.appendChild(dualOptLabel)
+
+                for value in dualChangingVars:
+                    valueCell = document.createElement('div')
+                    valueCell.className = 'cell opt-highlight'
+                    valueCell.textContent = f"{value:.3f}"
+                    dualOptRow.appendChild(valueCell)
+                container.appendChild(dualOptRow)
+
                 document.body.appendChild(container)
+
+            except Exception as e:
+                errorText = document.createElement('p')
+                errorText.textContent = "Error in rendering tableau"
+                container.appendChild(errorText)
 
         @when("click", "#solveButton")
         def solve(event):
             try:
-                twoPhaseSimplex.reset()
-                for elem in document.querySelectorAll('.error'):
-                    elem.remove()
+                lPDuality.reset()
+                # lPDuality.objFunc, lPDuality.constraints, isMin = lPDuality.testInput(0)
 
                 objFunc = getObjFunc().to_py()
 
@@ -418,37 +553,55 @@
                 else:
                     isMin = True
 
-                # Copy and compute
-                a = copy.deepcopy(objFunc)
-                b = copy.deepcopy(constraints)
+                lPDuality.objFunc = objFunc 
+                lPDuality.constraints = constraints
 
-                global tableaus, tCol, tRow, tPhase, tHeader
-                tableaus = twoPhaseSimplex.doTwoPhase(a, b, isMin)
+                lPDuality.headerString.clear()
+                lPDuality.dualHeaderString.clear()
 
-                twoPhaseSimplex.IMPivotCols.append(-1)
-                twoPhaseSimplex.IMPivotRows.append(-1)
+                a = copy.deepcopy(lPDuality.objFunc)
+                b = copy.deepcopy(lPDuality.constraints)
+                lPDuality.objFunc, lPDuality.optimalSolution, lPDuality.changingVars, lPDuality.constraintsLhs, lPDuality.cellRef, lPDuality.dualObjFunc, lPDuality.dualOptimalSolution, lPDuality.dualChangingVars, lPDuality.dualConstraintsLhs, lPDuality.dualCellRef = lPDuality.doDuality(
+                    a, b, isMin)
 
-                twoPhaseSimplex.IMPhaseType.append(0)
-                twoPhaseSimplex.IMPhaseType.append(0)
+                # for display reasons
+                lPDuality.tObjFunc = copy.deepcopy(lPDuality.objFunc)
+                lPDuality.tDualObjFunc = copy.deepcopy(lPDuality.dualObjFunc)
+                lPDuality.tObjFunc.append(lPDuality.optimalSolution)
+                lPDuality.tDualObjFunc.append(lPDuality.dualOptimalSolution)
 
-                tRow = copy.deepcopy(twoPhaseSimplex.IMPivotRows)
-                tCol = copy.deepcopy(twoPhaseSimplex.IMPivotCols)
-                tHeader = copy.deepcopy(twoPhaseSimplex.IMHeaderRow)
-                tPhase = copy.deepcopy(twoPhaseSimplex.IMPhaseType)
-                tPhase[-1] = 2
-                tPhase[-2] = 2
+                dualMin = not isMin
 
-                twoPhaseSimplex.IMHeaderRow.clear()
-                twoPhaseSimplex.IMPivotRows.clear()
-                twoPhaseSimplex.IMPivotCols.clear()
-                twoPhaseSimplex.IMPhaseType.clear()
+                if isMin:
+                    lPDuality.strMin = "max"
+                else:
+                    lPDuality.strMin = "min"
 
-                tCol.append(-1)
-                tRow.append(-1)
+                if dualMin:
+                    lPDuality.strDualMin = "max"
+                else:
+                    lPDuality.strDualMin = "min"
 
-                tHeader.insert(0, "t")
+                lPDuality.headerString.append("Primal")
+                lPDuality.dualHeaderString.append("Dual")
 
-                renderTableaus()
+                for i in range(len(lPDuality.objFunc)):
+                    lPDuality.headerString.append("x{}".format(i + 1))
+
+                for i in range(len(lPDuality.dualObjFunc)):
+                    lPDuality.dualHeaderString.append("y{}".format(i + 1))
+
+                lPDuality.headerString.append("Ref")
+                lPDuality.headerString.append("Sign")
+                lPDuality.headerString.append("Rhs")
+                lPDuality.headerString.append("Slack")
+
+                lPDuality.dualHeaderString.append("Ref")
+                lPDuality.dualHeaderString.append("Sign")
+                lPDuality.dualHeaderString.append("Rhs")
+                lPDuality.dualHeaderString.append("Slack")
+
+                renderTableau()
 
             except Exception as e:
                 for elem in document.querySelectorAll('.error'):
@@ -460,7 +613,7 @@
 
         @when("click", "#resetButton")
         def reset(event):
-            twoPhaseSimplex.reset()
+            lPDuality.reset()
             # Remove existing tableaus
             for elem in document.querySelectorAll('.tableauContainer'):
                 elem.remove()

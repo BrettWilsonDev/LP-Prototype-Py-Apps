@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <title>Goal Simplex Penalties</title>
+    <style>
+        html {
+            background-color: #151617;
+            color: white;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        button {
+            background-color: #20324d;
+            color: white;
+            border: none;
+            /* border-radius: 5px; */
+            padding: 2px 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:active {
+            /* transform: scale(0.98); */
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        input {
+            width: 50px;
+            margin-right: 5px;
+            background-color: #212425;
+            border: 1px solid #444;
+            color: white;
+            margin-left: 10px;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        select {
+            margin-left: 5px;
+            background-color: #212425;
+            border: 1px solid #444;
+            color: white;
+        }
+
+        .row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+            /* margin-top: 10px; */
+        }
+
+        .cell {
+            width: 80px;
+            text-align: right;
+            margin-right: 5px;
+            box-sizing: border-box;
+        }
+
+        .highlight {
+            color: greenyellow;
+        }
+
+        .header-row {
+            font-weight: bold;
+        }
+
+        label {
+            /* margin-right: 10px; */
+        }
+
+        input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        p {
+            font-weight: bold;
+            color: white;
+        }
+
+        .constraint {
+            margin-bottom: 10px;
+        }
+
+        .tableauContainer,
+        .tableau {
+            margin-bottom: 20px;
+            /* height: 300px; */
+            overflow-y: auto;
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .tableauContainer .row,
+        .tableau {
+            flex-wrap: nowrap;
+        }
+
+        .tableauContainer .cell,
+        .tableau {
+            min-width: 80px;
+        }
+
+        #objectiveFunction,
+        #constraintsContainer {
+            margin-top: 20px;
+        }
+
+        .penaltyItem {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+
+        .headerCell {
+            font-weight: bold;
+        }
+
+        .optimal {
+            color: cyan;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Goal Simplex Penalties</h1>
+    <h3 id="loadingStatus">Loading...</h3>
+
+    <div id="hiddenUntilLoad" hidden>
+        <button class="btn" id="addDecisionVarBtn">Decision Variable +</button>
+        <button class="btn" id="removeDecisionVarBtn">Decision Variable -</button>
+
+        <h3>Goal Constraints</h3>
+        <button style="margin-bottom: 20px;" class="btn" id="addGoalConstraintBtn">Goal Constraint +</button>
+        <button style="margin-bottom: 20px;" class="btn" id="removeGoalConstraintBtn">Goal Constraint -</button>
+
+        <br>
+        <div id="goalConstraintsContainer"></div>
+
+        <h3>Normal Constraints</h3>
+        <button class="btn" id="addConstraintBtn">Constraint +</button>
+        <button class="btn" id="removeConstraintBtn">Constraint -</button>
+
+        <div id="constraintsContainer"></div>
+
+        <h3>Penalties</h3>
+        <div style="margin-bottom: 20px;" id="penaltiesContainer"></div>
+
+        <button style="margin-bottom: 20px;" class="btn" id="toggleGoalOrderBtn">Show Goal Order</button>
+
+        <div id="goalOrderContainer" style="display: none;"></div>
+
+        <div class="row">
+            <button id="solveButton">Solve</button>
+            <button id="resetButton" style="margin-left: 25px; background-color: red">Reset</button>
+        </div>
+
+        <div id="tableauContainer"></div>
+    </div>
+
+    <script>
+        let amtOfObjVars = 2;
+        let amtOfGoalConstraints = 1;
+        let amtOfConstraints = 0;
+        let goalConstraints = [[0.0, 0.0, 0.0, 0.0]];
+        let signItemsChoices = [0];
+        let signItems = ["<=", ">=", "="];
+        let goals = ["Goal 1"];
+        let goalOrder = [0];
+        let penalties = [0.0];
+        let constraints = [];
+        let signItemsChoicesC = [];
+        let toggle = false;
+
+        const goalConstraintsContainer = document.getElementById('goalConstraintsContainer');
+        const constraintsContainer = document.getElementById('constraintsContainer');
+        const penaltiesContainer = document.getElementById('penaltiesContainer');
+        const goalOrderContainer = document.getElementById('goalOrderContainer');
+        const toggleGoalOrderBtn = document.getElementById('toggleGoalOrderBtn');
+
+        function updateGoalConstraints() {
+            goalConstraintsContainer.innerHTML = '';
+            for (let i = 0; i < amtOfGoalConstraints; i++) {
+                const div = document.createElement('div');
+                div.className = 'row';
+                for (let j = 0; j < amtOfObjVars; j++) {
+                    const input = document.createElement('input');
+                    input.className = 'input-field';
+                    input.type = 'number';
+                    input.value = goalConstraints[i][j];
+                    input.oninput = (e) => goalConstraints[i][j] = parseFloat(e.target.value);
+                    div.appendChild(input);
+
+                    const label = document.createElement('label');
+                    label.textContent = `x${j + 1}`;
+                    div.appendChild(label);
+                }
+
+                const signSelect = document.createElement('select');
+                signSelect.className = 'input-field';
+                signItems.forEach((item, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = item;
+                    signSelect.appendChild(option);
+                });
+                signSelect.value = signItemsChoices[i];
+                signSelect.onchange = (e) => {
+                    signItemsChoices[i] = parseInt(e.target.value);
+                    goalConstraints[i][amtOfObjVars + 1] = signItemsChoices[i];
+                    if (goalConstraints[i][goalConstraints[i].length - 1] === 2) {
+                        penalties.push(0.0);
+                        updatePenalties();
+                    } 
+
+                    let equalCount = 0;
+                    let notEqualCount = 0;
+                    for (let eqCtr = 0; eqCtr < goalConstraints.length; eqCtr++) {
+                            if ((goalConstraints[eqCtr][amtOfObjVars + 1] == 2)) {
+                                equalCount += 2;
+                            }
+                            else
+                            {
+                                notEqualCount += 1;
+                            }
+                        }
+                        
+                    if ((equalCount + notEqualCount) != penalties.length) {
+                        penalties.pop();
+                        updatePenalties();
+                    }
+
+                };
+                div.appendChild(signSelect);
+
+                const rhsInput = document.createElement('input');
+                rhsInput.className = 'input-field';
+                rhsInput.type = 'number';
+                rhsInput.value = goalConstraints[i][amtOfObjVars];
+                rhsInput.oninput = (e) => goalConstraints[i][amtOfObjVars] = parseFloat(e.target.value);
+                div.appendChild(rhsInput);
+
+                goalConstraintsContainer.appendChild(div);
+            }
+        }
+
+        function updateConstraints() {
+            constraintsContainer.innerHTML = '';
+            for (let i = 0; i < amtOfConstraints; i++) {
+                const div = document.createElement('div');
+                div.className = 'row';
+                for (let j = 0; j < amtOfObjVars; j++) {
+                    const input = document.createElement('input');
+                    input.className = 'input-field';
+                    input.type = 'number';
+                    input.value = constraints[i][j];
+                    input.oninput = (e) => constraints[i][j] = parseFloat(e.target.value);
+                    div.appendChild(input);
+
+                    const label = document.createElement('label');
+                    label.textContent = `x${j + 1}`;
+                    div.appendChild(label);
+                }
+
+                const signSelect = document.createElement('select');
+                signSelect.className = 'input-field';
+                signItems.forEach((item, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = item;
+                    signSelect.appendChild(option);
+                });
+                signSelect.value = signItemsChoicesC[i];
+                signSelect.onchange = (e) => {
+                    signItemsChoicesC[i] = parseInt(e.target.value);
+                    constraints[i][amtOfObjVars + 1] = signItemsChoicesC[i];
+                };
+                div.appendChild(signSelect);
+
+                const rhsInput = document.createElement('input');
+                rhsInput.className = 'input-field';
+                rhsInput.type = 'number';
+                rhsInput.value = constraints[i][amtOfObjVars];
+                rhsInput.oninput = (e) => constraints[i][amtOfObjVars] = parseFloat(e.target.value);
+                div.appendChild(rhsInput);
+
+                constraintsContainer.appendChild(div);
+            }
+        }
+
+        function updatePenalties() {
+            penaltiesContainer.innerHTML = '';
+            penalties.forEach((penalty, i) => {
+                const div = document.createElement('div');
+                div.className = 'penaltyItem';
+
+                const label = document.createElement('label');
+                label.textContent = `Penalty ${i + 1}`;
+                div.appendChild(label);
+
+                const input = document.createElement('input');
+                input.className = 'input-field';
+                input.type = 'number';
+                input.value = penalty;
+                input.oninput = (e) => penalties[i] = parseFloat(e.target.value);
+                div.appendChild(input);
+
+                penaltiesContainer.appendChild(div);
+            });
+        }
+
+        function updateGoalOrder() {
+            goalOrderContainer.innerHTML = '';
+            for (let i = 0; i < goals.length; i++) {
+                const div = document.createElement('div');
+                div.style = "margin-bottom: 10px;";
+                div.textContent = goals[i];
+
+                const upBtn = document.createElement('button');
+                upBtn.style = 'margin-left: 10px;';
+                upBtn.className = 'btn';
+                upBtn.textContent = 'Up';
+                upBtn.onclick = () => {
+                    if (i > 0) {
+                        [goals[i], goals[i - 1]] = [goals[i - 1], goals[i]];
+                        [goalOrder[i], goalOrder[i - 1]] = [goalOrder[i - 1], goalOrder[i]];
+                        updateGoalOrder();
+                    }
+                };
+                div.appendChild(upBtn);
+
+                const downBtn = document.createElement('button');
+                downBtn.className = 'btn';
+                downBtn.textContent = 'Down';
+                downBtn.onclick = () => {
+                    if (i < goals.length - 1) {
+                        [goals[i], goals[i + 1]] = [goals[i + 1], goals[i]];
+                        [goalOrder[i], goalOrder[i + 1]] = [goalOrder[i + 1], goalOrder[i]];
+                        updateGoalOrder();
+                    }
+                };
+                div.appendChild(downBtn);
+
+                goalOrderContainer.appendChild(div);
+            }
+        }
+
+        document.getElementById('addDecisionVarBtn').onclick = function () {
+            amtOfObjVars++;
+            goalConstraints.forEach(gc => gc.splice(gc.length - 2, 0, 0.0));
+            constraints.forEach(c => c.splice(c.length - 2, 0, 0.0));
+            updateGoalConstraints();
+            updateConstraints();
+        };
+
+        document.getElementById('removeDecisionVarBtn').onclick = function () {
+            if (amtOfObjVars > 2) {
+                amtOfObjVars--;
+                goalConstraints.forEach(gc => gc.splice(gc.length - 3, 1));
+                constraints.forEach(c => c.splice(c.length - 3, 1));
+                updateGoalConstraints();
+                updateConstraints();
+            }
+        };
+
+        document.getElementById('addGoalConstraintBtn').onclick = function () {
+            amtOfGoalConstraints++;
+            goalConstraints.push(Array(amtOfObjVars).fill(0.0).concat([0.0, 0.0]));
+            signItemsChoices.push(0);
+            goals.push(`Goal ${goals.length + 1}`);
+            goalOrder.push(goals.length - 1);
+            penalties.push(0.0);
+            updateGoalConstraints();
+            updatePenalties();
+            updateGoalOrder();
+        };
+
+        document.getElementById('removeGoalConstraintBtn').onclick = function () {
+            if (amtOfGoalConstraints > 1) {
+                amtOfGoalConstraints--;
+                goalConstraints.pop();
+                signItemsChoices.pop();
+                goals.pop();
+                goalOrder.pop();
+                penalties.pop();
+                updateGoalConstraints();
+                updatePenalties();
+                updateGoalOrder();
+            }
+        };
+
+        document.getElementById('addConstraintBtn').onclick = function () {
+            amtOfConstraints++;
+            constraints.push(Array(amtOfObjVars).fill(0.0).concat([0.0, 0.0]));
+            signItemsChoicesC.push(0);
+            updateConstraints();
+        };
+
+        document.getElementById('removeConstraintBtn').onclick = function () {
+            if (amtOfConstraints > 0) {
+                amtOfConstraints--;
+                constraints.pop();
+                signItemsChoicesC.pop();
+                updateConstraints();
+            }
+        };
+
+        toggleGoalOrderBtn.onclick = function () {
+            toggle = !toggle;
+            goalOrderContainer.style.display = toggle ? 'block' : 'none';
+            toggleGoalOrderBtn.textContent = toggle ? 'Hide Goal Order' : 'Show Goal Order';
+        };
+
+        document.getElementById("resetButton").onclick = () => {
+            amtOfObjVars = 2;
+            amtOfGoalConstraints = 1;
+            amtOfConstraints = 0;
+            goalConstraints = [[0.0, 0.0, 0.0, 0.0]];
+            signItemsChoices = [0];
+            signItems = ["<=", ">=", "="];
+            goals = ["Goal 1"];
+            goalOrder = [0];
+            penalties = [0.0];
+            constraints = [];
+            signItemsChoicesC = [];
+            toggle = false;
+
+            updateGoalConstraints();
+            updatePenalties();
+            updateConstraints();
+        };
+
+        function getPenalties() {
+            return penalties;
+        }
+
+        function getGoalOrder() {
+            return goalOrder;
+        }
+
+        function getGoalConstraints() {
+            return goalConstraints;
+        }
+
+        function getConstraints() {
+            return constraints;
+        }
+
+        // Initial Render
+        updateGoalConstraints();
+        updatePenalties();
+        updateConstraints();
+    </script>
+
+    <py-config>
+        packages = [
+        ]
+        [[fetch]]
+        files = ["./penaltiessimplex.py"]
+    </py-config>
+    <script type="py">
+        from pyscript import document, display, when
+        from js import console, getPenalties, getGoalOrder, getGoalConstraints, getConstraints
+        import copy
+
+        document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
+        document.getElementById("loadingStatus").hidden = True;
+
+        console.clear();
+
+        from penaltiessimplex import PenaltiesSimplex
+
+        # Initialize object
+        penaltiesSimplex = PenaltiesSimplex()
+
+        def renderTableau():
+            for elem in document.querySelectorAll('.tableauContainer'):
+                elem.remove()
+
+            container = document.getElementById("tableauContainer")
+            container.innerHTML = ""  # Clear previous content
+
+            try:
+                tableaus = penaltiesSimplex.tableaus
+                penaltiesTotals = penaltiesSimplex.penaltiesTotals
+                goalMetStrings = penaltiesSimplex.goalMetStrings
+                tHeader = penaltiesSimplex.tHeader
+                opTable = penaltiesSimplex.opTable
+
+                tHeader.insert(0, f"t - 0")
+                
+                for i, tableau in enumerate(tableaus):
+                    tableauDiv = document.createElement('div')
+                    tableauDiv.className = 'tableauContainer'
+
+                    pivotCol = penaltiesSimplex.tCol[i]
+                    pivotRow = penaltiesSimplex.tRow[i]
+
+                    if i == 0:
+                        header = document.createElement('h3')
+                        header.textContent = "Setup Tableau"
+                        tableauDiv.appendChild(header)
+                    elif i == opTable:
+                        header = document.createElement('h3')
+                        header.className = 'optimal'
+                        header.textContent = f"Optimal Tableau {opTable}"
+                        tableauDiv.appendChild(header)
+                    else:
+                        header = document.createElement('h3')
+                        header.textContent = f"Tableau {i}"
+                        tableauDiv.appendChild(header)
+
+                    if penaltiesTotals[i] != float('inf'):
+                        penaltiesText = document.createElement('p')
+                        penaltiesText.textContent = f"Penalties: {penaltiesTotals[i]}"
+                        tableauDiv.appendChild(penaltiesText)
+
+                    for metStringIndex, metString in enumerate(goalMetStrings[i]):
+                        if metString != " ":
+                            goalText = document.createElement('p')
+                            goalText.textContent = f"Goal {metStringIndex + 1} {metString}"
+                            tableauDiv.appendChild(goalText)
+
+                    # Table Header Row
+                    headerRow = document.createElement('div')
+                    headerRow.className = 'row'
+                    del tHeader[0]
+                    tHeader.insert(0, f"t - {i+1}")
+                    for h in tHeader:
+                        headerCell = document.createElement('div')
+                        headerCell.className = 'cell headerCell'
+                        headerCell.textContent = h
+                        headerRow.appendChild(headerCell)
+                    tableauDiv.appendChild(headerRow)
+
+                    # Table Body Rows
+                    for j, row in enumerate(tableau):
+                        rowDiv = document.createElement('div')
+                        rowDiv.className = 'row'
+                        if j == pivotRow and pivotRow != -1:
+                            rowDiv.classList.add('highlight')
+
+                        rowLabel = document.createElement('div')
+                        rowLabel.className = 'cell headerCell'
+                        if j < (len(penaltiesSimplex.goalConstraints) + penaltiesSimplex.extraGoalCtr):
+                            rowLabel.textContent = f"z {j + 1}"
+                        else:
+                            rowLabel.textContent = f"c {(j - (len(penaltiesSimplex.goalConstraints) + penaltiesSimplex.extraGoalCtr) + 1)}"
+                        rowDiv.appendChild(rowLabel)
+
+                        for k, value in enumerate(row):
+                            cell = document.createElement('div')
+                            cell.className = 'cell'
+                            cell.textContent = f"{value:.3f}"
+                            if k == pivotCol and pivotCol != -1:
+                                cell.classList.add('highlight')
+                            rowDiv.appendChild(cell)
+
+                        tableauDiv.appendChild(rowDiv)
+
+                    container.appendChild(tableauDiv)
+                    # document.body.appendChild(tableauDiv)
+
+            except Exception as e:
+                errorText = document.createElement('p')
+                errorText.textContent = "Could Not display next tableau"
+                container.appendChild(errorText)
+
+        @when("click", "#solveButton")
+        def solve(event):
+            try:
+                penaltiesSimplex.reset()
+                for elem in document.querySelectorAll('.error'):
+                    elem.remove()
+
+                penalties = getPenalties().to_py()
+                goalOrder = getGoalOrder().to_py()
+                goalConstraints = getGoalConstraints().to_py()
+                constraints = getConstraints().to_py()
+
+                # goalConstraints, constraints, penalties, goalOrder = penaltiesSimplex.testInput(0)
+
+                if len(goalOrder) == 1:
+                    goalOrder[0] = 0
+
+                penaltiesSimplex.penalties = penalties
+                penaltiesSimplex.goalOrder = goalOrder
+                penaltiesSimplex.goalConstraints = goalConstraints
+                penaltiesSimplex.constraints = constraints
+
+                orderCopy = copy.deepcopy(penaltiesSimplex.goalOrder)
+                if penaltiesSimplex.goalOrder == sorted(penaltiesSimplex.goalOrder):
+                    orderCopy = []
+
+                penaltiesSimplex.GuiPivotCols.append(-1)
+                penaltiesSimplex.GuiPivotRows.append(-1)
+                penaltiesSimplex.tableaus, penaltiesSimplex.goalMetStrings, penaltiesSimplex.opTable, penaltiesSimplex.penaltiesTotals = penaltiesSimplex.doPenalties(
+                    penaltiesSimplex.goalConstraints, penaltiesSimplex.constraints, penaltiesSimplex.penalties, orderCopy)
+
+                penaltiesSimplex.GuiPivotCols.append(-1)
+                penaltiesSimplex.GuiPivotRows.append(-1)
+
+                penaltiesSimplex.tRow = copy.deepcopy(penaltiesSimplex.GuiPivotRows)
+                penaltiesSimplex.tCol = copy.deepcopy(penaltiesSimplex.GuiPivotCols)
+                penaltiesSimplex.tHeader = copy.deepcopy(penaltiesSimplex.GuiHeaderRow)
+
+                penaltiesSimplex.GuiHeaderRow.clear()
+                penaltiesSimplex.GuiPivotRows.clear()
+                penaltiesSimplex.GuiPivotCols.clear()
+
+                for i in range(len(penaltiesSimplex.goalConstraints)):
+                    if penaltiesSimplex.goalConstraints[i][-1] == 2:
+                        penaltiesSimplex.extraGoalCtr += 1
+
+                for i in range(len(penaltiesSimplex.tableaus) - len(penaltiesSimplex.tRow)):
+                    penaltiesSimplex.tRow.append(-1)
+                    penaltiesSimplex.tCol.append(-1)
+
+                renderTableau()
+
+            except Exception as e:
+                for elem in document.querySelectorAll('.error'):
+                    elem.remove()
+                errorDiv = document.createElement('div')
+                errorDiv.className = 'error'
+                errorDiv.textContent = "Math Error"
+                document.body.appendChild(errorDiv)
+
+        @when("click", "#resetButton")
+        def reset(event):
+            penaltiesSimplex.reset()
+            for elem in document.querySelectorAll('.error'):
+                elem.remove()
+            for elem in document.querySelectorAll('.tableauContainer'):
+                elem.remove()
+
+    </script>
+</body>
+
+</html>

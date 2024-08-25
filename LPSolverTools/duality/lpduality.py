@@ -1,7 +1,9 @@
-import imgui
-from imgui.integrations.glfw import GlfwRenderer
-import glfw
+if __name__ == "__main__":
+    import imgui
+    from imgui.integrations.glfw import GlfwRenderer
+    import glfw
 
+import math
 import copy
 import sys
 import os
@@ -21,7 +23,7 @@ class LPDuality:
 
     def reset(self):
         self.dual = Dual()
-        self.testInputSelected = -1
+        self.testInputSelected = 0
 
         # simplex specific vars
         self.problemType = "Max"
@@ -34,6 +36,7 @@ class LPDuality:
         self.dualObjFunc = []
         self.dualOptimalSolution = 0
         self.dualChangingVars = []
+        self.dualConstraints = []
         self.dualConstraintsLhs = []
         self.dualCellRef = []
 
@@ -129,6 +132,25 @@ class LPDuality:
                 print()
             print()
 
+        # fix slack and excess mix
+        slackCtr = 0
+        excessCtr = 0
+        for i in range(len(constraints)):
+            if constraints[i][-1] == 1:
+                excessCtr += 1
+            else:
+                slackCtr += 1
+
+        if slackCtr != len(constraints) and excessCtr != len(constraints):
+            for i in range(len(constraints)):
+                if constraints[i][-1] == 1:
+                    constraints[i][-1] = 0
+                    for j in range(len(constraints[i]) - 1):
+                        constraints[i][j] = -constraints[i][j]
+                        print(constraints[i][j], end=" ")
+
+        self.dualConstraints = copy.deepcopy(constraints)
+
         # duality
 
         dualObjFunc = []
@@ -140,6 +162,7 @@ class LPDuality:
 
         dualConstraints = self.transposeMat(constraintsLhs)
 
+
         for i in range(len(dualConstraints)):
             dualConstraints[i].append(objFunc[i])
 
@@ -150,6 +173,11 @@ class LPDuality:
                 dualConstraints[i].append(0)
             else:
                 dualConstraints[i].append(1)
+        
+        for i in range(len(dualObjFunc)):
+            if dualObjFunc[i] < 0:
+                for j in range(len(dualConstraints)):
+                    dualConstraints[j][i] = -dualConstraints[j][i]
 
         isMin = not isMin
 
@@ -467,7 +495,7 @@ class LPDuality:
             # build display cons
             for i in range(len(self.dualConstraintsLhs)):
                 dualDisplayCons[i].append(self.dualCellRef[i])
-                if self.constraints[i][-1] == 0:
+                if self.dualConstraints[i][-1] == 0:
                     dualDisplayCons[i].append(">=")
                 else:
                     dualDisplayCons[i].append("<=")

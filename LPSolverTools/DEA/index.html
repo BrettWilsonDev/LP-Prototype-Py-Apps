@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <title>Data Envelopment Analysis</title>
+    <style>
+        html {
+            background-color: #151617;
+            color: white;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        button {
+            background-color: #20324d;
+            color: white;
+            border: none;
+            /* border-radius: 5px; */
+            padding: 2px 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-right: 10px;
+            perspective: 1px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:active {
+            /* transform: scale(0.98); */
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        input {
+            width: 50px;
+            margin-right: 5px;
+            background-color: #212425;
+            border: 1px solid #444;
+            color: white;
+            margin-left: 10px;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        select {
+            margin-left: 5px;
+            background-color: #212425;
+            border: 1px solid #444;
+            color: white;
+        }
+
+        .row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .cell {
+            width: 80px;
+            text-align: left;
+            margin-right: 5px;
+            box-sizing: border-box;
+        }
+
+        .highlight {
+            color: greenyellow;
+        }
+
+        .header-row {
+            font-weight: bold;
+        }
+
+        label {
+            margin-right: 20px;
+        }
+
+        input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        p {
+            font-weight: bold;
+            color: white;
+        }
+
+        .constraint {
+            margin-bottom: 10px;
+        }
+
+        .tableauContainer {
+            margin-bottom: 20px;
+            /* height: 300px; */
+            overflow-y: auto;
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .tableauContainer .row {
+            flex-wrap: nowrap;
+        }
+
+        .tableauContainer .cell {
+            min-width: 80px;
+        }
+
+        #objectiveFunction,
+        #constraintsContainer {
+            margin-top: 20px;
+        }
+
+        .button-group {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Data Envelopment Analysis</h1>
+
+    <h3 id="loadingStatus">Loading...</h3>
+    <div hidden id="hiddenUntilLoad">
+        <div id="problem-type">
+            <input type="radio" id="max" name="problemType" value="Max" checked>
+            <label for="max">Max</label>
+            <input type="radio" id="min" name="problemType" value="Min">
+            <label for="min">Min</label>
+        </div>
+        <br>
+
+        <div class="button-group">
+            <button class="button" id="itemRowPlus">Item Row +</button>
+            <button class="button" id="itemRowMinus">Item Row -</button>
+        </div>
+
+        <div class="button-group">
+            <button class="button" id="inputsPlus">Inputs +</button>
+            <button class="button" id="inputsMinus">Inputs -</button>
+            <button class="button" id="outputsPlus">Outputs +</button>
+            <button class="button" id="outputsMinus">Outputs -</button>
+        </div>
+
+        <div id="InputSection"></div>
+
+        <br>
+        <div class="row">
+            <button id="solveButton">Solve</button>
+            <button id="resetButton" style="margin-left: 25px; background-color: red">Reset</button>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        let problemType = "Max";
+        let amtOfItems = 1;
+        let amtOfInputs = 1;
+        let amtOfOutputs = 1;
+        let LpInputs = [[0.0]];
+        let LpOutputs = [[0.0]];
+
+        document.querySelectorAll('input[name="problemType"]').forEach((elem) => {
+            elem.addEventListener("change", function (event) {
+                problemType = event.target.value;
+            });
+        });
+
+        document.getElementById("itemRowPlus").addEventListener("click", function () {
+            amtOfItems += 1;
+            LpInputs.push(Array(amtOfInputs).fill(0.0));
+            LpOutputs.push(Array(amtOfOutputs).fill(0.0));
+            updateTable();
+        });
+
+        document.getElementById("itemRowMinus").addEventListener("click", function () {
+            if (amtOfItems > 1) {
+                amtOfItems -= 1;
+                LpInputs.pop();
+                LpOutputs.pop();
+                updateTable();
+            }
+        });
+
+        document.getElementById("inputsPlus").addEventListener("click", function () {
+            amtOfInputs += 1;
+            LpInputs.forEach(row => row.push(0.0));
+            updateTable();
+        });
+
+        document.getElementById("inputsMinus").addEventListener("click", function () {
+            if (amtOfInputs > 1) {
+                amtOfInputs -= 1;
+                LpInputs.forEach(row => row.pop());
+                updateTable();
+            }
+        });
+
+        document.getElementById("outputsPlus").addEventListener("click", function () {
+            amtOfOutputs += 1;
+            LpOutputs.forEach(row => row.push(0.0));
+            updateTable();
+        });
+
+        document.getElementById("outputsMinus").addEventListener("click", function () {
+            if (amtOfOutputs > 1) {
+                amtOfOutputs -= 1;
+                LpOutputs.forEach(row => row.pop());
+                updateTable();
+            }
+        });
+
+        function updateTable() {
+            const tableContainer = document.getElementById("InputSection");
+            tableContainer.innerHTML = ""; // Clear previous table
+
+            for (let i = 0; i < amtOfItems; i++) {
+                const rowDiv = document.createElement("div");
+                rowDiv.className = "row";
+
+                for (let j = 0; j < amtOfInputs; j++) {
+                    const inputField = document.createElement("input");
+                    inputField.type = "number";
+                    inputField.className = "input-field";
+                    inputField.value = LpInputs[i][j];
+                    inputField.addEventListener("input", (event) => {
+                        LpInputs[i][j] = parseFloat(event.target.value);
+                    });
+                    rowDiv.appendChild(inputField);
+                    const label = document.createElement("label");
+                    label.textContent = `i${j + 1}`;
+                    rowDiv.appendChild(label);
+                }
+
+                for (let j = 0; j < amtOfOutputs; j++) {
+                    const outputField = document.createElement("input");
+                    outputField.type = "number";
+                    outputField.className = "input-field";
+                    outputField.value = LpOutputs[i][j];
+                    outputField.addEventListener("input", (event) => {
+                        LpOutputs[i][j] = parseFloat(event.target.value);
+                    });
+                    rowDiv.appendChild(outputField);
+                    const label = document.createElement("label");
+                    label.textContent = `o${j + 1}`;
+                    rowDiv.appendChild(label);
+                }
+
+                tableContainer.appendChild(rowDiv);
+            }
+        }
+
+        function resetRadios() {
+            document.querySelector('input[value="Max"]').checked = true;
+        }
+
+        document.getElementById("resetButton").onclick = () => {
+            problemType = "Max";
+            amtOfItems = 1;
+            amtOfInputs = 1;
+            amtOfOutputs = 1;
+            LpInputs = [[0.0]];
+            LpOutputs = [[0.0]];
+
+            updateTable();
+            resetRadios();
+        };
+
+        function getInputs() {
+            return LpInputs;
+        }
+
+        function getOutputs() {
+            return LpOutputs;
+        }
+
+        function getProblemType() {
+            return problemType;
+        }
+        
+        // Initial render
+        updateTable(); 
+        resetRadios();
+    </script>
+
+    <py-config>
+        packages = [
+        ]
+        [[fetch]]
+        files = [
+        "./deasolver.py",
+        "../dual/dualsimplex.py",
+        ]
+    </py-config>
+    <script type="py">
+        from pyscript import document, display, when
+        from js import console, getProblemType, getInputs, getOutputs
+        import copy
+
+        document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
+        document.getElementById("loadingStatus").hidden = True;
+        
+        from deasolver import DEASolver
+
+        console.clear();
+        
+        # Initialize object
+        deaSolver = DEASolver()
+
+        # Main function to replace imgui code
+        def displayOutput():
+            try:
+                # Dummy Data
+                tables = deaSolver.tables
+                changingVars = deaSolver.changingVars
+                header = deaSolver.header
+                problemType = getProblemType()
+                LpOutputs = deaSolver.LpOutputs
+                LpInputs = deaSolver.LpInputs
+                allRangesO = deaSolver.allRangesO
+                allRangesI = deaSolver.allRangesI
+                allOutputTotals = deaSolver.allOutputTotals
+                allInputTotals = deaSolver.allInputTotals
+
+                for elem in document.querySelectorAll('.tableauContainer'):
+                    elem.remove()
+
+                container = document.createElement('div')
+                container.className = 'tableauContainer'
+
+                for i in range(len(tables)):
+                    headerRow = document.createElement('div')
+                    headerRow.className = 'row header-row'
+                    headerCell = document.createElement('div')
+                    headerCell.className = 'cell'
+                    headerCell.textContent = "cv"
+                    headerRow.appendChild(headerCell)
+                    for cvCtr in range(len(changingVars[i])):
+                        headerCell = document.createElement('div')
+                        headerCell.className = 'cell'
+                        headerCell.textContent = "{:10.4f}".format(changingVars[i][cvCtr])
+                        headerRow.appendChild(headerCell)
+                        headerRow.style = "color: greenyellow; margin-top: 30px;"
+                    container.appendChild(headerRow)
+
+                    headerRow = document.createElement('div')
+                    headerRow.className = 'row header-row'
+                    headerCell = document.createElement('div')
+                    headerCell.className = 'cell'
+                    headerCell.textContent = " "
+                    headerRow.appendChild(headerCell)
+                    for hctr in range(len(header)):
+                        headerCell = document.createElement('div')
+                        headerCell.className = 'cell'
+                        headerCell.textContent = "{:8}".format(header[hctr])
+                        headerRow.appendChild(headerCell)
+                        headerRow.style = "color: yellow;"
+                    container.appendChild(headerRow)
+                    for j in range(len(tables[i])):
+                        rowDiv = document.createElement('div')
+                        rowDiv.className = 'row header-row'
+                        if j == 0:
+                            cellDiv = document.createElement('div')
+                            cellDiv.className = 'cell'
+                            cellDiv.textContent = f"{problemType} z"
+                            rowDiv.appendChild(cellDiv)
+                        elif j < (len(LpOutputs) + 1):
+                            cellDiv = document.createElement('div')
+                            cellDiv.className = 'cell'
+                            cellDiv.textContent = f"c{j}   "
+                            rowDiv.appendChild(cellDiv)
+                        elif j == (len(LpOutputs) + 1):
+                            cellDiv = document.createElement('div')
+                            cellDiv.className = 'cell'
+                            cellDiv.textContent = f"con  "
+                            rowDiv.appendChild(cellDiv)
+                        else:
+                            cellDiv = document.createElement('div')
+                            cellDiv.className = 'cell'
+                            cellDiv.textContent = f"{j - len(LpOutputs) - 1}    "
+                            rowDiv.appendChild(cellDiv)
+                        # container.appendChild(rowDiv)
+                        for k in range(len(tables[i][j])):
+                            if k == (len(LpOutputs[-1]) + len(LpInputs[-1]) + 1):
+                                if tables[i][j][k] == 0:
+                                    cellDiv = document.createElement('div')
+                                    cellDiv.className = 'cell'
+                                    cellDiv.textContent = "{:10}".format("     <=")
+                                    rowDiv.appendChild(cellDiv)
+                                elif tables[i][j][k] == 1:
+                                    cellDiv = document.createElement('div')
+                                    cellDiv.className = 'cell'
+                                    cellDiv.textContent = "{:10}".format("     >=")
+                                    rowDiv.appendChild(cellDiv)
+                                else:
+                                    cellDiv = document.createElement('div')
+                                    cellDiv.className = 'cell'
+                                    cellDiv.textContent = "{:10}".format("     =")
+                                    rowDiv.appendChild(cellDiv)
+                            else:
+                                cellDiv = document.createElement('div')
+                                cellDiv.className = 'cell'
+                                if k == (len(tables[i][j]) - 3) and j == 0:
+                                    cellDiv.style = "color: turquoise;"
+                                elif j == (len(LpOutputs) + 1):
+                                    rowDiv.style = "color: #FFA500;"
+                                else:
+                                    cellDiv.style = "color: white;"
+                                cellDiv.textContent = "{:10.4f}".format(tables[i][j][k])
+                                rowDiv.appendChild(cellDiv)
+                            container.appendChild(rowDiv)
+
+                    headerRow = document.createElement('div')
+                    headerRow.className = 'row header-row'
+                    headerCell = document.createElement('div')
+                    headerCell.className = 'cell'
+                    headerCell.textContent = "Ranges:"
+                    headerRow.style = "margin-top: 40px;"
+                    headerRow.appendChild(headerCell)
+                    container.appendChild(headerRow)
+
+                    headerRow = document.createElement('div')
+                    headerRow.className = 'row header-row'
+                    headerCell = document.createElement('div')
+                    headerCell.className = 'cell'
+                    headerCell.textContent = " "
+                    headerRow.appendChild(headerCell)
+                    for j in range(len(LpOutputs[-1])):
+                        headerCell = document.createElement('div')
+                        headerCell.className = 'cell'
+                        headerCell.textContent = "  {:8}".format("o" + str(j + 1))
+                        headerRow.appendChild(headerCell)
+                    container.appendChild(headerRow)
+
+                    rowDiv = document.createElement('div')
+                    rowDiv.className = 'row header-row'
+                    cellDiv = document.createElement('div')
+                    cellDiv.className = 'cell'
+                    cellDiv.textContent = " "
+                    rowDiv.appendChild(cellDiv)
+                    for j in range(len(LpOutputs[-1])):
+                        cellDiv = document.createElement('div')
+                        cellDiv.className = 'cell'
+                        cellDiv.textContent = "{:10.6f}".format(allRangesO[i][j])
+                        rowDiv.appendChild(cellDiv)
+
+                    cellDiv = document.createElement('div')
+                    cellDiv.className = 'cell'
+                    cellDiv.textContent = f"  Output total: {allOutputTotals[i]}"
+                    cellDiv.style = "color: turquoise; width: 100%;"
+                    rowDiv.appendChild(cellDiv)
+                    container.appendChild(rowDiv)
+
+                    headerRow = document.createElement('div')
+                    headerRow.className = 'row header-row'
+                    headerCell = document.createElement('div')
+                    headerCell.className = 'cell'
+                    headerCell.textContent = " "
+                    headerRow.style = "margin-top: 20px;"
+                    headerRow.appendChild(headerCell)
+                    for j in range(len(LpInputs[-1])):
+                        headerCell = document.createElement('div')
+                        headerCell.className = 'cell'
+                        headerCell.textContent = "  {:8}".format("i" + str(j + 1))
+                        headerRow.appendChild(headerCell)
+                    container.appendChild(headerRow)
+
+                    rowDiv = document.createElement('div')
+                    rowDiv.className = 'row header-row'
+                    cellDiv = document.createElement('div')
+                    cellDiv.className = 'cell'
+                    cellDiv.textContent = " "
+                    rowDiv.appendChild(cellDiv)
+                    for j in range(len(LpInputs[-1])):
+                        cellDiv = document.createElement('div')
+                        cellDiv.className = 'cell'
+                        cellDiv.textContent = "{:10.6f}".format(allRangesI[i][j])
+                        rowDiv.appendChild(cellDiv)
+
+                    cellDiv = document.createElement('div')
+                    cellDiv.className = 'cell'
+                    cellDiv.textContent = f"   Input total: {allInputTotals[i]}"
+                    cellDiv.style = "color: turquoise; width: 100%;"
+                    rowDiv.appendChild(cellDiv)
+                    container.appendChild(rowDiv)
+
+                    container.appendChild(rowDiv)
+
+                    headerRow = document.createElement('div')
+                    headerRow.className = 'row header-row'
+                    headerCell = document.createElement('div')
+                    headerCell.className = 'cell'
+                    headerCell.textContent = f"\n\nTotals: {allOutputTotals[i]} / {allInputTotals[i]} = {allOutputTotals[i] / allInputTotals[i]}"
+                    headerCell.style = "margin-top: 30px; color: turquoise; width: 100%;"
+                    headerRow.appendChild(headerCell)
+                    container.appendChild(headerRow)
+
+                    document.getElementById("output").appendChild(container)
+            except Exception as e:
+                print(f"An error occurred: {e}")
+            
+
+        @when("click", "#solveButton")
+        def solve(event):
+            try:
+                for elem in document.querySelectorAll('.error'):
+                    elem.remove()
+
+                deaSolver.reset()
+
+                if getProblemType() == "Max":
+                    isMin = False
+                else:
+                    isMin = True
+
+                deaSolver.LpInputs = getInputs().to_py()
+                deaSolver.LpOutputs = getOutputs().to_py()
+                deaSolver.isMin = isMin
+
+                # deaSolver.LpInputs, deaSolver.LpOutputs = deaSolver.testInput(0)
+
+                deaSolver.tables, deaSolver.header, deaSolver.allInputTotals, deaSolver.allOutputTotals, deaSolver.allRangesO, deaSolver.allRangesI, deaSolver.changingVars = deaSolver.doDEA(
+                    deaSolver.LpInputs, deaSolver.LpOutputs, deaSolver.isMin)
+
+                displayOutput()
+            
+            except Exception as e:
+                for elem in document.querySelectorAll('.error'):
+                    elem.remove()
+                errorDiv = document.createElement('div')
+                errorDiv.className = 'error'
+                errorDiv.textContent = "Math Error"
+                document.body.appendChild(errorDiv)
+
+        @when("click", "#resetButton")
+        def reset(event):
+            deaSolver.reset()
+            for elem in document.querySelectorAll('.tableauContainer'):
+                elem.remove()
+            for elem in document.querySelectorAll('.error'):
+                elem.remove()
+
+    </script>
+</body>
+
+</html>

@@ -1,13 +1,15 @@
-import imgui
-from imgui.integrations.glfw import GlfwRenderer
-import glfw
+if __name__ == "__main__":  
+    import imgui
+    from imgui.integrations.glfw import GlfwRenderer
+    import glfw
 
+import math
 import copy
 import sys
 import os
 
 
-class PenaltiesSimplex:
+class PreemptiveSimplex:
 
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
@@ -53,9 +55,6 @@ class PenaltiesSimplex:
 
         self.extraGoalCtr = 0
 
-        self.penalties = [0.0]
-        self.penaltiesTotals = []
-
     def testInput(self, testNum=-1):
         if testNum == 0:
             goals = [
@@ -63,36 +62,19 @@ class PenaltiesSimplex:
                 [40, 30, 20, 100, 0],
                 [2, 4, 3, 10, 2],
                 [5, 8, 4, 30, 1],
-
             ]
 
             constraints = [
             ]
-
-            penalties = [5, 8, 12, 15]
-
-            orderOverride = [2, 1, 0]
-        elif testNum == 1:
-            goals = [
-                # <= is 0 and >= is 1 and == is 2
-                [12, 9, 15, 125, 1],
-                [5, 3, 4, 40, 2],
-                [5, 7, 8, 55, 0],
-
-            ]
-
-            constraints = [
-            ]
-
-            penalties = [5, 2, 4, 3]
 
             orderOverride = [0, 1, 2]
+
         if testNum == -1:
             return None
         else:
-            return goals, constraints, penalties, orderOverride
+            return goals, constraints, orderOverride
 
-    def buildFirstpenaltiesVarTableau(self, goalConstraints, constraints, penaltiesVar, orderOverride=[]):
+    def buildFirstPreemptiveTableau(self, goalConstraints, constraints, orderOverride=[]):
         oldTab = []
         newTab = []
         conStart = 0
@@ -142,7 +124,7 @@ class PenaltiesSimplex:
         for i in range(amtOfGoals):
             oldTab[i][0] = 1
 
-        # put in penaltiesVar spots
+        # put in neg 1s in their spots
         gCtr = amtOfObjVars + 1
         ExtraCtr = 0
         for i in range(len(goalConstraints)):
@@ -155,13 +137,6 @@ class PenaltiesSimplex:
                 oldTab[i + 1 + ExtraCtr][gCtr + 1] = -1
                 ExtraCtr += 1
             gCtr += 2
-
-        # put in penaltiesVar values or leave as -1
-        if len(penaltiesVar) != 0:
-            for i in range(len(oldTab)):
-                for j in range(len(oldTab[i])):
-                    if oldTab[i][j] == -1:
-                        oldTab[i][j] = -penaltiesVar[i]
 
         # put in the slacks
         for i in range(len(constraints)):
@@ -239,17 +214,17 @@ class PenaltiesSimplex:
 
         goalConstraints = tempGoals
 
-        # keep in mind this is penalties initial tab calculations
+        # keep in mind this is preemptive initial tab calculations
 
         # calculate the new table goal rows
         for i in range(len(goalConstraints)):
             for j in range(len(newTab[i])):
                 if goalConstraints[i][-1] == 0:
                     newTab[i][j] = -1 * \
-                        (topRows[i][j] - (bottomRows[i][j] * penaltiesVar[i]))
+                        (topRows[i][j] - (bottomRows[i][j]))
                 elif goalConstraints[i][-1] == 1:
                     newTab[i][j] = (
-                        topRows[i][j] + (bottomRows[i][j] * penaltiesVar[i]))
+                        topRows[i][j] + (bottomRows[i][j]))
 
         # fix the order of the equalities
         equalCtr = 0
@@ -350,10 +325,9 @@ class PenaltiesSimplex:
 
         return newTab, zRhs
 
-    def doPenalties(self, goals, constraints, penalties, orderOverride=[]):
+    def doPreemptive(self, goals, constraints, orderOverride=[]):
         a = copy.deepcopy(goals)
         b = copy.deepcopy(constraints)
-        c = copy.deepcopy(penalties)
         originalGoals = copy.deepcopy(goals)
         tableaus = []
 
@@ -378,8 +352,8 @@ class PenaltiesSimplex:
                 expandedOrder[i] += 1
             seen.add(expandedOrder[i])
 
-        firstTab, FormulatedTab, conStartRow = self.buildFirstpenaltiesVarTableau(
-            a, b, c, expandedOrder)
+        firstTab, FormulatedTab, conStartRow = self.buildFirstPreemptiveTableau(
+            a, b, expandedOrder)
         tableaus.append(firstTab)
         tableaus.append(FormulatedTab)
 
@@ -415,8 +389,6 @@ class PenaltiesSimplex:
         isLoopRunning = True
 
         goalMetStrings = []
-
-        penaltiesTotals = []
 
         ctr = 0
         while ctr != 100 and isLoopRunning:
@@ -483,7 +455,6 @@ class PenaltiesSimplex:
 
             EqualitySigns = []
             EqualitySigns = []
-            # handle the equalities by duplicating goals 1 positive and 1 negative according to the pos neg oder ex: col g2+ g2-
             for i in range(len(originalGoals)):
                 if originalGoals[i][-1] == 2:
                     if goalRhs[i] is not None:
@@ -495,7 +466,6 @@ class PenaltiesSimplex:
                             EqualitySigns.append(i+1)
                         goalRhs.insert(i, abs(goalRhs[i]))
                         goalRhs[i + 1] = -abs(goalRhs[i + 1])
-                        # goalRhs.insert(i, -goalRhs[i])
                     else:
                         goalRhs.insert(i, goalRhs[i])
                     goalRhs.pop()
@@ -504,6 +474,7 @@ class PenaltiesSimplex:
 
             # check if goal is met based on constraints conditions
             for i in range(len(goalRhs)):
+                # I hope dearly that this mathematical algorithm acquaints for both non-basic columns being optimal.
                 if goalRhs[i] == None:
                     metGoals[i] = True
                     if goals[i][-1] != 2:
@@ -582,14 +553,6 @@ class PenaltiesSimplex:
                     else:
                         metGoals[EqualitySigns[i]] = False
 
-            # penalties specific used to get the total penalties for each tableau
-            tempPenaltiesTotal = 0
-            for i in range(len(metGoals)):
-                if not metGoals[i]:
-                    tempPenaltiesTotal += abs(zRhs[i])
-
-            penaltiesTotals.append(tempPenaltiesTotal)
-
             # swap to the row of the current goal being worked on
             for i in range(len(metGoals)):
                 if metGoals[i] == False:
@@ -599,10 +562,8 @@ class PenaltiesSimplex:
             tempMetGoals = copy.deepcopy(metGoals)
             for i in range(len(originalGoals)):
                 if originalGoals[i][-1] == 2:
-
                     if not ((metGoals[i]) and (metGoals[i+1])):
                         if not metGoals[i]:
-
                             if goalRhs[i] > 0:
                                 goalMetString.append(
                                     f"{i + 1} not met: over by {abs(goalRhs[i])}")
@@ -616,7 +577,6 @@ class PenaltiesSimplex:
                             else:
                                 goalMetString.append(
                                     f"{i + 1} not met: under by {abs(goalRhs[i+1])}")
-                            pass
                         metGoals[i] = False
                         metGoals[i+1] = False
                     else:
@@ -638,6 +598,7 @@ class PenaltiesSimplex:
                     break
 
             if all(metGoals):
+                tableaus.append(tableaus[-1])
                 isLoopRunning = False
 
             metGoals = copy.deepcopy(tempMetGoals)
@@ -648,7 +609,6 @@ class PenaltiesSimplex:
                 tableaus.append(newTab)
             except Exception as e:
                 goalMetStrings.append("0")
-                penaltiesTotals.append(float('inf'))
                 break
 
             ctr += 1
@@ -663,15 +623,11 @@ class PenaltiesSimplex:
 
         goalMetStrings = sortedGoalMetStrings
 
-        penaltiesTotals.insert(0, float('inf'))
         goalMetStrings.insert(0, " ")
-        if self.isConsoleOutput:
-            print(penaltiesTotals)
 
         if self.isConsoleOutput:
             for i in range(len(tableaus)):
                 try:
-                    print(f"Penalty: {penaltiesTotals[i]}")
                     for l in range(len(goalMetStrings[i])):
                         print(f"Goal {l+1} {goalMetStrings[i][l]}")
                 except Exception as e:
@@ -685,10 +641,9 @@ class PenaltiesSimplex:
 
             print("\noptimal Tableau:\n")
 
-        opTable = penaltiesTotals.index(min(penaltiesTotals))
+        opTable = tableaus.index(tableaus[-2])
 
         if self.isConsoleOutput:
-            print(f"Penalty: {penaltiesTotals[opTable]}")
             for l in range(len(goalMetStrings[opTable])):
                 print(f"Goal {l+1} {goalMetStrings[opTable][l]}")
             print("Tableau {}".format(opTable + 1))
@@ -698,14 +653,15 @@ class PenaltiesSimplex:
                 print()
             print()
 
-        return tableaus, goalMetStrings, opTable, penaltiesTotals
+        return tableaus, goalMetStrings, opTable
 
     def spaceGui(self, amt):
         for i in range(amt):
             imgui.spacing()
 
-    def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
-        imgui.set_next_window_position(windowPosX, windowPosY)  # Set the window position
+    def imguiUIElements(self, windowSize, windowPosX=0, windowPosY=0):
+        imgui.set_next_window_position(
+            windowPosX, windowPosY)  # Set the window position
         imgui.set_next_window_size(
             (windowSize[0]), (windowSize[1]))  # Set the window size
         imgui.begin("Tableaus Output",
@@ -741,7 +697,6 @@ class PenaltiesSimplex:
             self.signItemsChoices.append(0)
             self.goals.append(f"Goal {len(self.goals) + 1}")
             self.goalOrder.append(len(self.goals) - 1)
-            self.penalties.append(0.0)
 
         imgui.same_line()
 
@@ -752,9 +707,6 @@ class PenaltiesSimplex:
                 self.signItemsChoices.pop()
                 self.goals.pop()
                 self.goalOrder.pop()
-                self.penalties.pop()
-
-        # spaceGui(3)
 
         imgui.spacing()
         for i in range(self.amtOfGoalConstraints):
@@ -781,12 +733,6 @@ class PenaltiesSimplex:
             if changed:
                 self.signItemsChoices[i] = self.selectedItemSign
                 self.goalConstraints[i][-1] = self.signItemsChoices[i]
-                # for i in range(len(goalConstraints)):
-                if self.goalConstraints[i][-1] == 2:
-                    self.penalties.append(0.0)
-                else:
-                    if len(self.penalties) > len(self.goalConstraints):
-                        self.penalties.pop()
 
             imgui.pop_item_width()
             imgui.same_line()
@@ -859,25 +805,7 @@ class PenaltiesSimplex:
 
         self.spaceGui(6)
 
-        imgui.text("Penalties:")
-        self.spaceGui(2)
-        for i in range(len(self.penalties)):
-            value = self.penalties[i]
-            imgui.text(f"penalty {i + 1}")
-            imgui.set_next_item_width(50)
-            imgui.same_line()
-            changed, self.penalties[i] = imgui.input_float(
-                "##penalty {}".format(i + 1), value)
-            imgui.same_line()
-
-            if changed:
-                # Value has been updated
-                pass
-
-        self.spaceGui(6)
-
         if imgui.button("Show Goal Order" if not self.toggle else "Hide Goal Order"):
-            # Toggle the boolean variable
             self.toggle = not self.toggle
 
         if self.toggle:
@@ -900,11 +828,11 @@ class PenaltiesSimplex:
                                                       1] = self.goalOrder[i + 1], self.goalOrder[i]
 
         self.spaceGui(6)
-        # solve button =============================================================================================
+        # solve button ===========================================================================
         if imgui.button("Solve"):
             try:
                 if self.testInput(self.testInputSelected) is not None:
-                    self.goalConstraints, self.constraints, self.penalties, self.goalOrder = self.testInput(
+                    self.goalConstraints, self.constraints, self.goalOrder = self.testInput(
                         self.testInputSelected)
 
                 orderCopy = copy.deepcopy(self.goalOrder)
@@ -913,8 +841,8 @@ class PenaltiesSimplex:
 
                 self.GuiPivotCols.append(-1)
                 self.GuiPivotRows.append(-1)
-                self.tableaus, self.goalMetStrings, self.opTable, self.penaltiesTotals = self.doPenalties(
-                    self.goalConstraints, self.constraints, self.penalties, orderCopy)
+                self.tableaus, self.goalMetStrings, self.opTable = self.doPreemptive(
+                    self.goalConstraints, self.constraints, orderCopy)
 
                 self.GuiPivotCols.append(-1)
                 self.GuiPivotRows.append(-1)
@@ -959,8 +887,6 @@ class PenaltiesSimplex:
                     imgui.pop_style_color()
                 else:
                     imgui.text("Tableau {}".format(i))
-                if self.penaltiesTotals[i] != float('inf'):
-                    imgui.text(f"Penalties: {self.penaltiesTotals[i]}")
                 for metString in range(len(self.goalMetStrings[i])):
                     if self.goalMetStrings[i][metString] != " ":
                         imgui.text(
@@ -1001,7 +927,7 @@ class PenaltiesSimplex:
 
         except Exception as e:
             imgui.text("Could Not display next tableau")
-            
+
         imgui.end_child()
         imgui.end()
 
@@ -1011,7 +937,7 @@ class PenaltiesSimplex:
             return
 
         window = glfw.create_window(
-            int(1920 / 2), int(1080 / 2), "Goal Penalties Simplex Prototype", None, None)
+            int(1920 / 2), int(1080 / 2), "Goal Preemptive Simplex Prototype", None, None)
         if not window:
             glfw.terminate()
             return
@@ -1041,7 +967,7 @@ class PenaltiesSimplex:
 
 
 def main(isConsoleOutput=False):
-    classInstance = PenaltiesSimplex(isConsoleOutput)
+    classInstance = PreemptiveSimplex(isConsoleOutput)
     classInstance.doGui()
 
 

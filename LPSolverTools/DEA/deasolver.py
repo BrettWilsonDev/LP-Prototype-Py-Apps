@@ -1,7 +1,9 @@
-import imgui
-from imgui.integrations.glfw import GlfwRenderer
-import glfw
+if __name__ == "__main__":
+    import imgui
+    from imgui.integrations.glfw import GlfwRenderer
+    import glfw
 
+import math
 import copy
 import sys
 import os
@@ -84,7 +86,8 @@ class DEASolver:
         #     row[i] = 1
         #     bottomRows.append(row)
 
-        print(len(LpInputs[-1]) + len(LpOutputs[-1]))
+        if self.isConsoleOutput:
+            print(len(LpInputs[-1]) + len(LpOutputs[-1]))
 
         for i in range(len(LpInputs[-1]) + len(LpOutputs[-1])):
             row = [0] * (len(LpInputs[-1]) + len(LpOutputs[-1]))
@@ -159,8 +162,9 @@ class DEASolver:
     def solveTable(self, table, objfunc, constraints, conRow, isMin=False):
         tableaus, changingVars, optimalSolution = self.dual.doDualSimplex(
             objfunc, constraints, isMin)
-        print("changingVars", changingVars)
-        print("optimalSolution", optimalSolution)
+        if self.isConsoleOutput:
+            print("changingVars", changingVars)
+            print("optimalSolution", optimalSolution)
 
         mathCons = []
         for i in range(len(constraints)):
@@ -203,6 +207,7 @@ class DEASolver:
         allRangesI = []
         allOutputTotals = []
         allInputTotals = []
+        allChangingVars = []
 
         for i in range(len(LpInputs)):
             table, objfunc, constraints, conRow = self.buildTable(
@@ -215,6 +220,8 @@ class DEASolver:
 
             allOutputTotals.append(outputTotal)
             allInputTotals.append(inputTotal)
+
+            allChangingVars.append(changingVars)
 
             # add the cell ref to the table
             for j in range(len(cellRef) - 1):
@@ -246,50 +253,62 @@ class DEASolver:
         header.append("sign")
         header.append("rhs")
 
-        for i in range(len(tables)):
-            for cvCtr in range(len(changingVars)):
-                print("{:10.4f}".format(changingVars[cvCtr]), end=" ")
-            print()
-            for hctr in range(len(header)):
-                print("    {:6}".format(header[hctr]), end=" ")
-            print()
-            for j in range(len(tables[i])):
-                for k in range(len(tables[i][j])):
-                    if k == (len(LpOutputs[-1]) + len(LpInputs[-1]) + 1):
-                        if tables[i][j][k] == 0:
-                            print("{:10}".format("    <="), end=" ")
-                        elif tables[i][j][k] == 1:
-                            print("{:10}".format("    >="), end=" ")
+        if self.isConsoleOutput:
+            for i in range(len(tables)):
+                # for cvCtr in range(len(changingVars)):
+                #     print("{:10.4f}".format(changingVars[cvCtr]), end=" ")
+                #     pass
+                for cvCtr in range(len(allChangingVars[i])):
+                    print("{:10.4f}".format(allChangingVars[i][cvCtr]), end=" ")
+                print()
+                for hctr in range(len(header)):
+                    print("    {:6}".format(header[hctr]), end=" ")
+                    pass
+                print()
+                for j in range(len(tables[i])):
+                    for k in range(len(tables[i][j])):
+                        if k == (len(LpOutputs[-1]) + len(LpInputs[-1]) + 1):
+                            if tables[i][j][k] == 0:
+                                print("{:10}".format("    <="), end=" ")
+                                pass
+                            elif tables[i][j][k] == 1:
+                                print("{:10}".format("    >="), end=" ")
+                                pass
+                            else:
+                                print("{:10}".format("     ="), end=" ")
+                                pass
                         else:
-                            print("{:10}".format("     ="), end=" ")
-                    else:
-                        print("{:10.4f}".format(tables[i][j][k]), end=" ")
+                            print("{:10.4f}".format(tables[i][j][k]), end=" ")
+                            pass
+                    print()
+
+                print("\nranges:")
+                print()
+                for j in range(len(LpOutputs[-1])):
+                    print("  {:8}".format("o" + str(j + 1)), end=" ")
+                    pass
+
+                print()
+                for j in range(len(LpOutputs[-1])):
+                    print("{:10.6f}".format(allRangesO[i][j]), end=" ")
+                    pass
+                print(f"  Output total: {allOutputTotals[i]}", end=" ")
+
+                print("\n")
+                for j in range(len(LpInputs[-1])):
+                    print("  {:8}".format("i" + str(j + 1)), end=" ")
+                    pass
+
+                print()
+                for j in range(len(LpInputs[-1])):
+                    print("{:10.6f}".format(allRangesI[i][j]), end=" ")
+                print(f"   Input total: {allInputTotals[i]}", end=" ")
+
+
+                print(f"\n\nTotals:\n\n{allOutputTotals[i]}\ndivided by\n{allInputTotals[i]}\n\n= {allOutputTotals[i] / allInputTotals[i]}")
                 print()
 
-            print("\nranges:")
-            print()
-            for j in range(len(LpOutputs[-1])):
-                print("  {:8}".format("o" + str(j + 1)), end=" ")
-
-            print()
-            for j in range(len(LpOutputs[-1])):
-                print("{:10.6f}".format(allRangesO[i][j]), end=" ")
-            print(f"  Output total: {allOutputTotals[i]}", end=" ")
-
-            print("\n")
-            for j in range(len(LpInputs[-1])):
-                print("  {:8}".format("i" + str(j + 1)), end=" ")
-
-            print()
-            for j in range(len(LpInputs[-1])):
-                print("{:10.6f}".format(allRangesI[i][j]), end=" ")
-            print(f"   Input total: {allInputTotals[i]}", end=" ")
-
-            print(f"\n\nTotals:\n\n{allOutputTotals[i]}\ndivided by\n{
-                allInputTotals[i]}\n\n= {allOutputTotals[i] / allInputTotals[i]}")
-            print()
-
-            return tables, header, allInputTotals, allOutputTotals, allRangesO, allRangesI, changingVars
+        return tables, header, allInputTotals, allOutputTotals, allRangesO, allRangesI, allChangingVars
 
     def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
         imgui.set_next_window_position(windowPosX, windowPosY)  # Set the window position
@@ -411,8 +430,9 @@ class DEASolver:
 
                 self.tables, self.header, self.allInputTotals, self.allOutputTotals, self.allRangesO, self.allRangesI, self.changingVars = self.doDEA(
                     self.LpInputs, self.LpOutputs, self.isMin)
-
-                print(self.tables[0])
+                
+                if self.isConsoleOutput:
+                    print(self.tables[0])
             except Exception as e:
                 print(f"math error {e}")
 
@@ -430,8 +450,8 @@ class DEASolver:
                 imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
                 imgui.text("cv   ")
                 imgui.same_line()
-                for cvCtr in range(len(self.changingVars)):
-                    imgui.text("{:10.4f}".format(self.changingVars[cvCtr]))
+                for cvCtr in range(len(self.changingVars[i])):
+                    imgui.text("{:10.4f}".format(self.changingVars[i][cvCtr]))
                     imgui.same_line()
                 imgui.pop_style_color()
                 imgui.spacing()
@@ -519,8 +539,7 @@ class DEASolver:
                 imgui.pop_style_color()
 
                 imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 1.0)
-                imgui.text(f"\n\nTotals: {
-                    self.allOutputTotals[i]} / {self.allInputTotals[i]} = {self.allOutputTotals[i] / self.allInputTotals[i]}")
+                imgui.text(f"\n\nTotals: {self.allOutputTotals[i]} / {self.allInputTotals[i]} = {self.allOutputTotals[i] / self.allInputTotals[i]}")
                 imgui.pop_style_color()
                 imgui.spacing()
                 imgui.spacing()

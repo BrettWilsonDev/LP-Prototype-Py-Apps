@@ -814,7 +814,7 @@
         @when("click", "#solveButton")
         def solve(event):
             try:
-                mathPreliminaries.reset()
+                # mathPreliminaries.reset()
                 outputSection.innerHTML = 'Solving...'
 
                 objFunc = getObjFunc().to_py()
@@ -907,6 +907,7 @@
 
                 mathPreliminaries.changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = mathPreliminaries.doPreliminaries(
                     a, b, isMin, absRule, optTabLockState)
+
 
                 mathPreliminaries.matCbv = matrixCbv.tolist()
                 mathPreliminaries.matB = matrixB.transpose().tolist()

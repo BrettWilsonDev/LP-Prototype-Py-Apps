@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+
+    <title>Navigation Bar</title>
+    <style>
+        /* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+        /*  */
+
+        html,
+        body,
+        div,
+        span,
+        applet,
+        object,
+        iframe,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p,
+        blockquote,
+        pre,
+        a,
+        abbr,
+        acronym,
+        address,
+        big,
+        cite,
+        code,
+        del,
+        dfn,
+        em,
+        img,
+        ins,
+        kbd,
+        q,
+        s,
+        samp,
+        small,
+        strike,
+        strong,
+        sub,
+        sup,
+        tt,
+        var,
+        b,
+        u,
+        i,
+        center,
+        dl,
+        dt,
+        dd,
+        ol,
+        ul,
+        li,
+        fieldset,
+        form,
+        label,
+        legend,
+        table,
+        caption,
+        tbody,
+        tfoot,
+        thead,
+        tr,
+        th,
+        td,
+        article,
+        aside,
+        canvas,
+        details,
+        embed,
+        figure,
+        figcaption,
+        footer,
+        header,
+        hgroup,
+        menu,
+        nav,
+        output,
+        ruby,
+        section,
+        summary,
+        time,
+        mark,
+        audio,
+        video {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            font-size: 100%;
+            font: inherit;
+            vertical-align: baseline;
+        }
+
+        article,
+        aside,
+        details,
+        figcaption,
+        figure,
+        footer,
+        header,
+        hgroup,
+        menu,
+        nav,
+        section {
+            display: block;
+        }
+
+        body {
+            line-height: 1;
+        }
+
+        ol,
+        ul {
+            list-style: none;
+        }
+
+        blockquote,
+        q {
+            quotes: none;
+        }
+
+        blockquote:before,
+        blockquote:after,
+        q:before,
+        q:after {
+            content: '';
+            content: none;
+        }
+
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+
+        html {
+            background-color: #151617;
+            color: white;
+        }
+
+        nav {
+            background-color: #242424;
+        }
+
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+
+        nav ul li {
+            position: relative;
+            margin-right: 20px;
+        }
+
+        nav ul li ul {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            background-color: #141414;
+            padding: 10px;
+            z-index: 1;
+            margin-top: 23px;
+        }
+
+        nav ul li:hover ul {
+            display: block;
+        }
+
+        nav ul li ul li {
+            margin-bottom: 10px;
+        }
+
+        nav ul li ul li button {
+            width: 110%;
+            /* padding: 10px; */
+            border: none;
+            background-color: #141414;
+            color: #fff;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        nav ul li ul li button:hover {
+            background-color: #0056b3;
+        }
+
+        button {
+            background-color: #20324d;
+            color: white;
+            border: none;
+            padding: 2px 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        html,
+        body {
+            height: 99%;
+            margin: 0;
+            /* Reset default margin on the body element */
+        }
+
+        iframe {
+            display: block;
+            background: #000;
+            border: none;
+            width: 100%;
+            height: 99%;
+        }
+
+        .centered-list {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .centered-list li {
+            margin: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li><button id="home" style="margin-left: 20px;">home</button></li>
+            <li>
+                <button>Tools</button>
+                <ul>
+                    <li><button id="addingActsCons">Adding Acts, Cons</button></li>
+                    <li><button id="DEA">DEA Solver</button></li>
+                    <li><button id="dualSimplex">Dual Simplex</button></li>
+                    <li><button id="duality">Duality</button></li>
+                    <li><button id="penalties">Goal Penalties</button></li>
+                    <li><button id="goalPreemptive">Goal Preemptive</button></li>
+                    <li><button id="graphical">Graphical Solver</button></li>
+                    <li><button id="preliminaries">Preliminaries</button></li>
+                    <li><button id="sensitivity">Sensitivity Analysis</button></li>
+                    <li><button id="Two-Phase">Two Phase Simplex</button></li>
+                </ul>
+            </li>
+            <li><button>help</button></li>
+        </ul>
+    </nav>
+
+    <div class="centered-list">
+        <ul>
+            <li><button id="addingActsCons">Adding Acts, Cons</button></li>
+            <li><button id="DEA">DEA Solver</button></li>
+            <li><button id="dualSimplex">Dual Simplex</button></li>
+            <li><button id="duality">Duality</button></li>
+            <li><button id="penalties">Goal Penalties</button></li>
+            <li><button id="goalPreemptive">Goal Preemptive</button></li>
+            <li><button id="graphical">Graphical Solver</button></li>
+            <li><button id="preliminaries">Preliminaries</button></li>
+            <li><button id="sensitivity">Sensitivity Analysis</button></li>
+            <li><button id="Two-Phase">Two Phase Simplex</button></li>
+        </ul>
+    </div>
+
+
+    <script>
+        function attachListeners() {
+            document.querySelectorAll("#addingActsCons").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/addingActsCons/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+
+            document.querySelectorAll("#DEA").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/DEA/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+
+            document.querySelectorAll("#dualSimplex").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/dual/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+
+            document.querySelectorAll("#duality").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/duality/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+
+            document.querySelectorAll("#penalties").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/goal/penaltiessimplex/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+
+            document.querySelectorAll("#goalPreemptive").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/goal/preemptivesimplex/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+
+            document.querySelectorAll("#graphical").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/graphicalSolver/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+
+            document.querySelectorAll("#preliminaries").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/mathPrelim/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+
+            document.querySelectorAll("#sensitivity").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/sensitivityAnalysis/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+
+            document.querySelectorAll("#Two-Phase").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    var iframe = document.createElement('iframe');
+                    iframe.src = '../LPSolverTools/twoPhase/index.html';
+                    document.body.appendChild(iframe);
+                });
+            });
+        }
+
+        function removeIframeAndList() {
+            document.querySelectorAll('.centered-list').forEach((elem) => {
+                elem.remove();
+            });
+
+            var iframeTest = document.querySelector('iframe');
+            if (iframeTest) {
+                document.body.removeChild(iframeTest);
+            }
+        }
+
+        document.getElementById("home").addEventListener("click", function () {
+            removeIframeAndList();
+
+            const container = document.createElement('div');
+            container.classList.add('centered-list');
+            container.innerHTML = `
+        <ul>
+            <li><button id="addingActsCons">Adding Acts, Cons</button></li>
+            <li><button id="DEA">DEA Solver</button></li>
+            <li><button id="dualSimplex">Dual Simplex</button></li>
+            <li><button id="duality">Duality</button></li>
+            <li><button id="penalties">Goal Penalties</button></li>
+            <li><button id="goalPreemptive">Goal Preemptive</button></li>
+            <li><button id="graphical">Graphical Solver</button></li>
+            <li><button id="preliminaries">Preliminaries</button></li>
+            <li><button id="sensitivity">Sensitivity Analysis</button></li>
+            <li><button id="Two-Phase">Two Phase Simplex</button></li>
+        </ul>
+        `;
+            document.body.appendChild(container);
+            attachListeners(); // Reattach listeners for the dynamically created buttons
+        });
+
+        attachListeners(); // Attach listeners to the initial buttons
+    </script>
+</body>
+
+</html>

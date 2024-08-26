@@ -281,7 +281,7 @@
                     <li><button id="Two-Phase">Two Phase Simplex</button></li>
                 </ul>
             </li>
-            <li><button id="help">help</button></li>
+            <li><button id="helpBtn">help</button></li>
         </ul>
     </nav>
 
@@ -298,7 +298,7 @@
             <li><button id="preliminaries">Preliminaries</button></li>
             <li><button id="sensitivity">Sensitivity Analysis</button></li>
             <li><button id="Two-Phase">Two Phase Simplex</button></li>
-            <li><button id="help">help</button></li>
+            <li><button id="helpBtn">help</button></li>
             <h1>see help for more info!</h1>
         </ul>
     </div>
@@ -395,54 +395,10 @@
                     document.body.appendChild(iframe);
                 });
             });
-        }
 
-        function removeIframeAndList() {
-            document.querySelectorAll('.centered-list').forEach((elem) => {
-                elem.remove();
-            });
-
-            document.querySelectorAll('.help').forEach((elem) => {
-                elem.remove();
-            });
-
-            var iframeTest = document.querySelector('iframe');
-            if (iframeTest) {
-                document.body.removeChild(iframeTest);
-            }
-        }
-
-        document.getElementById("home").addEventListener("click", function () {
-            removeIframeAndList();
-
-            const container = document.createElement('div');
-            container.classList.add('centered-list');
-            container.innerHTML = `
-        
-            <ul>
-                <h1>Welcome To Linier Programming Tool Prototypes!<br>By Brett Wilson</h1>
-                <li><button id="addingActsCons">Adding Acts, Cons</button></li>
-                <li><button id="DEA">DEA Solver</button></li>
-                <li><button id="dualSimplex">Dual Simplex</button></li>
-                <li><button id="duality">Duality</button></li>
-                <li><button id="penalties">Goal Penalties</button></li>
-                <li><button id="goalPreemptive">Goal Preemptive</button></li>
-                <li><button id="graphical">Graphical Solver</button></li>
-                <li><button id="preliminaries">Preliminaries</button></li>
-                <li><button id="sensitivity">Sensitivity Analysis</button></li>
-                <li><button id="Two-Phase">Two Phase Simplex</button></li>
-                <li><button id="help">help</button></li>
-                <h1>see help for more info!</h1>
-            </ul>
-        `;
-            document.body.appendChild(container);
-            attachListeners(); // Reattach listeners for the dynamically created buttons
-        });
-
-        document.querySelectorAll("#help").forEach(btn => {
+            document.querySelectorAll("button#helpBtn").forEach(btn => {
             btn.addEventListener("click", function () {
                 removeIframeAndList();
-
                 const container = document.createElement('div');
                 container.classList.add('help');
                 container.innerHTML = `
@@ -526,13 +482,55 @@
                         <br>Most tools do not have an '=' option in the drop-down. Instead, you must create two constraints for an '=' constraint: one as '>=' and the other as '<='. There is no need to adjust positive and negative signs.
                     </p>
                 </div>
-        `;
+                `;
                 document.body.appendChild(container);
-                attachListeners(); // Reattach listeners for the dynamically created buttons
             });
         });
+        }
 
-        attachListeners(); // Attach listeners to the initial buttons
+        function removeIframeAndList() {
+            document.querySelectorAll('.centered-list').forEach((elem) => {
+                elem.remove();
+            });
+
+            document.querySelectorAll('.help').forEach((elem) => {
+                elem.remove();
+            });
+
+            var iframeTest = document.querySelector('iframe');
+            if (iframeTest) {
+                document.body.removeChild(iframeTest);
+            }
+        }
+
+        document.getElementById("home").addEventListener("click", function () {
+            removeIframeAndList();
+
+            const container = document.createElement('div');
+            container.classList.add('centered-list');
+            container.innerHTML = `
+            <ul>
+                <h1>Welcome To Linier Programming Tool Prototypes!<br>By Brett Wilson</h1>
+                <li><button id="addingActsCons">Adding Acts, Cons</button></li>
+                <li><button id="DEA">DEA Solver</button></li>
+                <li><button id="dualSimplex">Dual Simplex</button></li>
+                <li><button id="duality">Duality</button></li>
+                <li><button id="penalties">Goal Penalties</button></li>
+                <li><button id="goalPreemptive">Goal Preemptive</button></li>
+                <li><button id="graphical">Graphical Solver</button></li>
+                <li><button id="preliminaries">Preliminaries</button></li>
+                <li><button id="sensitivity">Sensitivity Analysis</button></li>
+                <li><button id="Two-Phase">Two Phase Simplex</button></li>
+                <li><button id="helpBtn">help</button></li>
+                <h1>see help for more info!</h1>
+            </ul>
+            `;
+            document.body.appendChild(container);
+            attachListeners();
+        });
+
+
+        attachListeners();
     </script>
 </body>
 

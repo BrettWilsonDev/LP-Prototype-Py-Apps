@@ -426,12 +426,14 @@
         files = ["./preemptivesimplex.py"]
     </py-config>
     <script type="py">
-        from pyscript import document, display, when
+        from pyscript import document, display, when, window
         from js import console, getGoalOrder, getGoalConstraints, getConstraints
         import copy
 
         document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
         document.getElementById("loadingStatus").hidden = True;
+
+        window.isIframeLoaded = True;
 
         console.clear();
 

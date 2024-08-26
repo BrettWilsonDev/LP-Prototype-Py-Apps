@@ -664,7 +664,7 @@
         ]
     </py-config>
     <script type="py">
-        from pyscript import document, display, when
+        from pyscript import document, display, when, window
         from js import console, getObjFunc, getConstraints, getProblemType, getNewConstraints, getActivity, getAbsProblemType, getReverseRows, getKeepSlack, getChoiceProblemType
         import copy
 
@@ -674,6 +674,8 @@
     
         document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
         document.getElementById("loadingStatus").hidden = True;
+
+        window.isIframeLoaded = True;
 
         # Initialize object
         addingActsCons = AddingActsCons()

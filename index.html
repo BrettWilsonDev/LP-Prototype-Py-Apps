@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
     <link rel="shortcut icon" href="https://www.brettwilsondev.com/assets/images/favicon.ico">
-    <meta name="keywords" content="lp solver, linear program solver tools, goal Programming, goal simplex, Preemptive, penalties, simplex, dual simplex, dea, duality, graphical solver, primal, slacks, excess, two phase, sensitivity analysis, Mathematical Preliminaries, tableau, 181, 281">
+    <meta name="keywords"
+        content="lp solver, linear program solver tools, goal Programming, goal simplex, Preemptive, penalties, simplex, dual simplex, dea, duality, graphical solver, primal, slacks, excess, two phase, sensitivity analysis, Mathematical Preliminaries, tableau, 181, 281">
 
     <title>Linear Programming Prototype Python Apps</title>
     <style>
@@ -254,6 +255,14 @@
         .help {
             margin: 10px;
         }
+
+        iframe {
+            display: none;
+            background: #000;
+            border: none;
+            width: 100%;
+            height: 99%;
+        }
     </style>
 </head>
 
@@ -277,6 +286,7 @@
                 </ul>
             </li>
             <li><button id="helpBtn">help</button></li>
+            <h1 id="loadingStatus">Initializing Pyscript: <span id="progress">0%</span></h1>
         </ul>
     </nav>
 
@@ -298,189 +308,229 @@
         </ul>
     </div>
 
+    <iframe id="iframe-addingActsCons" src="LPSolverTools/addingActsCons/index.html"></iframe>
+    <iframe id="iframe-DEA" src="LPSolverTools/DEA/index.html"></iframe>
+    <iframe id="iframe-dualSimplex" src="LPSolverTools/dual/index.html"></iframe>
+    <iframe id="iframe-duality" src="LPSolverTools/duality/index.html"></iframe>
+    <iframe id="iframe-penalties" src="LPSolverTools/goal/penaltiessimplex/index.html"></iframe>
+    <iframe id="iframe-goalPreemptive" src="LPSolverTools/goal/preemptivesimplex/index.html"></iframe>
+    <iframe id="iframe-graphical" src="LPSolverTools/graphicalSolver/index.html"></iframe>
+    <iframe id="iframe-preliminaries" src="LPSolverTools/mathPrelim/index.html"></iframe>
+    <iframe id="iframe-sensitivity" src="LPSolverTools/sensitivityAnalysis/index.html"></iframe>
+    <iframe id="iframe-Two-Phase" src="LPSolverTools/twoPhase/index.html"></iframe>
 
     <script>
+        const iframeIds = [
+            'iframe-addingActsCons', 'iframe-DEA', 'iframe-dualSimplex', 'iframe-duality', 'iframe-penalties',
+            'iframe-goalPreemptive', 'iframe-graphical', 'iframe-preliminaries',
+            'iframe-sensitivity', 'iframe-Two-Phase'
+        ];
+
+        intervalId = setInterval(checkIframesLoaded, 1000);
+        let loadedCount = 0;
+        function checkIframesLoaded() {
+            loadedCount++;        
+
+            document.getElementById('progress').innerHTML = `${loadedCount / 32 * 100}%`;
+            
+            let allLoaded = true;
+            iframeIds.forEach(id => {
+                const iframe = document.getElementById(id);
+                if (iframe.contentWindow && !iframe.contentWindow.isIframeLoaded) {
+                    allLoaded = false;
+                }
+            });
+
+            if (allLoaded) {
+                allIframesLoaded();
+                clearInterval(intervalId);
+            }
+        }
+
+        function allIframesLoaded() {
+            document.getElementById('progress').style.display = 'none';
+            document.getElementById('loadingStatus').style.display = 'none';
+        }
+
+        function hideAllIframes() {
+            document.querySelectorAll('iframe').forEach(iframe => {
+                iframe.style.display = 'none';
+            });
+        }
+
         function attachListeners() {
             document.querySelectorAll("#addingActsCons").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/addingActsCons/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-addingActsCons').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("#DEA").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/DEA/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-DEA').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("#dualSimplex").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/dual/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-dualSimplex').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("#duality").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/duality/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-duality').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("#penalties").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/goal/penaltiessimplex/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-penalties').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("#goalPreemptive").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/goal/preemptivesimplex/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-goalPreemptive').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("#graphical").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/graphicalSolver/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-graphical').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("#preliminaries").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/mathPrelim/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-preliminaries').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("#sensitivity").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/sensitivityAnalysis/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-sensitivity').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("#Two-Phase").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
-                    var iframe = document.createElement('iframe');
-                    iframe.src = 'LPSolverTools/twoPhase/index.html';
-                    document.body.appendChild(iframe);
+                    hideAllIframes();
+                    document.getElementById('iframe-Two-Phase').style.display = 'block';
                 });
             });
 
             document.querySelectorAll("button#helpBtn").forEach(btn => {
-            btn.addEventListener("click", function () {
-                removeIframeAndList();
-                const container = document.createElement('div');
-                container.classList.add('help');
-                container.innerHTML = `
-                <div class="section">
-                    <p>LP Tool by Brett Wilson: <a style="color: white; text-decoration: none" href="https://github.com/brettwilsonbdw">Github.com/brettwilsonbdw</a></p>
-                </div>
+                btn.addEventListener("click", function () {
+                    removeIframeAndList();
+                    const container = document.createElement('div');
+                    container.classList.add('help');
+                    container.innerHTML = `
+                        <div class="section">
+                            <p>LP Tool by Brett Wilson: <a style="color: white; text-decoration: none" href="https://github.com/brettwilsonbdw">Github.com/brettwilsonbdw</a></p>
+                        </div>
 
-                <div class="section">
-                    <p>
-                        In the Input:
-                        <br><br>
-                        Click on the boxes and enter values.
-                        <br><br>
-                        Objective Variables: x1, x2, x3, etc. are your objective variables (also known as decision variables). Both decision variables and constraints can be increased or decreased using their respective '+' and '-' buttons.
-                        <br><br>
-                        Constraints also use x1, x2, x3, etc. Align their respective values with the objective variables. Use the drop-down box to select the constraint type (<=, >=).
-                        <br><br>
-                        Use the radio buttons to choose between 'Maximize' or 'Minimize'.
-                        <br><br>
-                        Click 'Solve' to run the solver.
-                        <br><br>
-                        Click 'Reset' to clear all inputs.
-                        <br><br>
-                        If no output appears, check if your input is correct. Most likely, an error in the input is causing the issue.
-                    </p>
-                </div>
+                        <div class="section">
+                            <p>
+                                In the Input:
+                                <br><br>
+                                Click on the boxes and enter values.
+                                <br><br>
+                                Objective Variables: x1, x2, x3, etc. are your objective variables (also known as decision variables). Both decision variables and constraints can be increased or decreased using their respective '+' and '-' buttons.
+                                <br><br>
+                                Constraints also use x1, x2, x3, etc. Align their respective values with the objective variables. Use the drop-down box to select the constraint type (<=, >=).
+                                <br><br>
+                                Use the radio buttons to choose between 'Maximize' or 'Minimize'.
+                                <br><br>
+                                Click 'Solve' to run the solver.
+                                <br><br>
+                                Click 'Reset' to clear all inputs.
+                                <br><br>
+                                If no output appears, check if your input is correct. Most likely, an error in the input is causing the issue.
+                            </p>
+                        </div>
 
-                <div class="separator"></div>
+                        <div class="separator"></div>
 
-                <div class="section">
-                    <p>
-                        In the output:
-                        <br><br>
-                        The header will have:
-                        <br>- 'x' for objective values
-                        <br>- 's' for slack
-                        <br>- 'e' for excess
-                        <br>- 'rhs' for right-hand side values
-                        <br><br>
-                        For the columns:
-                        <br>- 'c' represents constraints with the constraint number
-                        <br>- 'z' represents the objective row
-                        <br><br>
-                        The optimal tableau will have the words optimal tableau or be the last tableau.
-                        <br><br>
-                        The optimal value is in the top right corner of each tableau under rhs.
-                        <br><br>
-                        The pivot row and column will be highlighted.
-                    </p>
-                </div>
+                        <div class="section">
+                            <p>
+                                In the output:
+                                <br><br>
+                                The header will have:
+                                <br>- 'x' for objective values
+                                <br>- 's' for slack
+                                <br>- 'e' for excess
+                                <br>- 'rhs' for right-hand side values
+                                <br><br>
+                                For the columns:
+                                <br>- 'c' represents constraints with the constraint number
+                                <br>- 'z' represents the objective row
+                                <br><br>
+                                The optimal tableau will have the words optimal tableau or be the last tableau.
+                                <br><br>
+                                The optimal value is in the top right corner of each tableau under rhs.
+                                <br><br>
+                                The pivot row and column will be highlighted.
+                            </p>
+                        </div>
 
-                <div class="separator"></div>
+                        <div class="separator"></div>
 
-                <div class="section">
-                    <p>
-                        Extras:
-                        <br><br>
-                        For Goal Simplex:
-                        <br>The header will include 'g-' and 'g+' indicating the goal with its number.
-                        <br>There is also a 'Show Goal Order' button that allows you to rearrange the goals from top to bottom, indicating their importance from most to least important.
-                        <br><br>
-                        In Duality:
-                        <br>There will be an extra 'slack' column and a 'ref' column. The 'ref' column can be safely ignored, based on the Excel Solver way of showing results.
-                        <br><br>
-                        In DEA (Data Envelopment Analysis):
-                        <br>The 'ref' column can be safely ignored, similar to Duality.
-                        <br><br>
-                        In Adding Acts and Cons:
-                        <br>'Acts' stands for activities (e.g., x1, x2) and 'cons' stands for constraints there is a radio button to select each. There is an 'Abs On/Off' radio button to force the underlying initial tableau to be all positive.
-                        <br><br>
-                        In Mathematical Preliminaries:
-                        <br>The 'Abs' radio button is also present, allowing the same functionality as in Adding Acts and Cons. Additionally, there is a 'Lock Tab' radio button to prevent the table from automatically being the most optimal, enabling some sensitivity analysis from the first table input.
-                        <br><br>
-                        In both Adding Acts/Cons and Mathematical Preliminaries:
-                        <br>There is an 'Optimize' button which will re-solve the current adjusted table to be optimal.
-                        <br><br>
-                        In Mathematical Preliminaries:
-                        <br>You can enter values with the words '+d' for delta. This will perform algebraic calculations and display the results in each respective part. There is also a 'Solve Delta' radio button to compute the delta for the RHS equation in the changing table.
-                        <br><br>
-                        For Constraints:
-                        <br>Most tools do not have an '=' option in the drop-down. Instead, you must create two constraints for an '=' constraint: one as '>=' and the other as '<='. There is no need to adjust positive and negative signs.
-                    </p>
-                </div>
-                `;
-                document.body.appendChild(container);
+                        <div class="section">
+                            <p>
+                                Extras:
+                                <br><br>
+                                For Goal Simplex:
+                                <br>The header will include 'g-' and 'g+' indicating the goal with its number.
+                                <br>There is also a 'Show Goal Order' button that allows you to rearrange the goals from top to bottom, indicating their importance from most to least important.
+                                <br><br>
+                                In Duality:
+                                <br>There will be an extra 'slack' column and a 'ref' column. The 'ref' column can be safely ignored, based on the Excel Solver way of showing results.
+                                <br><br>
+                                In DEA (Data Envelopment Analysis):
+                                <br>The 'ref' column can be safely ignored, similar to Duality.
+                                <br><br>
+                                In Adding Acts and Cons:
+                                <br>'Acts' stands for activities (e.g., x1, x2) and 'cons' stands for constraints there is a radio button to select each. There is an 'Abs On/Off' radio button to force the underlying initial tableau to be all positive.
+                                <br><br>
+                                In Mathematical Preliminaries:
+                                <br>The 'Abs' radio button is also present, allowing the same functionality as in Adding Acts and Cons. Additionally, there is a 'Lock Tab' radio button to prevent the table from automatically being the most optimal, enabling some sensitivity analysis from the first table input.
+                                <br><br>
+                                In both Adding Acts/Cons and Mathematical Preliminaries:
+                                <br>There is an 'Optimize' button which will re-solve the current adjusted table to be optimal.
+                                <br><br>
+                                In Mathematical Preliminaries:
+                                <br>You can enter values with the words '+d' for delta. This will perform algebraic calculations and display the results in each respective part. There is also a 'Solve Delta' radio button to compute the delta for the RHS equation in the changing table.
+                                <br><br>
+                                For Constraints:
+                                <br>Most tools do not have an '=' option in the drop-down. Instead, you must create two constraints for an '=' constraint: one as '>=' and the other as '<='. There is no need to adjust positive and negative signs.
+                            </p>
+                        </div>
+                   `;
+                    document.body.appendChild(container);
+                });
             });
-        });
+
+
         }
 
         function removeIframeAndList() {
@@ -491,41 +541,39 @@
             document.querySelectorAll('.help').forEach((elem) => {
                 elem.remove();
             });
-
-            var iframeTest = document.querySelector('iframe');
-            if (iframeTest) {
-                document.body.removeChild(iframeTest);
-            }
         }
 
         document.getElementById("home").addEventListener("click", function () {
             removeIframeAndList();
+            hideAllIframes();
 
             const container = document.createElement('div');
             container.classList.add('centered-list');
             container.innerHTML = `
-            <ul>
-                <h1>Welcome To Linier Programming Tool Prototypes!<br>By Brett Wilson</h1>
-                <li><button id="addingActsCons">Adding Acts, Cons</button></li>
-                <li><button id="DEA">DEA Solver</button></li>
-                <li><button id="dualSimplex">Dual Simplex</button></li>
-                <li><button id="duality">Duality</button></li>
-                <li><button id="penalties">Goal Penalties</button></li>
-                <li><button id="goalPreemptive">Goal Preemptive</button></li>
-                <li><button id="graphical">Graphical Solver</button></li>
-                <li><button id="preliminaries">Preliminaries</button></li>
-                <li><button id="sensitivity">Sensitivity Analysis</button></li>
-                <li><button id="Two-Phase">Two Phase Simplex</button></li>
-                <li><button id="helpBtn">help</button></li>
-                <h1>see help for more info!</h1>
-            </ul>
-            `;
+               <ul>
+                   <h1>Welcome To Linier Programming Tool Prototypes!<br>By Brett Wilson</h1>
+                   <li><button id="addingActsCons">Adding Acts, Cons</button></li>
+                   <li><button id="DEA">DEA Solver</button></li>
+                   <li><button id="dualSimplex">Dual Simplex</button></li>
+                   <li><button id="duality">Duality</button></li>
+                   <li><button id="penalties">Goal Penalties</button></li>
+                   <li><button id="goalPreemptive">Goal Preemptive</button></li>
+                   <li><button id="graphical">Graphical Solver</button></li>
+                   <li><button id="preliminaries">Preliminaries</button></li>
+                   <li><button id="sensitivity">Sensitivity Analysis</button></li>
+                   <li><button id="Two-Phase">Two Phase Simplex</button></li>
+                   <li><button id="helpBtn">help</button></li>
+                   <h1>see help for more info!</h1>
+               </ul>
+           `;
             document.body.appendChild(container);
             attachListeners();
         });
 
-
         attachListeners();
+
+        // document.getElementById("hiddenUntilLoadSection").removeAttribute("hidden");
+        console.clear();
     </script>
 </body>
 

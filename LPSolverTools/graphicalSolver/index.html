@@ -314,12 +314,14 @@
     </py-config>
 
     <script type="py">
-        from pyscript import document, display, when
+        from pyscript import document, display, when, window
         from js import console, getObjFunc, getConstraints, getProblemType
         import copy
 
         document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
         document.getElementById("loadingStatus").hidden = True;
+
+        window.isIframeLoaded = True;
         
         import matplotlib.pyplot as plt
         import matplotlib.tri as tri

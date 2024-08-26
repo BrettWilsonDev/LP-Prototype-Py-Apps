@@ -489,13 +489,15 @@
     </py-config>
 
     <script type="py">
-        from pyscript import document, display, when
+        from pyscript import document, display, when, window
         from js import console, getObjFunc, getConstraints, getProblemType, getCurrentDeltaSelection, getAbsProblemType, getLockOptTab, getSolveDelta
         import copy
         import math
         
         document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
         document.getElementById("loadingStatus").hidden = True;
+
+        window.isIframeLoaded = True;
 
         from mathpreliminaries import MathPreliminaries
 

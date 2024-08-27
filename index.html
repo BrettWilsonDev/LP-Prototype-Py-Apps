@@ -269,20 +269,20 @@
 <body>
     <nav>
         <ul>
-            <li><button id="home" style="margin-left: 20px;">home</button></li>
+            <li><button id="home" style="margin-left: 20px;" disabled>home</button></li>
             <li>
                 <button>LP Tools</button>
                 <ul>
-                    <li><button id="addingActsCons">Adding Acts, Cons</button></li>
-                    <li><button id="DEA">DEA Solver</button></li>
-                    <li><button id="dualSimplex">Dual Simplex</button></li>
-                    <li><button id="duality">Duality</button></li>
-                    <li><button id="penalties">Goal Penalties</button></li>
-                    <li><button id="goalPreemptive">Goal Preemptive</button></li>
-                    <li><button id="graphical">Graphical Solver</button></li>
-                    <li><button id="preliminaries">Preliminaries</button></li>
-                    <li><button id="sensitivity">Sensitivity Analysis</button></li>
-                    <li><button id="Two-Phase">Two Phase Simplex</button></li>
+                    <li><button class="iframe-addingActsCons" id="addingActsCons" disabled>Adding Acts, Cons</button></li>
+                    <li><button class="iframe-DEA" id="DEA" disabled>DEA Solver</button></li>
+                    <li><button class="iframe-dualSimplex" id="dualSimplex" disabled>Dual Simplex</button></li>
+                    <li><button class="iframe-duality" id="duality" disabled>Duality</button></li>
+                    <li><button class="iframe-penalties" id="penalties" disabled>Goal Penalties</button></li>
+                    <li><button class="iframe-goalPreemptive" id="goalPreemptive" disabled>Goal Preemptive</button></li>
+                    <li><button class="iframe-graphical" id="graphical" disabled>Graphical Solver</button></li>
+                    <li><button class="iframe-preliminaries" id="preliminaries" disabled>Preliminaries</button></li>
+                    <li><button class="iframe-sensitivity" id="sensitivity" disabled>Sensitivity Analysis</button></li>
+                    <li><button class="iframe-Two-Phase" id="Two-Phase" disabled>Two Phase Simplex</button></li>
                 </ul>
             </li>
             <li><button id="helpBtn">help</button></li>
@@ -293,16 +293,16 @@
     <div class="centered-list">
         <ul>
             <h1>Welcome To Linier Programming Tool Prototypes!<br>By Brett Wilson</h1>
-            <li><button id="addingActsCons">Adding Acts, Cons</button></li>
-            <li><button id="DEA">DEA Solver</button></li>
-            <li><button id="dualSimplex">Dual Simplex</button></li>
-            <li><button id="duality">Duality</button></li>
-            <li><button id="penalties">Goal Penalties</button></li>
-            <li><button id="goalPreemptive">Goal Preemptive</button></li>
-            <li><button id="graphical">Graphical Solver</button></li>
-            <li><button id="preliminaries">Preliminaries</button></li>
-            <li><button id="sensitivity">Sensitivity Analysis</button></li>
-            <li><button id="Two-Phase">Two Phase Simplex</button></li>
+            <li><button class="iframe-addingActsCons" id="addingActsCons" disabled>Adding Acts, Cons</button></li>
+            <li><button class="iframe-DEA" id="DEA" disabled>DEA Solver</button></li>
+            <li><button class="iframe-dualSimplex" id="dualSimplex" disabled>Dual Simplex</button></li>
+            <li><button class="iframe-duality" id="duality" disabled>Duality</button></li>
+            <li><button class="iframe-penalties" id="penalties" disabled>Goal Penalties</button></li>
+            <li><button class="iframe-goalPreemptive" id="goalPreemptive" disabled>Goal Preemptive</button></li>
+            <li><button class="iframe-graphical" id="graphical" disabled>Graphical Solver</button></li>
+            <li><button class="iframe-preliminaries" id="preliminaries" disabled>Preliminaries</button></li>
+            <li><button class="iframe-sensitivity" id="sensitivity" disabled>Sensitivity Analysis</button></li>
+            <li><button class="iframe-Two-Phase" id="Two-Phase" disabled>Two Phase Simplex</button></li>
             <li><button id="helpBtn">help</button></li>
             <h1>see help for more info!</h1>
         </ul>
@@ -326,24 +326,38 @@
             'iframe-sensitivity', 'iframe-Two-Phase'
         ];
 
+        document.getElementById('home').disabled = true;
+        iframeIds.forEach(id => {
+            document.querySelectorAll(`.${id}`).forEach((elem) => {
+                elem.disabled = true;
+            })
+        });
+
         intervalId = setInterval(checkIframesLoaded, 1000);
         let loadedCount = 0;
         function checkIframesLoaded() {
-            loadedCount++;        
+            loadedCount++;
 
             document.getElementById('progress').innerHTML = `${loadedCount / 32 * 100}%`;
-            
+
             let allLoaded = true;
             iframeIds.forEach(id => {
                 const iframe = document.getElementById(id);
                 if (iframe.contentWindow && !iframe.contentWindow.isIframeLoaded) {
                     allLoaded = false;
                 }
+
+                if (iframe.contentWindow.isIframeLoaded) {
+                    document.querySelectorAll(`.${id}`).forEach((elem) => {
+                        elem.disabled = false;
+                    })
+                }
             });
 
             if (allLoaded) {
                 allIframesLoaded();
                 clearInterval(intervalId);
+                document.getElementById('home').disabled = false;
             }
         }
 

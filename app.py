@@ -100,7 +100,7 @@ class App:
             imgui.spacing()
             imgui.spacing()
             imgui.set_cursor_pos_x(midX)
-            if imgui.button(self.buttonLabels[i]):
+            if imgui.button(self.buttonLabels[i], width=200):
                 self.currentTool = i
 
         imgui.spacing()

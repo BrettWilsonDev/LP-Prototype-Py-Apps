@@ -823,7 +823,6 @@
 
                 except Exception as e:
                     print("math error in Optimize again:", e)
-                    raise
 
             # Remove existing tableaus
             for elem in document.querySelectorAll('.tableauContainer2'):
@@ -932,9 +931,8 @@
                         a, b, isMin, c, addingActsCons.absRule)
                 else:
                     e = copy.deepcopy(addingActsCons.addingConstraints)
+                    print(e)
                     addingActsCons.addedConstraints = addingActsCons.addingConstraints
-                    if addingActsCons.isConsoleOutput:
-                        print(addingActsCons.addingConstraints)
                     addingActsCons.fixedTab, addingActsCons.unfixedTab = addingActsCons.doAddConstraint(
                         a, b, isMin, e, addingActsCons.absRule, addingActsCons.reverseRowsState, addingActsCons.negRuleState)
 
@@ -948,7 +946,6 @@
                 errorDiv.className = 'error'
                 errorDiv.textContent = "Math Error"
                 document.body.appendChild(errorDiv)
-                raise
 
         @when("click", "#resetButton")
         def reset(event):

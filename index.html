@@ -266,7 +266,7 @@
 
         .centered-list li button {
             width: 200px;
-        } 
+        }
     </style>
 </head>
 
@@ -277,7 +277,8 @@
             <li>
                 <button>LP Tools</button>
                 <ul>
-                    <li><button class="iframe-addingActsCons" id="addingActsCons" disabled>Adding Acts, Cons</button></li>
+                    <li><button class="iframe-addingActsCons" id="addingActsCons" disabled>Adding Acts, Cons</button>
+                    </li>
                     <li><button class="iframe-DEA" id="DEA" disabled>DEA Solver</button></li>
                     <li><button class="iframe-dualSimplex" id="dualSimplex" disabled>Dual Simplex</button></li>
                     <li><button class="iframe-duality" id="duality" disabled>Duality</button></li>
@@ -289,13 +290,14 @@
                     <li><button class="iframe-Two-Phase" id="Two-Phase" disabled>Two Phase Simplex</button></li>
                 </ul>
             </li>
-            <li><button id="helpBtn">help</button></li>
+            <li><button class="helpBtnClass" id="helpBtn" disabled>help</button></li>
         </ul>
     </nav>
 
     <div class="centered-list">
         <ul>
-            <h1 style="margin-bottom: 20px; font-size: 25px" id="loadingStatus">Initializing Pyscript: <span style="color: lime;" id="progress">0%</span></h1>
+            <h1 style="margin-bottom: 20px; font-size: 25px" id="loadingStatus">Initializing Pyscript: <span
+                    style="color: lime;" id="progress">0%</span><br>Please Wait</h1>
             <h1>Welcome To Linier Programming Tool Prototypes!<br>By Brett Wilson</h1>
             <li><button class="iframe-addingActsCons" id="addingActsCons" disabled>Adding Acts, Cons</button></li>
             <li><button class="iframe-DEA" id="DEA" disabled>DEA Solver</button></li>
@@ -307,7 +309,7 @@
             <li><button class="iframe-preliminaries" id="preliminaries" disabled>Preliminaries</button></li>
             <li><button class="iframe-sensitivity" id="sensitivity" disabled>Sensitivity Analysis</button></li>
             <li><button class="iframe-Two-Phase" id="Two-Phase" disabled>Two Phase Simplex</button></li>
-            <li><button id="helpBtn">help</button></li>
+            <li><button class="helpBtnClass" id="helpBtn" disabled>help</button></li>
             <h1>see help for more info!</h1>
         </ul>
     </div>
@@ -335,6 +337,10 @@
             document.querySelectorAll(`.${id}`).forEach((elem) => {
                 elem.disabled = true;
             })
+
+            document.querySelectorAll('.helpBtnClass').forEach((elem) => {
+                elem.disabled = true;
+            });
         });
 
         intervalId = setInterval(checkIframesLoaded, 1000);
@@ -362,6 +368,9 @@
                 allIframesLoaded();
                 clearInterval(intervalId);
                 document.getElementById('home').disabled = false;
+                document.querySelectorAll('.helpBtnClass').forEach((elem) => {
+                    elem.disabled = false;
+                });
             }
         }
 

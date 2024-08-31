@@ -460,6 +460,7 @@
             document.querySelectorAll("button#helpBtn").forEach(btn => {
                 btn.addEventListener("click", function () {
                     removeIframeAndList();
+                    hideAllIframes();
                     const container = document.createElement('div');
                     container.classList.add('help');
                     container.innerHTML = `

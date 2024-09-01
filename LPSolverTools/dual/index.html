@@ -366,6 +366,15 @@
                 tableauHeader = document.createElement('h3')
                 tableauHeader.textContent = f"Tableau {i + 1}"
                 container.appendChild(tableauHeader)
+                tableauHeader = document.createElement('h4')
+                if dualSimplex.phases[i] == 0:
+                    tableauHeader.textContent = f"Dual Phase"
+                elif dualSimplex.phases[i] == 1:
+                    tableauHeader.textContent = f"Primal Phase"
+                else:
+                    tableauHeader.textContent = f"Optimal"
+                tableauHeader.style = "margin-top: -19px;"
+                container.appendChild(tableauHeader)
 
                 # Create header row
                 del tHeader[0]
@@ -376,6 +385,14 @@
                     headerCell = document.createElement('div')
                     headerCell.className = 'cell'
                     headerCell.textContent = header
+                    headerRow.appendChild(headerCell)
+                if i != len(dualSimplex.tableaus) - 1:
+                    headerCell = document.createElement('div')
+                    headerCell.className = 'cell'
+                    if dualSimplex.phases[i] == 0:
+                        headerCell.textContent = "LG Neg"
+                    elif dualSimplex.phases[i] == 1:
+                        headerCell.textContent = "theta"
                     headerRow.appendChild(headerCell)
                 container.appendChild(headerRow)
 
@@ -394,11 +411,52 @@
                     for k, value in enumerate(row):
                         cell = document.createElement('div')
                         cell.className = 'cell'
-                        cell.textContent = f"{value:.3f}"
+                        # cell.textContent = f"{value:.3f}"
+                        cell.textContent = f"{dualSimplex.tableaus[i][j][k]:.3f}"
                         if k == tCol[i] and tCol[i] != -1:
                             cell.classList.add('highlight')
                         rowDiv.appendChild(cell)
+                    if j != 0 and i != len(dualSimplex.tableaus) - 1:
+                        if dualSimplex.phases[i] == 0:
+                            cell = document.createElement('div')
+                            cell.className = 'cell'
+                            if dualSimplex.tableaus[i][j][-1] < 0 and j == tRow[i] and tRow[i] != -1:
+                                cell.textContent = f"{(dualSimplex.tableaus[i][j][-1]):.3f}"
+                            rowDiv.appendChild(cell)
+                        else:
+                            cell = document.createElement('div')
+                            cell.className = 'cell'
+                            try: 
+                                cell.textContent = f"{(dualSimplex.tableaus[i][j][-1] / dualSimplex.tableaus[i][j][tCol[i]]):.3f}"
+                            except:
+                                cell.textContent = f"{float('inf')}"
+                            rowDiv.appendChild(cell)
+                        
                     container.appendChild(rowDiv)
+                
+                if dualSimplex.phases[i] == 0:
+                    rowDiv = document.createElement('div')
+                    rowDiv.className = 'row'
+                    rowLabel = document.createElement('div')
+                    rowLabel.className = 'cell'
+                    rowLabel.textContent = "theta"
+                    rowLabel.style = "font-weight: bold;"
+                    rowDiv.appendChild(rowLabel)
+
+                    for k in range(len(dualSimplex.tableaus[i][j]) - 1):
+                        rowLabel = document.createElement('div')
+                        rowLabel.className = 'cell'
+                        if k == tCol[i] and tCol[i] != -1:
+                            rowLabel.classList.add('highlight')
+                        if dualSimplex.tableaus[i][tRow[i]][k] < 0:
+                            rowLabel.textContent = str(float(abs(dualSimplex.tableaus[i][0][k] / dualSimplex.tableaus[i][tRow[i]][k])))
+                        else:
+                            rowLabel.textContent = str(float('inf'))
+
+                        rowDiv.appendChild(rowLabel)
+
+                    container.appendChild(rowDiv)
+
                 document.body.appendChild(container)
 
 

@@ -42,6 +42,8 @@ class TwoPhaseSimplex:
         self.tRow = -1
         self.tHeader = []
 
+        self.phases = []
+
     def testInput(self, testNum=-1):
         isMin = False
 
@@ -373,6 +375,8 @@ class TwoPhaseSimplex:
         indexOfDupe = tabs.index(tabs[-1])
 
         phase2Ctr = 0
+        self.phases.append(0)
+
         while not AllPosZ:
             self.prevZ = tabs[-1][1][-1]
             tab, AllPosZ = self.doPivotOperationsPhase2(tabs[-1], isMin)
@@ -381,6 +385,7 @@ class TwoPhaseSimplex:
                 break
 
             tabs.append(tab)
+            self.phases.append(1)
 
             if AllPosZ or phase2Ctr > 100:
                 break
@@ -413,6 +418,7 @@ class TwoPhaseSimplex:
                     print()
                 print()
 
+        self.phases.append(-1)
         return tabs
 
     def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
@@ -571,15 +577,20 @@ class TwoPhaseSimplex:
         for i in range(len(self.tableaus)):
             pivotCol = self.tCol[i]
             pivotRow = self.tRow[i]
-            if self.tPhase[i] == 0:
-                imgui.text("Phase 1")
-            else:
-                imgui.text("Phase 2")
             imgui.text("Tableau {}".format(i + 1))
+            if self.phases[i] == 0:
+                imgui.text("Phase 1")
+            elif self.phases[i] == 1:
+                imgui.text("Phase 2")
+            else:
+                imgui.text("optimal")
             imgui.text("t-" + str(i + 1))
             imgui.same_line(0, 20)
             for hCtr in range(len(self.tHeader)):
                 imgui.text("{:>8}".format(str(self.tHeader[hCtr])))
+                imgui.same_line(0, 20)
+            if self.phases[i] != -1:
+                imgui.text("{:>8}".format("theta"))
                 imgui.same_line(0, 20)
             imgui.spacing()
             for j in range(len(self.tableaus[i])):
@@ -602,6 +613,16 @@ class TwoPhaseSimplex:
                         imgui.pop_style_color()
                 if j == pivotRow and pivotRow != -1:
                     imgui.pop_style_color()
+                if j != 0 and j != 1 and i != len(self.tableaus) - 1:
+                    imgui.same_line(0, 20)
+                    if j == pivotRow and pivotRow != -1:
+                        imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    try:
+                        imgui.text("{:>8.3f}".format((self.tableaus[i][j][-1] / self.tableaus[i][j][pivotCol])))
+                    except:
+                        imgui.text("{:>8.3f}".format(float('inf')))
+                    if j == pivotRow and pivotRow != -1:
+                        imgui.pop_style_color()
                 imgui.spacing()
             imgui.spacing()
             imgui.spacing()

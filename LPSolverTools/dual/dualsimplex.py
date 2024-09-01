@@ -43,6 +43,8 @@ class DualSimplex:
 
         self.errorE = ""
 
+        self.phases = []
+
     def testInput(self, testNum=-1):
         isMin = False
         if testNum == 0:
@@ -84,12 +86,14 @@ class DualSimplex:
                            ]
         elif testNum == 5:
             objFunc = [-3, 7, 40]
-            constraints = [[0, 1, 10, 100, 1], [-1, 1, 4, 30, 1], [0, 1, 0, 0, 1], [0, 0, 1, 0, 1]]
+            constraints = [[0, 1, 10, 100, 1], [-1, 1, 4,
+                30, 1], [0, 1, 0, 0, 1], [0, 0, 1, 0, 1]]
             isMin = True
-        
+
         elif testNum == 6:
             objFunc = [140, 50, -50, -70]
-            constraints = [[1, 1, -1, -1, 10, 1], [4, 0, 0, -1, 50, 1], [4, 0, 0, -1, 80, 1], [8, 0, 0, -1, 100, 1]]
+            constraints = [[1, 1, -1, -1, 10, 1], [4, 0, 0, -1,
+                50, 1], [4, 0, 0, -1, 80, 1], [8, 0, 0, -1, 100, 1]]
             isMin = True
 
         if testNum == -1:
@@ -294,7 +298,8 @@ class DualSimplex:
         newTab[rowIndex] = pivotMathRow
 
         if self.isConsoleOutput:
-            print(f"the pivot col in Dual is {colIndex + 1} and the pivot row is {rowIndex + 1}")
+            print(f"the pivot col in Dual is {
+                  colIndex + 1} and the pivot row is {rowIndex + 1}")
 
         self.IMPivotCols.append(colIndex)
         self.IMPivotRows.append(rowIndex)
@@ -380,7 +385,8 @@ class DualSimplex:
                 operationTab[i][j] = mathItem
 
         if self.isConsoleOutput:
-            print(f"the pivot col in primal is {colIndex + 1} and the pivot row is {rowIndex + 1}")
+            print(f"the pivot col in primal is {
+                  colIndex + 1} and the pivot row is {rowIndex + 1}")
 
         self.IMPivotCols.append(colIndex)
         self.IMPivotRows.append(rowIndex)
@@ -437,6 +443,8 @@ class DualSimplex:
                         item = 0.0
             tableaus.append(tab)
 
+            self.phases.append(0)
+
         objFuncTest = []
         for i in range(len(tableaus[-1][0]) - 1):
             objFuncTest.append(tableaus[-1][0][i])
@@ -483,6 +491,8 @@ class DualSimplex:
                 thetaCols.append(thetaCol.copy())
                 tableaus.append(tab)
 
+                self.phases.append(1)
+
             # final optimal check
             rhsTest = []
             for i in range(len(tableaus[-1])):
@@ -511,6 +521,8 @@ class DualSimplex:
         amtOfExcess = 0
 
         topRow = []
+
+        self.phases.append(-1)
 
         topRowSize = lenObj + amtOfE + amtOfS
 
@@ -578,8 +590,9 @@ class DualSimplex:
         else:
             return tableaus, changingVars, optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow
 
-    def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
-        imgui.set_next_window_position(windowPosX, windowPosY)  # Set the window position
+    def imguiUIElements(self, windowSize, windowPosX=0, windowPosY=0):
+        imgui.set_next_window_position(
+            windowPosX, windowPosY)  # Set the window position
         imgui.set_next_window_size(
             (windowSize[0]), (windowSize[1]))  # Set the window size
         imgui.begin("Tableaus Output",
@@ -729,11 +742,23 @@ class DualSimplex:
             pivotCol = self.tCol[i]
             pivotRow = self.tRow[i]
             imgui.text("Tableau {}".format(i + 1))
+            if self.phases[i] == 0:
+                imgui.text("Dual Phase")
+            elif self.phases[i] == 1:
+                imgui.text("Primal Phase")
+            else:
+                imgui.text("Optimal")
             imgui.text("t-" + str(i + 1))
             imgui.same_line(0, 20)
             for hCtr in range(len(self.tHeader)):
                 imgui.text("{:>8}".format(str(self.tHeader[hCtr])))
                 imgui.same_line(0, 20)
+            if i != len(self.tableaus) - 1:
+                imgui.same_line()
+                if self.phases[i] == 0:
+                    imgui.text("{:>8}".format("LG neg"))
+                else:
+                    imgui.text("{:>8}".format("theta"))
             imgui.spacing()
             for j in range(len(self.tableaus[i])):
                 if j == pivotRow and pivotRow != -1:
@@ -754,7 +779,46 @@ class DualSimplex:
                         imgui.pop_style_color()
                 if j == pivotRow and pivotRow != -1:
                     imgui.pop_style_color()
+                
+                if j != 0 and i != len(self.tableaus) - 1:
+                    if self.phases[i] == 0:
+                        imgui.same_line()
+                        if j == pivotRow and pivotRow != -1:
+                            imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                        if self.tableaus[i][j][-1] < 0 and j == pivotRow and pivotRow != -1:
+                                imgui.text("{:>8.3f}".format((self.tableaus[i][j][-1])))
+                        if j == pivotRow and pivotRow != -1:
+                            imgui.pop_style_color()    
+                    else:
+                        imgui.same_line()
+                        if j == pivotRow and pivotRow != -1:
+                            imgui.push_style_color(imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                        try:
+                            imgui.text("{:>8.3f}".format((self.tableaus[i][j][-1] / self.tableaus[i][j][pivotCol])))
+                        except:
+                            imgui.text("{:>8.3f}".format(float('inf')))
+                        if j == pivotRow and pivotRow != -1:
+                            imgui.pop_style_color()
                 imgui.spacing()
+            if self.phases[i] == 0:
+                imgui.text("theta")
+                for k in range(len(self.tableaus[i][j]) - 1):
+                    if k == 0:
+                        imgui.same_line(0, 5)
+                    else:
+                        imgui.same_line(0, 20)
+
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.push_style_color(
+                            imgui.COLOR_TEXT, 0.0, 1.0, 0.0)
+                    
+                    if self.tableaus[i][pivotRow][k] < 0:
+                        imgui.text("{:>8.3f}".format(abs(self.tableaus[i][0][k] / self.tableaus[i][pivotRow][k])))
+                    else:
+                        imgui.text("{:>8.3f}".format(float('inf')))
+
+                    if k == pivotCol and pivotCol != -1:
+                        imgui.pop_style_color()
             imgui.spacing()
             imgui.spacing()
             imgui.spacing()

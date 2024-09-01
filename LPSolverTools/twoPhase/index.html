@@ -361,13 +361,19 @@
             container.className = 'tableauContainer'
 
             for i, tableau in enumerate(tableaus):
-                phaseText = "Phase 1" if tPhase[i] == 0 else "Phase 2"
+                if twoPhaseSimplex.phases[i] == 0:
+                    phaseText = "Phase 1"
+                elif twoPhaseSimplex.phases[i] == 1:
+                    phaseText = "Phase 2"
+                else: 
+                    phaseText = "Optimal"
                 tableauHeader = document.createElement('h3')
                 tableauHeader.textContent = f"Tableau {i + 1}"
                 container.appendChild(tableauHeader)
 
                 phaseElem = document.createElement('p')
                 phaseElem.textContent = phaseText
+                phaseElem.style = "margin-top: -19px;"
                 container.appendChild(phaseElem)
 
                 # Create header row
@@ -380,7 +386,13 @@
                     headerCell.className = 'cell'
                     headerCell.textContent = header
                     headerRow.appendChild(headerCell)
+                if i != len(tableaus) - 1:
+                    headerCell = document.createElement('div')
+                    headerCell.className = 'cell'
+                    headerCell.textContent = "theta"
+                    headerRow.appendChild(headerCell)
                 container.appendChild(headerRow)
+
 
                 # Create tableau rows
                 for j, row in enumerate(tableau):
@@ -401,6 +413,14 @@
                         if k == tCol[i] and tCol[i] != -1:
                             cell.classList.add('highlight')
                         rowDiv.appendChild(cell)
+                    if j != 0 and j != 1 and i != len(tableaus) - 1:
+                        cell = document.createElement('div')
+                        cell.className = 'cell'
+                        try: 
+                            cell.textContent = f"{(tableaus[i][j][-1] / tableaus[i][j][tCol[i]]):.3f}"
+                        except:
+                            cell.textContent = f"{float('inf')}"
+                        rowDiv.appendChild(cell)
                     container.appendChild(rowDiv)
                 document.body.appendChild(container)
 
@@ -419,6 +439,8 @@
                     isMin = False
                 else:
                     isMin = True
+
+                # objFunc, constraints, isMin = twoPhaseSimplex.testInput(0)
 
                 # Copy and compute
                 a = copy.deepcopy(objFunc)
@@ -459,6 +481,7 @@
                 errorDiv.className = 'error'
                 errorDiv.textContent = "Math Error"
                 document.body.appendChild(errorDiv)
+                raise
 
         @when("click", "#resetButton")
         def reset(event):

@@ -320,6 +320,33 @@
             return problemType;
         }
 
+        let isTestInput = false
+        function testInputOn()
+        {
+            isTestInput  = true
+        }
+
+        function testInputOff()
+        {
+            isTestInput  = false
+        }
+
+        function getTestInput()
+        {
+            return isTestInput
+        }
+
+        let testNum = 0
+        function setTestNum(num = 0)
+        {
+            testNum = num
+        }
+
+        function getTestNum()
+        {
+            return testNum
+        }
+
         // Initial render
         updateObjectiveFunction();
         updateConstraints();
@@ -334,7 +361,7 @@
     </py-config>
     <script type="py">
         from pyscript import document, display, when, window
-        from js import console, getObjFunc, getConstraints, getProblemType
+        from js import console, getObjFunc, getConstraints, getProblemType, getTestInput, getTestNum
         import copy
     
         document.getElementById("hiddenUntilLoad").removeAttribute("hidden");
@@ -477,7 +504,8 @@
                 else:
                     isMin = True
 
-                # objFunc, constraints, isMin = dualSimplex.testInput(0)
+                if getTestInput():
+                    objFunc, constraints, isMin = dualSimplex.testInput(getTestNum())
 
                 # Copy and compute
                 a = copy.deepcopy(objFunc)
@@ -506,7 +534,6 @@
                 errorDiv.className = 'error'
                 errorDiv.textContent = "Math Error"
                 document.body.appendChild(errorDiv)
-                raise
 
         @when("click", "#resetButton")
         def reset(event):

@@ -994,7 +994,7 @@
                         # if mathPreliminaries.isSingleDeltaARow:
                             # print(f"A{mathPreliminaries.singleAIndex}* = B^-1.A{mathPreliminaries.singleAIndex}")
 
-                        for i in range(len(mathPreliminaries.changingTable)):
+                        for i in range(1, len(mathPreliminaries.changingTable) - 1):
                             if isinstance(mathPreliminaries.changingTable[i][-1], (sp.Add, sp.Mul)):
                                 mathPreliminaries.isDeltaZCol = True
 

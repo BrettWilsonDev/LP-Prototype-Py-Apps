@@ -779,7 +779,8 @@ class MathPreliminaries:
                             print(
                                 f"A{self.singleAIndex}* = B^-1.A{self.singleAIndex}")
 
-                        for i in range(len(self.changingTable)):
+                        for i in range(1, len(self.changingTable) - 1):
+                            print(self.changingTable[i][-1])
                             if isinstance(self.changingTable[i][-1], (sp.Add, sp.Mul)):
                                 self.isDeltaZCol = True
 

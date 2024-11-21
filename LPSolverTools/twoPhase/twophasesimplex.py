@@ -450,8 +450,8 @@ class TwoPhaseSimplex:
         imgui.same_line()
 
         if imgui.button("decision variables -"):
-            if amtOfObjVars != 2:
-                amtOfObjVars += -1
+            if self.amtOfObjVars != 2:
+                self.amtOfObjVars += -1
                 for i in range(len(self.constraints)):
                     self.constraints[i].pop()
                 self.objFunc.pop()

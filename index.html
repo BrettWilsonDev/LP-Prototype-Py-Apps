@@ -369,7 +369,7 @@
                 }
             });
 
-            document.getElementById('progress').innerHTML = `${loadedIframes.length / iframeIds.length) * 100}%`;
+            document.getElementById('progress').innerHTML = `${(loadedIframes.length / iframeIds.length) * 100}%`;
 
             if (allLoaded) {
                 allIframesLoaded();

@@ -345,6 +345,7 @@
 
         intervalId = setInterval(checkIframesLoaded, 1000);
         let loadedCount = 0;
+        let loadedIframes = [];
         function checkIframesLoaded() {
             loadedCount++;
 
@@ -360,9 +361,15 @@
                 if (iframe.contentWindow.isIframeLoaded) {
                     document.querySelectorAll(`.${id}`).forEach((elem) => {
                         elem.disabled = false;
+                        if (!loadedIframes.includes(id))
+                        {
+                            loadedIframes.push(id);
+                        }
                     })
                 }
             });
+
+            document.getElementById('progress').innerHTML = `${loadedIframes.length / iframeIds.length) * 100}%`;
 
             if (allLoaded) {
                 allIframesLoaded();

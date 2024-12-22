@@ -4,15 +4,19 @@ This repository contains a collection of prototype linear programming (LP) appli
 
 ## List of LP tools
 
-- Adding activities and constraints
-- Data Envelopment Analysis
-- Dual Simplex
-- Duality
+- [Adding activities and constraints](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/addingActsCons)
+- [Data Envelopment Analysis](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/DEA)
+- [Dual Simplex](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/dual)
+- [Duality](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/duality)
 - Goal Simplex
-- Graphical Method
-- Mathematical Preliminaries
-- Sensitivity Analysis
-- Two-Phase Simplex
+  - [Penalties](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/goal/penaltiessimplex)
+  - [Preemptive](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/goal/preemptivesimplex)
+- [Graphical Method](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/graphicalSolver)
+- [Mathematical Preliminaries](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/mathPrelim)
+- [Sensitivity Analysis](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/sensitivityAnalysis)
+- [Two-Phase Simplex](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/twoPhase)
+
+[Full web app](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps)
 
 ## pip packages used
 - glfw for windowing 

@@ -367,9 +367,16 @@
                         }
                     })
                 }
+                
+                if (loadedCount % 10 === 0)
+                {
+                    loadedCount = 0;
+                }
+                
+                document.getElementById('progress').innerHTML = `${((loadedIframes.length / iframeIds.length) * 100) + loadedCount}%`;
             });
 
-            document.getElementById('progress').innerHTML = `${(loadedIframes.length / iframeIds.length) * 100}%`;
+            // document.getElementById('progress').innerHTML = `${(loadedIframes.length / iframeIds.length) * 100}%`;
 
             if (allLoaded) {
                 allIframesLoaded();

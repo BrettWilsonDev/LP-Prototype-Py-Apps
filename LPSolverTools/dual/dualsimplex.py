@@ -164,68 +164,6 @@ class DualSimplex:
 
         return opTable
 
-    def doFormulationOperation(self, objFunc, constraints):
-        excessCount = 0
-        slackCount = 0
-
-        for i in range(len(constraints)):
-            if constraints[i][-1] == 1:
-                excessCount += 1
-            else:
-                slackCount += 1
-
-        for i in range(len(constraints)):
-            for j in range(len(constraints[i])):
-                if constraints[i][-1] == 1:
-                    constraints[i][j] = -1 * constraints[i][j]
-
-        for i in range(len(constraints)):
-            del constraints[i][-1]
-
-        tableSizeH = len(constraints) + 1
-
-        # build the display header row eg x1 x2 e1 e2 s1 s2 rhs
-        imCtr = 1
-        for i in range(len(objFunc)):
-            self.IMHeaderRow.append("x" + str(imCtr))
-            imCtr += 1
-
-        imCtr = 1
-
-        if excessCount > 0:
-            for i in range(excessCount):
-                self.IMHeaderRow.append("e" + str(imCtr))
-                imCtr += 1
-
-        if slackCount > 0:
-            for i in range(slackCount):
-                self.IMHeaderRow.append("s" + str(imCtr))
-                imCtr += 1
-
-        self.IMHeaderRow.append("rhs")
-
-        tableSizeW = excessCount + slackCount + 1 + len(objFunc)
-        opTable = []
-        for i in range(tableSizeH):
-            opTable.append([])
-            for j in range(tableSizeW):
-                opTable[i].append(0)
-
-        for i in range(len(objFunc)):
-            opTable[0][i] = -objFunc[i]
-
-        for i in range(len(constraints)):
-            for j in range(len(constraints[i]) - 1):
-                opTable[i + 1][j] = constraints[i][j]
-                opTable[i + 1][-1] = constraints[i][-1]
-
-        # added the slack and excess 1s
-        for i in range(1, len(opTable)):
-            for j in range(len(objFunc), len(opTable[i]) - 1):
-                opTable[i][i + 1 * len(objFunc) - 1] = 1
-
-        return opTable
-
     def doDualPivotOperation(self, tab):
         thetaRow = []
 

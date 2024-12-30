@@ -346,8 +346,12 @@
         intervalId = setInterval(checkIframesLoaded, 1000);
         let loadedCount = 0;
         let loadedIframes = [];
+        let stopCount = false;
         function checkIframesLoaded() {
-            loadedCount++;
+            if (!stopCount)
+            {
+                loadedCount++;
+            }
 
             document.getElementById('progress').innerHTML = `${loadedCount / 32 * 100}%`;
 
@@ -370,7 +374,8 @@
                 
                 if (loadedCount % 10 === 0)
                 {
-                    loadedCount = 0;
+                    loadedCount = 9;
+                    stopCount = true;
                 }
                 
                 document.getElementById('progress').innerHTML = `${((loadedIframes.length / iframeIds.length) * 100) + loadedCount}%`;

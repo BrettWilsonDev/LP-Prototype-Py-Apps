@@ -4,19 +4,19 @@ This repository contains a collection of prototype linear programming (LP) appli
 
 ## List of LP tools
 
-- [Adding activities and constraints](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/addingActsCons)
-- [Data Envelopment Analysis](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/DEA)
-- [Dual Simplex](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/dual)
-- [Duality](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/duality)
+- [Adding activities and constraints](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/addingActsCons)
+- [Data Envelopment Analysis](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/DEA)
+- [Dual Simplex](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/dual)
+- [Duality](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/duality)
 - Goal Simplex
-  - [Penalties](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/goal/penaltiessimplex)
-  - [Preemptive](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/goal/preemptivesimplex)
-- [Graphical Method](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/graphicalSolver)
-- [Mathematical Preliminaries](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/mathPrelim)
-- [Sensitivity Analysis](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/sensitivityAnalysis)
-- [Two-Phase Simplex](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps/LPSolverTools/twoPhase)
+  - [Penalties](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/goal/penaltiessimplex)
+  - [Preemptive](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/goal/preemptivesimplex)
+- [Graphical Method](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/graphicalSolver)
+- [Mathematical Preliminaries](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/mathPrelim)
+- [Sensitivity Analysis](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/sensitivityAnalysis)
+- [Two-Phase Simplex](https://brettwilsondev.github.io/LP-Prototype-Py-Apps/LPSolverTools/twoPhase)
 
-[Full web app](https://brettwilsonbdw.github.io/LP-Prototype-Py-Apps)
+[Full web app](https://brettwilsondev.github.io/LP-Prototype-Py-Apps)
 
 ## pip packages used
 - glfw for windowing 

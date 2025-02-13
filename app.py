@@ -121,7 +121,7 @@ class App:
         imgui.begin_child("Scrollable Child", width=0, height=0,
                           border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
 
-        imgui.text("LP Tool by Brett Wilson: Github.com/brettwilsonbdw")
+        imgui.text("LP Tool by Brett Wilson: Github.com/brettwilsondev")
 
         helpTextInput = (
             "In the Input:\n\n"

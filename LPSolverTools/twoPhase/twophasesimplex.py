@@ -70,6 +70,15 @@ class TwoPhaseSimplex:
                            [6, 2, 1.5, 30, 1],
                            [1, 1.5, 0.5, 20, 1]]
             isMin = True
+        
+        elif testNum == 3:
+            objFunc = [4, 1]
+
+            constraints = [[3, 1, 10, 1],
+                           [1, 1, 5, 1],
+                           [1, 0, 3, 1],
+                           ]
+            isMin = True
 
         if testNum == -1:
             return None
@@ -491,7 +500,7 @@ class TwoPhaseSimplex:
             imgui.spacing()
             if len(self.constraints) <= i:
                 # Fill with default values if needed
-                self.constraints.append([0.0] * (amtOfObjVars + 2))
+                self.constraints.append([0.0] * (self.amtOfObjVars + 2))
 
             for j in range(self.amtOfObjVars):
                 value = self.constraints[i][j]
@@ -561,6 +570,12 @@ class TwoPhaseSimplex:
 
                 self.tCol.append(-1)
                 self.tRow.append(-1)
+
+                if len(self.tableaus) != len(self.phases):
+                    self.phases.clear()
+                    for item in range(len(self.tableaus) - 1):
+                        self.phases.append(0)
+                    self.phases.append(-1)
 
             except Exception as e:
                 print("math error:", e)

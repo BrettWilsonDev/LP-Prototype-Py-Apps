@@ -472,6 +472,12 @@
 
                 tHeader.insert(0, "t")
 
+                if len(tableaus) != len(twoPhaseSimplex.phases):
+                    twoPhaseSimplex.phases.clear()
+                    for item in range(len(tableaus) - 1):
+                        twoPhaseSimplex.phases.append(0)
+                    twoPhaseSimplex.phases.append(-1)
+
                 renderTableaus()
 
             except Exception as e:

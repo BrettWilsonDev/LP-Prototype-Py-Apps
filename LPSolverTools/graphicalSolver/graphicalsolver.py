@@ -8,6 +8,7 @@ import sys
 import os
 import matplotlib.pyplot as plt
 
+
 class GraphicalSolver:
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
@@ -111,10 +112,13 @@ class GraphicalSolver:
                 if point is not None:
                     intersectionPoints.append(point)
 
-        xBounds = (0, max(constraint[2]
-                          for constraint in constraints if constraint[0] != 0))
-        yBounds = (0, max(constraint[2]
-                          for constraint in constraints if constraint[1] != 0))
+        # xBounds = (0, max(constraint[2]
+        #                   for constraint in constraints if constraint[0] != 0))
+        # yBounds = (0, max(constraint[2]
+        #                   for constraint in constraints if constraint[1] != 0))
+
+        xBounds = (0, max((constraint[2] for constraint in constraints if constraint[0] != 0), default=0))
+        yBounds = (0, max((constraint[2] for constraint in constraints if constraint[1] != 0), default=0))
 
         endPoints = []
         for constraint in constraints:
@@ -128,7 +132,7 @@ class GraphicalSolver:
         for point in allPoints:
             x, y = point
             if all((a * x + b * y <= c + 1e-9 if eq == 0 else a * x + b * y >= c - 1e-9 if eq == 1 else abs(a * x + b * y - c) < 1e-9)
-                for a, b, c, eq in constraints) and x >= 0 and y >= 0:
+                   for a, b, c, eq in constraints) and x >= 0 and y >= 0:
                 feasiblePoints.append((x, y))
 
         # Remove duplicates and sort
@@ -278,14 +282,15 @@ class GraphicalSolver:
         plt.legend(loc='upper right', fontsize='small')
         plt.show()
 
-    def imguiUIElements(self, windowSize, windowPosX = 0, windowPosY = 0):
-        imgui.set_next_window_position(windowPosX, windowPosY)  # Set the window position
+    def imguiUIElements(self, windowSize, windowPosX=0, windowPosY=0):
+        imgui.set_next_window_position(
+            windowPosX, windowPosY)  # Set the window position
         imgui.set_next_window_size(
             (windowSize[0]), (windowSize[1]))  # Set the window size
         imgui.begin("Tableaus Output",
                     flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
         imgui.begin_child("Scrollable Child", width=0, height=0,
-            border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
+                          border=True, flags=imgui.WINDOW_ALWAYS_HORIZONTAL_SCROLLBAR)
 
         # input ======================================================
 
@@ -394,7 +399,6 @@ class GraphicalSolver:
             self.reset()
         imgui.pop_style_color()
 
-
         imgui.end_child()
         imgui.end()
 
@@ -431,6 +435,7 @@ class GraphicalSolver:
         # Cleanup
         impl.shutdown()
         glfw.terminate()
+
 
 def main(isConsoleOutput=False):
     classInstance = GraphicalSolver(isConsoleOutput)

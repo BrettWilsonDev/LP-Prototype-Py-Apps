@@ -279,7 +279,7 @@ class MathPreliminaries:
                 columnValue = tableaus[-1][i][columnIndex]
                 tCVars.append(columnValue)
 
-            if (sum(tCVars) == 1):
+            if (sum(tCVars) == 1 or sum(tCVars) == 1.0):
                 basicVarSpots.append(k)
 
         # get the columns of the basic variables

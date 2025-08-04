@@ -10,12 +10,11 @@ import os
 import sympy as sp
 try:
     from dualsimplex import DualSimplex as Dual
-    from mathpreliminaries import MathPreliminaries as MathPrelims
+    # from mathpreliminaries import MathPreliminaries as MathPrelims
 except:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from dual.dualsimplex import DualSimplex as Dual
-    from mathPrelim.mathpreliminaries import MathPreliminaries as MathPrelims
-
+    # from mathPrelim.mathpreliminaries import MathPreliminaries as MathPrelims
 
 class BranchAndBound:
     def __init__(self, isConsoleOutput=False):
@@ -26,7 +25,7 @@ class BranchAndBound:
 
     def reset(self):
         self.dual = Dual()
-        self.mathPrelim = MathPrelims()
+        # self.mathPrelim = MathPrelims()
         self.testInputSelected = 0
 
         # simplex specific vars
@@ -104,57 +103,52 @@ class BranchAndBound:
         else:
             return objFunc, constraints, isMin
 
-    def round_value(self, value):
-        """Round a single value to specified precision"""
+    def roundValue(self, value):
         try:
             return round(float(value), self.precision)
         except (ValueError, TypeError):
             return value
 
-    def round_matrix(self, matrix):
-        """Round all values in a matrix to specified precision"""
+    def roundMatrix(self, matrix):
         if isinstance(matrix, list):
             if isinstance(matrix[0], list):
                 # 2D matrix
-                return [[self.round_value(val) for val in row] for row in matrix]
+                return [[self.roundValue(val) for val in row] for row in matrix]
             else:
                 # 1D array
-                return [self.round_value(val) for val in matrix]
+                return [self.roundValue(val) for val in matrix]
         else:
-            return self.round_value(matrix)
+            return self.roundValue(matrix)
 
-    def round_tableaus(self, tableaus):
-        """Round all values in tableau structure"""
+    def roundTableaus(self, tableaus):
         if not tableaus:
             return tableaus
 
-        rounded_tableaus = []
+        roundedTableaus = []
         for tableau in tableaus:
-            rounded_tableau = self.round_matrix(tableau)
-            rounded_tableaus.append(rounded_tableau)
-        return rounded_tableaus
+            roundedTableau = self.roundMatrix(tableau)
+            roundedTableaus.append(roundedTableau)
+        return roundedTableaus
 
-    def is_integer_value(self, value):
-        """Check if a value is effectively an integer within tolerance"""
-        rounded_val = self.round_value(value)
-        return abs(rounded_val - round(rounded_val)) <= self.tolerance
+    def isIntegerValue(self, value):
+        roundedVal = self.roundValue(value)
+        return abs(roundedVal - round(roundedVal)) <= self.tolerance
 
-    def print_tableau(self, tableau, title="Tableau"):
-        """Print tableau with consistent formatting"""
+    def printTableau(self, tableau, title="Tableau"):
         if self.isConsoleOutput:
             print(f"\n{title}")
             for i in range(len(tableau)):
                 for j in range(len(tableau[i])):
-                    print(f"{self.round_value(tableau[i][j]):>8.4f}", end="  ")
+                    print(f"{self.roundValue(tableau[i][j]):>8.4f}", end="  ")
                 print()
             print()
 
-    def getMathPrelims(self, objFunc, constraints, isMin, absRule=False):
-        changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.mathPrelim.doPreliminaries(
-            objFunc, constraints, isMin, absRule)
-        # Round the results
-        changingTable = self.round_matrix(changingTable)
-        return changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots
+    # def getMathPrelims(self, objFunc, constraints, isMin, absRule=False):
+    #     changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.mathPrelim.doPreliminaries(
+    #         objFunc, constraints, isMin, absRule)
+    #     # Round the results
+    #     changingTable = self.roundMatrix(changingTable)
+    #     return changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots
 
     def getBasicVarSpots(self, tableaus):
         # get the spots of the basic variables
@@ -164,11 +158,11 @@ class BranchAndBound:
             tCVars = []
 
             for i in range(len(tableaus[-1])):
-                columnValue = self.round_value(tableaus[-1][i][columnIndex])
+                columnValue = self.roundValue(tableaus[-1][i][columnIndex])
                 tCVars.append(columnValue)
 
-            sum_vals = self.round_value(sum(tCVars))
-            if abs(sum_vals - 1.0) <= self.tolerance:
+            sumVals = self.roundValue(sum(tCVars))
+            if abs(sumVals - 1.0) <= self.tolerance:
                 basicVarSpots.append(k)
 
         # get the columns of the basic variables
@@ -177,8 +171,8 @@ class BranchAndBound:
             tLst = []
             if i in basicVarSpots:
                 for j in range(len(tableaus[-1])):
-                    rounded_val = self.round_value(tableaus[-1][j][i])
-                    tLst.append(rounded_val)
+                    roundedVal = self.roundValue(tableaus[-1][j][i])
+                    tLst.append(roundedVal)
                 basicVarCols.append(tLst)
 
         # sort the cbv according the basic var positions
@@ -196,7 +190,7 @@ class BranchAndBound:
         if overRideTab is not None:
             changingTable = copy.deepcopy(overRideTab)
             # Round the input table
-            changingTable = self.round_matrix(changingTable)
+            changingTable = self.roundMatrix(changingTable)
             tempTabs = []
             tempTabs.append(changingTable)
             basicVarSpots = self.getBasicVarSpots(tempTabs)
@@ -219,10 +213,10 @@ class BranchAndBound:
 
             # Fill in the coefficients for the constraint
             for i in range(len(addedConstraints[k]) - 2):
-                newCon[i] = self.round_value(addedConstraints[k][i])
+                newCon[i] = self.roundValue(addedConstraints[k][i])
 
             # Set the RHS value
-            newCon[-1] = self.round_value(addedConstraints[k][-2])
+            newCon[-1] = self.roundValue(addedConstraints[k][-2])
 
             # Add slack or surplus variable
             slackSpot = ((len(newCon) - len(addedConstraints)) - 1) + k
@@ -234,52 +228,52 @@ class BranchAndBound:
             newTab.append(newCon)
 
         # Round the new tableau
-        newTab = self.round_matrix(newTab)
-        self.print_tableau(newTab, "unfixed tab")
+        newTab = self.roundMatrix(newTab)
+        self.printTableau(newTab, "unfixed tab")
 
         displayTab = copy.deepcopy(newTab)
 
         # Fix tableau to maintain basic feasible solution
         for k in range(len(addedConstraints)):
-            constraint_row_index = len(newTab) - len(addedConstraints) + k
+            constraintRowIndex = len(newTab) - len(addedConstraints) + k
 
             # Check each basic variable column
-            for col_index in basicVarSpots:
+            for colIndex in basicVarSpots:
                 # Get the coefficient in the new constraint row for this basic variable
-                coefficient_in_new_row = self.round_value(
-                    displayTab[constraint_row_index][col_index])
+                coefficientInNewRow = self.roundValue(
+                    displayTab[constraintRowIndex][colIndex])
 
-                if abs(coefficient_in_new_row) > self.tolerance:
+                if abs(coefficientInNewRow) > self.tolerance:
                     # Find the row where this basic variable has coefficient 1
-                    pivot_row = None
-                    for row_index in range(len(displayTab) - len(addedConstraints)):
-                        if abs(self.round_value(displayTab[row_index][col_index]) - 1.0) <= self.tolerance:
-                            pivot_row = row_index
+                    pivotRow = None
+                    for rowIndex in range(len(displayTab) - len(addedConstraints)):
+                        if abs(self.roundValue(displayTab[rowIndex][colIndex]) - 1.0) <= self.tolerance:
+                            pivotRow = rowIndex
                             break
 
-                    if pivot_row is not None:
+                    if pivotRow is not None:
                         # Auto-detect if we need to reverse the row operation based on constraint type
-                        constraint_type = addedConstraints[k][-1]
-                        auto_reverse = (constraint_type == 1)
+                        constraintType = addedConstraints[k][-1]
+                        autoReverse = (constraintType == 1)
 
                         # Perform row operation to eliminate the coefficient
                         for col in range(len(displayTab[0])):
-                            pivot_val = self.round_value(
-                                displayTab[pivot_row][col])
-                            constraint_val = self.round_value(
-                                displayTab[constraint_row_index][col])
+                            pivotVal = self.roundValue(
+                                displayTab[pivotRow][col])
+                            constraintVal = self.roundValue(
+                                displayTab[constraintRowIndex][col])
 
-                            if auto_reverse:
-                                new_val = pivot_val - coefficient_in_new_row * constraint_val
+                            if autoReverse:
+                                newVal = pivotVal - coefficientInNewRow * constraintVal
                             else:
-                                new_val = constraint_val - coefficient_in_new_row * pivot_val
+                                newVal = constraintVal - coefficientInNewRow * pivotVal
 
-                            displayTab[constraint_row_index][col] = self.round_value(
-                                new_val)
+                            displayTab[constraintRowIndex][col] = self.roundValue(
+                                newVal)
 
         # Round the final tableau
-        displayTab = self.round_matrix(displayTab)
-        self.print_tableau(displayTab, "fixed tab")
+        displayTab = self.roundMatrix(displayTab)
+        self.printTableau(displayTab, "fixed tab")
 
         return displayTab, newTab
 
@@ -287,15 +281,15 @@ class BranchAndBound:
         decisionVars = []
         for i in range(len(self.objFunc)):
             for j in range(len(tabs[-1])):
-                val = self.round_value(tabs[-1][j][i])
+                val = self.roundValue(tabs[-1][j][i])
                 if abs(val - 1.0) <= self.tolerance:
-                    rhs_val = self.round_value(tabs[-1][j][-1])
-                    decisionVars.append(rhs_val)
+                    rhsVal = self.roundValue(tabs[-1][j][-1])
+                    decisionVars.append(rhsVal)
 
         xSpot = -1
         rhsVal = None
         for i in range(len(decisionVars)):
-            if not self.is_integer_value(decisionVars[i]):
+            if not self.isIntegerValue(decisionVars[i]):
                 rhsVal = decisionVars[i]
                 xSpot = i
                 break
@@ -312,7 +306,7 @@ class BranchAndBound:
             return None, None
 
         if self.isConsoleOutput:
-            print(f"Branching on x{xSpot+1} = {self.round_value(rhsVal)}")
+            print(f"Branching on x{xSpot+1} = {self.roundValue(rhsVal)}")
 
         maxInt = math.ceil(rhsVal)
         minInt = math.floor(rhsVal)
@@ -343,23 +337,23 @@ class BranchAndBound:
         if not tabs or len(tabs) == 0:
             return None
         # Last element of first row in final tableau
-        return self.round_value(tabs[-1][0][-1])
+        return self.roundValue(tabs[-1][0][-1])
 
     def getCurrentSolution(self, tabs):
         solution = [0.0] * len(self.objFunc)
 
         for i in range(len(self.objFunc)):
             for j in range(len(tabs[-1])):
-                val = self.round_value(tabs[-1][j][i])
+                val = self.roundValue(tabs[-1][j][i])
                 if abs(val - 1.0) <= self.tolerance:
-                    solution[i] = self.round_value(tabs[-1][j][-1])
+                    solution[i] = self.roundValue(tabs[-1][j][-1])
                     break
 
         return solution
 
     def isIntegerSolution(self, solution):
         for val in solution:
-            if not self.is_integer_value(val):
+            if not self.isIntegerValue(val):
                 return False
         return True
 
@@ -409,14 +403,14 @@ class BranchAndBound:
             print("="*50)
 
         # Round initial tableaus
-        initialTabs = self.round_tableaus(initialTabs)
+        initialTabs = self.roundTableaus(initialTabs)
 
         # Initialize best solution tracking
         self.bestSolution = None
         self.bestObjective = float('-inf') if not self.isMin else float('inf')
         self.nodeCounter = 0
 
-        # Stack to store nodes to process: (tableau, depth, node_id, constraints_added)
+        # Stack to store nodes to process: (tableau, depth, nodeId, constraintsAdded)
         nodeStack = [(initialTabs, 0, 0, [])]
 
         while nodeStack:
@@ -424,7 +418,7 @@ class BranchAndBound:
             self.nodeCounter += 1
 
             # Round current tableaus
-            currentTabs = self.round_tableaus(currentTabs)
+            currentTabs = self.roundTableaus(currentTabs)
 
             if self.isConsoleOutput:
                 print(f"\n--- Processing Node {nodeId} (Depth {depth}) ---")
@@ -481,14 +475,14 @@ class BranchAndBound:
 
                 if newTableausMin and len(newTableausMin) > 0:
                     # Round the new tableaus
-                    newTableausMin = self.round_tableaus(newTableausMin)
+                    newTableausMin = self.roundTableaus(newTableausMin)
                     childNodes.append((newTableausMin, depth + 1, self.nodeCounter + 1,
                                       constraintsPath + [f"x{newConMin[:-2].index(1)+1} <= {newConMin[-2]}"]))
                 elif self.isConsoleOutput:
                     print("MIN branch infeasible")
 
                 if self.isConsoleOutput and newTableausMin:
-                    self.print_tableau(
+                    self.printTableau(
                         newTableausMin[-1], "MIN branch final tableau")
 
             except Exception as e:
@@ -521,14 +515,14 @@ class BranchAndBound:
 
                 if newTableausMax and len(newTableausMax) > 0:
                     # Round the new tableaus
-                    newTableausMax = self.round_tableaus(newTableausMax)
+                    newTableausMax = self.roundTableaus(newTableausMax)
                     childNodes.append((newTableausMax, depth + 1, self.nodeCounter + 2,
                                       constraintsPath + [f"x{newConMax[:-2].index(1)+1} >= {newConMax[-2]}"]))
                 elif self.isConsoleOutput:
                     print("MAX branch infeasible")
 
                 if self.isConsoleOutput and newTableausMax:
-                    self.print_tableau(
+                    self.printTableau(
                         newTableausMax[-1], "MAX branch final tableau")
 
             except Exception as e:
@@ -570,14 +564,14 @@ class BranchAndBound:
                     a, b, isMin)
 
                 # Round the initial tableaus
-                self.newTableaus = self.round_tableaus(self.newTableaus)
+                self.newTableaus = self.roundTableaus(self.newTableaus)
 
                 if self.isConsoleOutput:
                     print("Initial LP relaxation solved")
                     solution = self.getCurrentSolution(self.newTableaus)
-                    obj_val = self.getObjectiveValue(self.newTableaus)
+                    objVal = self.getObjectiveValue(self.newTableaus)
                     print(f"Initial solution: {solution}")
-                    print(f"Initial objective: {obj_val}")
+                    print(f"Initial objective: {objVal}")
 
                 # Start branch and bound
                 bestSolution, bestObjective = self.doBranchAndBound(

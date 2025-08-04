@@ -143,29 +143,36 @@ class AddingActsCons:
         return displayCol, changingTable
 
     def doAddConstraint(self, objFunc, constraints, isMin, addedConstraints, absRule=False, reverseRows=False, negRuleState=False):
+        # Fix: Use the actual isMin and absRule parameters
         changingTable, matrixCbv, matrixB, matrixBNegOne, matrixCbvNegOne, basicVarSpots = self.getMathPrelims(
-            objFunc, constraints, isMin=False, absRule=False)
+            objFunc, constraints, isMin=isMin, absRule=absRule)
 
         newTab = copy.deepcopy(changingTable)
 
+        # Add new constraint rows to the tableau
         for k in range(len(addedConstraints)):
+            # Add a column for each new constraint's slack/surplus variable
             for i in range(len(changingTable)):
                 newTab[i].insert(-1, 0.0)
 
+            # Create the new constraint row
             newCon = []
             for i in range(len(changingTable[0]) + len(addedConstraints)):
                 newCon.append(0.0)
 
+            # Fill in the coefficients for the constraint
             for i in range(len(addedConstraints[k]) - 2):
                 newCon[i] = float(addedConstraints[k][i])
 
+            # Set the RHS value
             newCon[-1] = float(addedConstraints[k][-2])
 
+            # Add slack or surplus variable
             slackSpot = ((len(newCon) - len(addedConstraints)) - 1) + k
-            if addedConstraints[k][-1] == 1:
-                newCon[slackSpot] = -1.0
-            else:
-                newCon[slackSpot] = 1.0
+            if addedConstraints[k][-1] == 1:  # >= constraint
+                newCon[slackSpot] = -1.0  # surplus variable
+            else:  # <= constraint
+                newCon[slackSpot] = 1.0   # slack variable
 
             newTab.append(newCon)
 
@@ -178,60 +185,53 @@ class AddingActsCons:
             print("\n\n")
 
         displayTab = copy.deepcopy(newTab)
+        
+        # Fix tableau to maintain basic feasible solution
         for k in range(len(addedConstraints)):
-            for i in range(len(newTab[0])):
-                tLst = []
-                for j in range(len(newTab)):
-                    tLst.append(newTab[j][i])
-                if i in basicVarSpots:
-                    if tLst[-(len(addedConstraints) - (k))] != 0:
-                        testLst = []
+            constraint_row_index = len(newTab) - len(addedConstraints) + k
+            
+            # Check each basic variable column
+            for col_index in basicVarSpots:
+                # Get the coefficient in the new constraint row for this basic variable
+                coefficient_in_new_row = displayTab[constraint_row_index][col_index]
+                
+                if coefficient_in_new_row != 0:
+                    # Find the row where this basic variable has coefficient 1
+                    pivot_row = None
+                    for row_index in range(len(displayTab) - len(addedConstraints)):
+                        if displayTab[row_index][col_index] == 1:
+                            pivot_row = row_index
+                            break
+                    
+                    if pivot_row is not None:
+                        # Auto-detect if we need to reverse the row operation based on constraint type
+                        # Check if this is a >= constraint (surplus variable has coefficient -1)
+                        constraint_type = addedConstraints[k][-1]  # 1 for >=, 0 for <=
+                        auto_reverse = (constraint_type == 1)  # Reverse for >= constraints
+                        
+                        # Perform row operation to eliminate the coefficient
+                        for col in range(len(displayTab[0])):
+                            if auto_reverse:
+                                # Reverse operation for >= constraints: pivot row - coefficient * constraint row
+                                displayTab[constraint_row_index][col] = (
+                                    displayTab[pivot_row][col] - 
+                                    coefficient_in_new_row * displayTab[constraint_row_index][col]
+                                )
+                            else:
+                                # Standard row operation for <= constraints: constraint row - coefficient * pivot row
+                                displayTab[constraint_row_index][col] = (
+                                    displayTab[constraint_row_index][col] - 
+                                    coefficient_in_new_row * displayTab[pivot_row][col]
+                                )
 
-                        for ojCtr in range(len(objFunc)):
-                            testLst.append([])
-
-                        for ntCtr in range(len(newTab)):
-                            for ojCtr in range(len(objFunc)):
-                                testLst[ojCtr].append(newTab[ntCtr][ojCtr])
-
-                        colIndex = testLst.index(tLst)
-
-                        bottomRow = ((k) + len(newTab) - len(addedConstraints))
-                        for spotsCtr in range(len(newTab) - len(addedConstraints)):
-                            if testLst[colIndex][spotsCtr] == 1:
-                                topRow = spotsCtr
-                                tempNewRow = []
-
-                                for newTabCtr in range(len(newTab[0])):
-                                    if newTab[bottomRow][colIndex] == -1:
-                                        if reverseRows:
-                                            tempNewRow.append(
-                                                newTab[topRow][newTabCtr] + newTab[topRow][newTabCtr])
-                                        else:
-                                            tempNewRow.append(
-                                                newTab[bottomRow][newTabCtr] + newTab[topRow][newTabCtr])
-                                    elif newTab[bottomRow][colIndex] == 1:
-                                        if reverseRows:
-                                            tempNewRow.append(
-                                                newTab[topRow][newTabCtr] - newTab[bottomRow][newTabCtr])
-                                        else:
-                                            tempNewRow.append(
-                                                newTab[bottomRow][newTabCtr] - newTab[topRow][newTabCtr])
-                                    else:
-                                        pass
-
-                                displayTab[bottomRow] = tempNewRow
-
-        negRows = []
+        # Handle negative RHS values if negRuleState is True
         if negRuleState:
             for i in range(len(changingTable), len(displayTab)):
-                for j in range(len(changingTable[-1]) - 1, len(displayTab[i]) - 1):
-                    if displayTab[i][j] < 0:
-                        negRows.append(i)
-
-            for i in range(len(negRows)):
-                for j in range(len(displayTab[0])):
-                    displayTab[negRows[i]][j] = -displayTab[negRows[i]][j]
+                # Check if RHS (last column) is negative
+                if displayTab[i][-1] < 0:
+                    # Multiply entire row by -1
+                    for j in range(len(displayTab[i])):
+                        displayTab[i][j] = -displayTab[i][j]
 
         if self.isConsoleOutput:
             print("fixed tab")

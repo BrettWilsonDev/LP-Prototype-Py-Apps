@@ -23,6 +23,7 @@ class BranchAndBound:
         self.tolerance = 1e-6  # Tolerance for integer checks
         self.reset()
 
+
     def reset(self):
         self.dual = Dual()
         # self.mathPrelim = MathPrelims()
@@ -97,6 +98,15 @@ class BranchAndBound:
             # addedConstraints = [
             #     [1, 0, 3, 0],
             # ]
+
+        if testNum == 1:
+            objFunc = [3, 2, 4]  # maximize 3x + 2y + 4z
+            constraints = [
+                [2, 1, 3, 10, 0],
+                [1, 2, 1, 8, 0],
+                [3, 1, 2, 15, 0],
+            ]
+            isMin = False
 
         if testNum == -1:
             return None
@@ -277,6 +287,29 @@ class BranchAndBound:
 
         return displayTab, newTab
 
+    # def testIfBasicVarIsInt(self, tabs):
+    #     decisionVars = []
+    #     for i in range(len(self.objFunc)):
+    #         for j in range(len(tabs[-1])):
+    #             val = self.roundValue(tabs[-1][j][i])
+    #             if abs(val - 1.0) <= self.tolerance:
+    #                 rhsVal = self.roundValue(tabs[-1][j][-1])
+    #                 decisionVars.append(rhsVal)
+
+    #     xSpot = -1
+    #     rhsVal = None
+    #     for i in range(len(decisionVars)):
+    #         if not self.isIntegerValue(decisionVars[i]):
+    #             rhsVal = decisionVars[i]
+    #             xSpot = i
+    #             break
+
+    #     if xSpot == -1:
+    #         return None, None
+    #     else:
+    #         return xSpot, rhsVal
+
+
     def testIfBasicVarIsInt(self, tabs):
         decisionVars = []
         for i in range(len(self.objFunc)):
@@ -286,18 +319,25 @@ class BranchAndBound:
                     rhsVal = self.roundValue(tabs[-1][j][-1])
                     decisionVars.append(rhsVal)
 
-        xSpot = -1
-        rhsVal = None
+        # Find the fractional variable closest to 0.5
+        bestXSpot = -1
+        bestRhsVal = None
+        minDistanceToHalf = float('inf')
+        
         for i in range(len(decisionVars)):
             if not self.isIntegerValue(decisionVars[i]):
-                rhsVal = decisionVars[i]
-                xSpot = i
-                break
+                fractionalPart = decisionVars[i] - math.floor(decisionVars[i])
+                distanceToHalf = abs(fractionalPart - 0.5)
+                
+                if distanceToHalf < minDistanceToHalf:
+                    minDistanceToHalf = distanceToHalf
+                    bestXSpot = i
+                    bestRhsVal = decisionVars[i]
 
-        if xSpot == -1:
+        if bestXSpot == -1:
             return None, None
         else:
-            return xSpot, rhsVal
+            return bestXSpot, bestRhsVal
 
     def makeBranch(self, tabs):
         xSpot, rhsVal = self.testIfBasicVarIsInt(tabs)
@@ -482,6 +522,9 @@ class BranchAndBound:
                     print("MIN branch infeasible")
 
                 if self.isConsoleOutput and newTableausMin:
+                    for i in range(len(newTableausMin) - 1):
+                        self.printTableau(
+                            newTableausMin[i], f"MIN branch Tableau {i+1}")
                     self.printTableau(
                         newTableausMin[-1], "MIN branch final tableau")
 
@@ -512,6 +555,7 @@ class BranchAndBound:
 
                 newTableausMax, self.changingVars, self.optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow = self.dual.doDualSimplex(
                     [], [], self.isMin, displayTabMax)
+        
 
                 if newTableausMax and len(newTableausMax) > 0:
                     # Round the new tableaus
@@ -522,12 +566,16 @@ class BranchAndBound:
                     print("MAX branch infeasible")
 
                 if self.isConsoleOutput and newTableausMax:
+                    for i in range(len(newTableausMax) - 1):
+                        self.printTableau(
+                            newTableausMax[i], f"MAX branch Tableau {i+1}")
                     self.printTableau(
                         newTableausMax[-1], "MAX branch final tableau")
 
             except Exception as e:
                 if self.isConsoleOutput:
                     print(f"MAX branch failed: {e}")
+
 
             # Add child nodes to stack (reverse order for depth-first search)
             for child in reversed(childNodes):
@@ -568,6 +616,9 @@ class BranchAndBound:
 
                 if self.isConsoleOutput:
                     print("Initial LP relaxation solved")
+                    for i in range(len(self.newTableaus) - 1):
+                        self.printTableau(self.newTableaus[i], f"Initial Tableau {i+1}")
+                    self.printTableau(self.newTableaus[-1], "Initial tableau solved")
                     solution = self.getCurrentSolution(self.newTableaus)
                     objVal = self.getObjectiveValue(self.newTableaus)
                     print(f"Initial solution: {solution}")

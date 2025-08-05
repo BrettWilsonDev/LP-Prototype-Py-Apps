@@ -21,6 +21,7 @@ class CuttingPlane():
         self.isConsoleOutput = isConsoleOutput
         self.precision = 4  
         self.tolerance = 1e-6 
+        self.maxIterations = 10  # Add maximum iterations to prevent infinite loops
         self.reset()
 
     def reset(self):
@@ -89,6 +90,13 @@ class CuttingPlane():
                            [9, 5, 45, 0],
                            ]
 
+        if testNum == 2:
+            isMin = False
+            objFunc = [5, 2]
+            constraints = [[3, 1, 12, 0],
+                           [1, 1, 5, 0],
+                           ]
+
         if testNum == -1:
             return None, None, None
         else:
@@ -108,6 +116,17 @@ class CuttingPlane():
             return round(float(value), self.precision)
         except (ValueError, TypeError):
             return value
+        
+    def roundMatrix(self, matrix):
+        if isinstance(matrix, list):
+            if isinstance(matrix[0], list):
+                # 2D matrix
+                return [[self.roundValue(val) for val in row] for row in matrix]
+            else:
+                # 1D array
+                return [self.roundValue(val) for val in matrix]
+        else:
+            return self.roundValue(matrix)
 
     def gomoryCut(self, row, verbose=False):
         if len(row) < 2:
@@ -170,62 +189,231 @@ class CuttingPlane():
         result = [float(x) for x in fracCoefs] + [float(negFracRhs)]
 
         return result
+    
+    def getBasicVarSpots(self, tableaus):
+        # get the spots of the basic variables
+        basicVarSpots = []
+        for k in range(len(tableaus[-1][-1])):
+            columnIndex = k
+            tCVars = []
+
+            for i in range(len(tableaus[-1])):
+                columnValue = self.roundValue(tableaus[-1][i][columnIndex])
+                tCVars.append(columnValue)
+
+            sumVals = self.roundValue(sum(tCVars))
+            if abs(sumVals - 1.0) <= self.tolerance:
+                basicVarSpots.append(k)
+
+        # get the columns of the basic variables
+        basicVarCols = []
+        for i in range(len(tableaus[-1][-1])):
+            tLst = []
+            if i in basicVarSpots:
+                for j in range(len(tableaus[-1])):
+                    roundedVal = self.roundValue(tableaus[-1][j][i])
+                    tLst.append(roundedVal)
+                basicVarCols.append(tLst)
+
+        # sort the cbv according the basic var positions
+        zippedCbv = list(zip(basicVarCols, basicVarSpots))
+        sortedCbvZipped = sorted(
+            zippedCbv, key=lambda x: x[0].index(1.0) if 1.0 in x[0] else (x[0].index(1) if 1 in x[0] else len(x[0])))
+        if sortedCbvZipped:
+            sortedBasicVars, basicVarSpots = zip(*sortedCbvZipped)
+        else:
+            basicVarSpots = []
+
+        return basicVarSpots
+    
+    def doAddConstraint(self, addedConstraints, overRideTab=None):
+        if overRideTab is not None:
+            changingTable = copy.deepcopy(overRideTab)
+            # Round the input table
+            changingTable = self.roundMatrix(changingTable)
+            tempTabs = []
+            tempTabs.append(changingTable)
+            basicVarSpots = self.getBasicVarSpots(tempTabs)
+        else:
+            print("needs an input table")
+            return
+
+        newTab = copy.deepcopy(changingTable)
+
+        # Add new constraint rows to the tableau
+        for k in range(len(addedConstraints)):
+            # Add a column for each new constraint's slack/surplus variable
+            for i in range(len(changingTable)):
+                newTab[i].insert(-1, 0.0)
+
+            # Create the new constraint row
+            newCon = []
+            for i in range(len(changingTable[0]) + len(addedConstraints)):
+                newCon.append(0.0)
+
+            # Fill in the coefficients for the constraint
+            for i in range(len(addedConstraints[k]) - 2):
+                newCon[i] = self.roundValue(addedConstraints[k][i])
+
+            # Set the RHS value
+            newCon[-1] = self.roundValue(addedConstraints[k][-2])
+
+            # Add slack or surplus variable
+            slackSpot = ((len(newCon) - len(addedConstraints)) - 1) + k
+            if addedConstraints[k][-1] == 1:  # >= constraint
+                newCon[slackSpot] = -1.0  # surplus variable
+            else:  # <= constraint
+                newCon[slackSpot] = 1.0   # slack variable
+
+            newTab.append(newCon)
+
+        # Round the new tableau
+        newTab = self.roundMatrix(newTab)
+        self.printTableau(newTab, "unfixed tab")
+
+        displayTab = copy.deepcopy(newTab)
+
+        # Fix tableau to maintain basic feasible solution
+        for k in range(len(addedConstraints)):
+            constraintRowIndex = len(newTab) - len(addedConstraints) + k
+
+            # Check each basic variable column
+            for colIndex in basicVarSpots:
+                # Get the coefficient in the new constraint row for this basic variable
+                coefficientInNewRow = self.roundValue(
+                    displayTab[constraintRowIndex][colIndex])
+
+                if abs(coefficientInNewRow) > self.tolerance:
+                    # Find the row where this basic variable has coefficient 1
+                    pivotRow = None
+                    for rowIndex in range(len(displayTab) - len(addedConstraints)):
+                        if abs(self.roundValue(displayTab[rowIndex][colIndex]) - 1.0) <= self.tolerance:
+                            pivotRow = rowIndex
+                            break
+
+                    if pivotRow is not None:
+                        # Auto-detect if we need to reverse the row operation based on constraint type
+                        constraintType = addedConstraints[k][-1]
+                        autoReverse = (constraintType == 1)
+
+                        # Perform row operation to eliminate the coefficient
+                        for col in range(len(displayTab[0])):
+                            pivotVal = self.roundValue(
+                                displayTab[pivotRow][col])
+                            constraintVal = self.roundValue(
+                                displayTab[constraintRowIndex][col])
+
+                            if autoReverse:
+                                newVal = pivotVal - coefficientInNewRow * constraintVal
+                            else:
+                                newVal = constraintVal - coefficientInNewRow * pivotVal
+
+                            displayTab[constraintRowIndex][col] = self.roundValue(
+                                newVal)
+
+        # Round the final tableau
+        displayTab = self.roundMatrix(displayTab)
+        self.printTableau(displayTab, "fixed tab")
+
+        return displayTab, newTab
+
+    def hasFractionalSolution(self, tableau):
+        """Check if the current optimal solution has fractional basic variables"""
+        basicVarSpots = self.getBasicVarSpots([tableau])
+        
+        for i in range(1, len(tableau)):  # Skip objective row
+            rhsValue = self.roundValue(tableau[i][-1])
+            decimalPart = abs(rhsValue - round(rhsValue))
+            
+            if decimalPart > self.tolerance:
+                return True
+        
+        return False
+
+    def findMostFractionalRow(self, tableau):
+        """Find the row with the most fractional RHS value for Gomory cut"""
+        rhsDecimals = []
+        for i in range(1, len(tableau)):
+            decimalPart = self.roundValue(tableau[i][-1] - int(tableau[i][-1]))
+            rhsDecimals.append(self.roundValue(decimalPart))
+
+        rhsPickList = [self.roundValue(abs(dec - 0.5)) for dec in rhsDecimals]
+        pickedRowIndex = rhsPickList.index(min(rhsPickList))
+        
+        # Convert to actual row index in tableau
+        pickedRow = ((self.getBasicVarSpots([tableau])).index(pickedRowIndex)) + 1
+        
+        return pickedRow
 
     def test(self):
         if self.testInput(self.testInputSelected) is not None:
             self.objFunc, self.constraints, self.isMin = self.testInput(
                 self.testInputSelected)
 
-        # self.gomoryCut([-1.25, 0.25, 3.75], verbose=True)
-        # self.gomoryCut([0.2, -0.6, 1.6], verbose=True)
-
+        # Initial dual simplex solution
         workingTableaus, self.changingVars, self.optimalSolution = self.dual.doDualSimplex(
             self.objFunc, self.constraints, self.isMin)
-
-        for i in range(len(workingTableaus)):
-            self.printTableau(workingTableaus[i], title=f"Tableau {i+1}")
-
-        rhsDecimals = []
-        for i in range(1, len(workingTableaus[-1])):
-            decimalPart = workingTableaus[-1][i][-1] - int(workingTableaus[-1][i][-1])
-            rhsDecimals.append(self.roundValue(decimalPart))
-
-        rhsPickList = []
-        for i in range(len(rhsDecimals)):
-            rhsPickList.append(self.roundValue((rhsDecimals[i] * 100) - 0.5))
-
-        if (self.isMin):
-            pickedRow = rhsPickList.index(min(rhsPickList)) + 1
-        else:
-            pickedRow = rhsPickList.index(max(rhsPickList)) + 1
-
-        # for i in range(1, len(newTableaus[-1])):
-        print(self.roundValue(workingTableaus[-1][pickedRow]))
-
-        tempList = self.roundValue(workingTableaus[-1][pickedRow])
-        tempList = tempList[len(self.objFunc):]
-        newCon = self.gomoryCut(tempList, verbose=True)
-
-        for i in range(len(newCon)):
-            newCon[i] = self.roundValue(newCon[i])
-
-        # self.doAddConstraint([newCon], newTableaus[-1])
-
-        for i in range(len(self.objFunc)):
-            newCon.insert(i, 0)
-
-        print(newCon)
-
-        workingTableaus[-1].append(newCon)
-
-        self.printTableau(
-            workingTableaus[-1], title=f"Tableau with new cutting plane constraint")
-
-        finalTableaus, self.changingVars, self.optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow = self.dual.doDualSimplex(
-            [], [], self.isMin, workingTableaus[-1])
         
-        for i in range(len(finalTableaus)):
-            self.printTableau(finalTableaus[i], title=f"Tableau {i+1}")
+        for i in range(len(workingTableaus)):
+            self.printTableau(workingTableaus[i], title=f"Initial Tableau {i+1}")
+
+        currentTableau = workingTableaus[-1]
+        iteration = 1
+
+        # Recursive cutting plane loop
+        while self.hasFractionalSolution(currentTableau) and iteration <= self.maxIterations:
+            print(f"\n=== CUTTING PLANE ITERATION {iteration} ===")
+            
+            # Find the most fractional row for Gomory cut
+            pickedRow = self.findMostFractionalRow(currentTableau)
+            
+            print(f"Selected row for Gomory cut: {self.roundValue(currentTableau[pickedRow])}")
+
+            # Generate Gomory cut from the selected row
+            tempList = self.roundValue(currentTableau[pickedRow])
+            tempList = tempList[len(self.objFunc):]  # Remove objective function coefficients
+            newCon = self.gomoryCut(tempList, verbose=True)
+
+            for i in range(len(newCon)):
+                newCon[i] = self.roundValue(newCon[i])
+
+            # Prepare the new constraint for tableau format
+            for i in range(len(self.objFunc)):
+                newCon.insert(i, 0)
+
+            newCon.insert(-1, 1)  # Add slack variable coefficient
+            print(f"Generated cutting plane constraint: {newCon}")
+
+            # Add new column for the slack variable
+            print("Adding new slack variable column...")
+            for i in range(len(currentTableau)):
+                currentTableau[i].insert(-1, 0)
+
+            # Add the new constraint row
+            currentTableau.append(newCon)
+
+            self.printTableau(currentTableau, title=f"Tableau with cutting plane constraint {iteration}")
+
+            # Solve the new problem with dual simplex
+            finalTableaus, self.changingVars, self.optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow = self.dual.doDualSimplex(
+                [], [], self.isMin, currentTableau)
+            
+            for i in range(len(finalTableaus)):
+                self.printTableau(finalTableaus[i], title=f"Iteration {iteration} - Tableau {i+1}")
+
+            # Update current tableau for next iteration
+            currentTableau = finalTableaus[-1]
+            iteration += 1
+
+        # Final results
+        if not self.hasFractionalSolution(currentTableau):
+            print(f"\n=== OPTIMAL INTEGER SOLUTION FOUND ===")
+            print(f"Solution achieved after {iteration-1} cutting plane iterations")
+        else:
+            print(f"\n=== MAXIMUM ITERATIONS REACHED ===")
+            print(f"Stopped after {self.maxIterations} iterations")
+            
+        self.printTableau(currentTableau, title="Final Optimal Tableau")
 
 
 def main(isConsoleOutput=False):

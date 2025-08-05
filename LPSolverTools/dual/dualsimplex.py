@@ -201,7 +201,11 @@ class DualSimplex:
                 dualPivotThetas, key=lambda x: x if x > 0 else float('inf'))
 
         rowIndex = pivotRow
-        colIndex = dualPivotThetas.index(smallestPosPivotTheta)
+
+        try:
+            colIndex = dualPivotThetas.index(smallestPosPivotTheta)
+        except:
+            return tab, None
 
         oldTab = tab.copy()
 
@@ -375,6 +379,15 @@ class DualSimplex:
                 break
 
             tab, thetaRow = self.doDualPivotOperation(tableaus[-1])
+
+            if thetaRow is None:
+                if tabOverride is None:
+                    if self.isConsoleOutput:
+                        print("\nNo Optimal Solution Found")
+                    return None, None, None
+                else:
+                    return None, None, None, None, None, None
+
             for items in tab:
                 for item in items:
                     if item == -0.0:

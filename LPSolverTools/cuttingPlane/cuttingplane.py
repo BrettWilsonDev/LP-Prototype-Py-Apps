@@ -26,7 +26,7 @@ class CuttingPlane():
 
     def reset(self):
         self.dual = Dual()
-        self.testInputSelected = 0
+        self.testInputSelected = 1
 
         self.isMin = False
 
@@ -226,97 +226,6 @@ class CuttingPlane():
 
         return basicVarSpots
     
-    def doAddConstraint(self, addedConstraints, overRideTab=None):
-        if overRideTab is not None:
-            changingTable = copy.deepcopy(overRideTab)
-            # Round the input table
-            changingTable = self.roundMatrix(changingTable)
-            tempTabs = []
-            tempTabs.append(changingTable)
-            basicVarSpots = self.getBasicVarSpots(tempTabs)
-        else:
-            print("needs an input table")
-            return
-
-        newTab = copy.deepcopy(changingTable)
-
-        # Add new constraint rows to the tableau
-        for k in range(len(addedConstraints)):
-            # Add a column for each new constraint's slack/surplus variable
-            for i in range(len(changingTable)):
-                newTab[i].insert(-1, 0.0)
-
-            # Create the new constraint row
-            newCon = []
-            for i in range(len(changingTable[0]) + len(addedConstraints)):
-                newCon.append(0.0)
-
-            # Fill in the coefficients for the constraint
-            for i in range(len(addedConstraints[k]) - 2):
-                newCon[i] = self.roundValue(addedConstraints[k][i])
-
-            # Set the RHS value
-            newCon[-1] = self.roundValue(addedConstraints[k][-2])
-
-            # Add slack or surplus variable
-            slackSpot = ((len(newCon) - len(addedConstraints)) - 1) + k
-            if addedConstraints[k][-1] == 1:  # >= constraint
-                newCon[slackSpot] = -1.0  # surplus variable
-            else:  # <= constraint
-                newCon[slackSpot] = 1.0   # slack variable
-
-            newTab.append(newCon)
-
-        # Round the new tableau
-        newTab = self.roundMatrix(newTab)
-        self.printTableau(newTab, "unfixed tab")
-
-        displayTab = copy.deepcopy(newTab)
-
-        # Fix tableau to maintain basic feasible solution
-        for k in range(len(addedConstraints)):
-            constraintRowIndex = len(newTab) - len(addedConstraints) + k
-
-            # Check each basic variable column
-            for colIndex in basicVarSpots:
-                # Get the coefficient in the new constraint row for this basic variable
-                coefficientInNewRow = self.roundValue(
-                    displayTab[constraintRowIndex][colIndex])
-
-                if abs(coefficientInNewRow) > self.tolerance:
-                    # Find the row where this basic variable has coefficient 1
-                    pivotRow = None
-                    for rowIndex in range(len(displayTab) - len(addedConstraints)):
-                        if abs(self.roundValue(displayTab[rowIndex][colIndex]) - 1.0) <= self.tolerance:
-                            pivotRow = rowIndex
-                            break
-
-                    if pivotRow is not None:
-                        # Auto-detect if we need to reverse the row operation based on constraint type
-                        constraintType = addedConstraints[k][-1]
-                        autoReverse = (constraintType == 1)
-
-                        # Perform row operation to eliminate the coefficient
-                        for col in range(len(displayTab[0])):
-                            pivotVal = self.roundValue(
-                                displayTab[pivotRow][col])
-                            constraintVal = self.roundValue(
-                                displayTab[constraintRowIndex][col])
-
-                            if autoReverse:
-                                newVal = pivotVal - coefficientInNewRow * constraintVal
-                            else:
-                                newVal = constraintVal - coefficientInNewRow * pivotVal
-
-                            displayTab[constraintRowIndex][col] = self.roundValue(
-                                newVal)
-
-        # Round the final tableau
-        displayTab = self.roundMatrix(displayTab)
-        self.printTableau(displayTab, "fixed tab")
-
-        return displayTab, newTab
-
     def hasFractionalSolution(self, tableau):
         """Check if the current optimal solution has fractional basic variables"""
         basicVarSpots = self.getBasicVarSpots([tableau])
@@ -344,20 +253,10 @@ class CuttingPlane():
         pickedRow = ((self.getBasicVarSpots([tableau])).index(pickedRowIndex)) + 1
         
         return pickedRow
+    
+    def doCuttingPlane(self, workingTableau):
 
-    def test(self):
-        if self.testInput(self.testInputSelected) is not None:
-            self.objFunc, self.constraints, self.isMin = self.testInput(
-                self.testInputSelected)
-
-        # Initial dual simplex solution
-        workingTableaus, self.changingVars, self.optimalSolution = self.dual.doDualSimplex(
-            self.objFunc, self.constraints, self.isMin)
-        
-        for i in range(len(workingTableaus)):
-            self.printTableau(workingTableaus[i], title=f"Initial Tableau {i+1}")
-
-        currentTableau = workingTableaus[-1]
+        currentTableau = workingTableau
         iteration = 1
 
         # Recursive cutting plane loop
@@ -414,6 +313,22 @@ class CuttingPlane():
             print(f"Stopped after {self.maxIterations} iterations")
             
         self.printTableau(currentTableau, title="Final Optimal Tableau")
+
+        return currentTableau
+
+    def test(self):
+        if self.testInput(self.testInputSelected) is not None:
+            self.objFunc, self.constraints, self.isMin = self.testInput(
+                self.testInputSelected)
+
+        # Initial dual simplex solution
+        workingTableaus, self.changingVars, self.optimalSolution = self.dual.doDualSimplex(
+            self.objFunc, self.constraints, self.isMin)
+        
+        for i in range(len(workingTableaus)):
+            self.printTableau(workingTableaus[i], title=f"Initial Tableau {i+1}")
+
+        self.doCuttingPlane(workingTableaus[-1])
 
 
 def main(isConsoleOutput=False):

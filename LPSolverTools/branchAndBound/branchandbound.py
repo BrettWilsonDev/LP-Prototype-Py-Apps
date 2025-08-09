@@ -85,19 +85,30 @@ class BranchAndBound:
         self.bestSolution = None
         self.bestObjective = float('-inf') if not self.isMin else float('inf')
         self.nodeCounter = 0
+        self.allSolutions = []  # Store all integer solutions found
+        self.enablePruning = False  # NEW: Control whether to use pruning
 
     def testInput(self, testNum=-1):
-        isMin = False
+        # isMin = False
 
-        if testNum == 0:
-            objFunc = [8, 5]
-            constraints = [[1, 1, 6, 0],
-                           [9, 5, 45, 0],
-                           ]
+        # if testNum == 0:
+        #     objFunc = [8, 5]
+        #     constraints = [[1, 1, 6, 0],
+        #                    [9, 5, 45, 0],
+        #                    ]
 
             # addedConstraints = [
             #     [1, 0, 3, 0],
             # ]
+
+
+        isMin = False
+
+        if testNum == 0:
+            objFunc = [13, 8]
+            constraints = [[1, 2, 10, 0],
+                           [5, 2, 20, 0],
+                           ]
 
         if testNum == 1:
             objFunc = [3, 2, 4]  # maximize 3x + 2y + 4z
@@ -287,29 +298,6 @@ class BranchAndBound:
 
         return displayTab, newTab
 
-    # def testIfBasicVarIsInt(self, tabs):
-    #     decisionVars = []
-    #     for i in range(len(self.objFunc)):
-    #         for j in range(len(tabs[-1])):
-    #             val = self.roundValue(tabs[-1][j][i])
-    #             if abs(val - 1.0) <= self.tolerance:
-    #                 rhsVal = self.roundValue(tabs[-1][j][-1])
-    #                 decisionVars.append(rhsVal)
-
-    #     xSpot = -1
-    #     rhsVal = None
-    #     for i in range(len(decisionVars)):
-    #         if not self.isIntegerValue(decisionVars[i]):
-    #             rhsVal = decisionVars[i]
-    #             xSpot = i
-    #             break
-
-    #     if xSpot == -1:
-    #         return None, None
-    #     else:
-    #         return xSpot, rhsVal
-
-
     def testIfBasicVarIsInt(self, tabs):
         decisionVars = []
         for i in range(len(self.objFunc)):
@@ -405,6 +393,9 @@ class BranchAndBound:
             return False
 
         if self.isIntegerSolution(solution):
+            # Store ALL integer solutions found
+            self.allSolutions.append((solution.copy(), objVal))
+            
             if self.isMin:
                 if objVal < self.bestObjective:
                     self.bestObjective = objVal
@@ -413,6 +404,10 @@ class BranchAndBound:
                         print(
                             f"New best integer solution found: {solution} with objective {objVal}")
                     return True
+                else:
+                    if self.isConsoleOutput:
+                        print(
+                            f"Integer solution found: {solution} with objective {objVal} (not better than current best)")
             else:
                 if objVal > self.bestObjective:
                     self.bestObjective = objVal
@@ -421,9 +416,17 @@ class BranchAndBound:
                         print(
                             f"New best integer solution found: {solution} with objective {objVal}")
                     return True
+                else:
+                    if self.isConsoleOutput:
+                        print(
+                            f"Integer solution found: {solution} with objective {objVal} (not better than current best)")
         return False
 
     def shouldPrune(self, tabs):
+        # NEW: Only prune if pruning is enabled
+        if not self.enablePruning:
+            return False
+            
         objVal = self.getObjectiveValue(tabs)
 
         if objVal is None:
@@ -437,9 +440,22 @@ class BranchAndBound:
 
         return False
 
-    def doBranchAndBound(self, initialTabs):
+    def doBranchAndBound(self, initialTabs, enablePruning=False):
+        """
+        Performs branch and bound algorithm.
+        
+        Args:
+            initialTabs: Initial LP relaxation tableau
+            enablePruning: If True, uses standard pruning. If False, explores all branches.
+        """
+        self.enablePruning = enablePruning
+        
         if self.isConsoleOutput:
             print("Starting Branch and Bound Algorithm")
+            if enablePruning:
+                print("Pruning: ENABLED (standard branch and bound)")
+            else:
+                print("Pruning: DISABLED (complete tree exploration)")
             print("="*50)
 
         # Round initial tableaus
@@ -449,6 +465,7 @@ class BranchAndBound:
         self.bestSolution = None
         self.bestObjective = float('-inf') if not self.isMin else float('inf')
         self.nodeCounter = 0
+        self.allSolutions = []
 
         # Stack to store nodes to process: (tableau, depth, nodeId, constraintsAdded)
         nodeStack = [(initialTabs, 0, 0, [])]
@@ -464,7 +481,7 @@ class BranchAndBound:
                 print(f"\n--- Processing Node {nodeId} (Depth {depth}) ---")
                 print(f"Constraints path: {constraintsPath}")
 
-            # Check if current solution should be pruned
+            # Check if current solution should be pruned (only if pruning enabled)
             if self.shouldPrune(currentTabs):
                 if self.isConsoleOutput:
                     print(f"Node {nodeId} pruned by bound")
@@ -592,10 +609,22 @@ class BranchAndBound:
             else:
                 print("No integer solution found")
             print(f"Total nodes processed: {self.nodeCounter}")
+            
+            # Print all integer solutions found
+            if self.allSolutions:
+                print(f"\nAll integer solutions found ({len(self.allSolutions)}):")
+                for i, (sol, obj) in enumerate(self.allSolutions, 1):
+                    print(f"  {i}. Solution: {sol}, Objective: {obj}")
 
         return self.bestSolution, self.bestObjective
 
-    def test(self):
+    def test(self, enablePruning=False):
+        """
+        Test method with option to enable/disable pruning
+        
+        Args:
+            enablePruning: If True, uses standard pruning. If False, explores all branches.
+        """
         try:
             if self.testInput(self.testInputSelected) is not None:
                 self.objFunc, self.constraints, isMin = self.testInput(
@@ -626,7 +655,7 @@ class BranchAndBound:
 
                 # Start branch and bound
                 bestSolution, bestObjective = self.doBranchAndBound(
-                    self.newTableaus)
+                    self.newTableaus, enablePruning)
 
             except Exception as e:
                 if self.isConsoleOutput:
@@ -638,10 +667,21 @@ class BranchAndBound:
             raise
 
 
-def main(isConsoleOutput=False):
+def main(isConsoleOutput=False, enablePruning=False):
+    """
+    Main function with pruning control
+    
+    Args:
+        isConsoleOutput: Enable console output
+        enablePruning: If True, uses standard pruning. If False, explores all branches.
+    """
     classInstance = BranchAndBound(isConsoleOutput)
-    classInstance.test()
+    classInstance.test(enablePruning)
 
 
 if __name__ == "__main__":
-    main(True)
+    # To run with complete tree exploration (no pruning):
+    main(True, False)
+    
+    # To run with standard pruning:
+    # main(True, True)

@@ -6,6 +6,7 @@ import math
 import copy
 import sys
 import os
+from fractions import Fraction
 
 from decimal import Decimal, getcontext, ROUND_HALF_UP
 
@@ -26,7 +27,7 @@ class CuttingPlane():
 
     def reset(self):
         self.dual = Dual()
-        self.testInputSelected = 1
+        self.testInputSelected = 0
 
         self.isMin = False
 
@@ -77,10 +78,17 @@ class CuttingPlane():
     def testInput(self, testNum=-1):
 
         if testNum == 0:
-            isMin = True
-            objFunc = [6, 8]
-            constraints = [[3, 1, 4, 1],
-                           [1, 2, 4, 1],
+            # isMin = True
+            # objFunc = [6, 8]
+            # constraints = [[3, 1, 4, 1],
+            #                [1, 2, 4, 1],
+            #                ]
+            
+
+            isMin = False
+            objFunc = [13, 8]
+            constraints = [[1, 2, 10, 0],
+                           [5, 2, 20, 0],
                            ]
             
         if testNum == 1:
@@ -112,8 +120,15 @@ class CuttingPlane():
             print()
 
     def roundValue(self, value):
+        """Improved rounding with fraction conversion to avoid floating point errors"""
         try:
-            return round(float(value), self.precision)
+            # Convert to fraction first, then to float with proper rounding
+            if isinstance(value, (int, float)):
+                # Use fractions to get exact representation, then round
+                frac = Fraction(value).limit_denominator(10000)
+                rounded = round(float(frac), self.precision)
+                return rounded
+            return value
         except (ValueError, TypeError):
             return value
         
@@ -128,160 +143,151 @@ class CuttingPlane():
         else:
             return self.roundValue(matrix)
 
+    def cleanValue(self, value, tolerance=1e-10):
+        """Clean up floating point values to remove tiny errors"""
+        if abs(value) < tolerance:
+            return 0.0
+        
+        # Try to convert to a simple fraction
+        frac = Fraction(value).limit_denominator(1000)
+        if abs(float(frac) - value) < tolerance:
+            return float(frac)
+        
+        return value
+
     def gomoryCut(self, row, verbose=False):
         if len(row) < 2:
             raise ValueError(
                 "Input must have at least one coefficient and RHS.")
 
-        getcontext().prec = 12
-        getcontext().rounding = ROUND_HALF_UP
-        def toDecimal(x): return Decimal(str(x)).quantize(Decimal("0.0000001"))
+        # Clean the input row first
+        cleanRow = [self.cleanValue(x) for x in row]
+        
+        # Use fractions for exact arithmetic
+        coefs = [Fraction(x).limit_denominator(10000) for x in cleanRow[:-1]]
+        rhs = Fraction(cleanRow[-1]).limit_denominator(10000)
 
-        coefs = [toDecimal(x) for x in row[:-1]]
-        rhs = toDecimal(row[-1])
-
-        def getFraction(x):
-            f = x - x.to_integral_value(rounding=ROUND_HALF_UP)
-            if f < 0:
-                f += 1
-            return f
+        def getFractionalPart(x):
+            """Get the fractional part of a number"""
+            integer_part = int(x)
+            fractional_part = x - integer_part
+            
+            # If negative, adjust the fractional part to be positive
+            if fractional_part < 0:
+                fractional_part += 1
+                
+            return fractional_part
 
         if verbose:
-            # Step 1: Original row
-            terms = " + ".join([f"{c:.4f}e{i+1}".replace(".", ",")
-                               for i, c in enumerate(coefs)])
-            print(f"Xn + {terms} = {rhs:.4f}".replace(".", ","))
+            print(f"Original row: {[float(c) for c in coefs]} | {float(rhs)}")
 
-            # Step 2: Integer + fractional decomposition
-            intParts = [c.to_integral_value(
-                rounding=ROUND_HALF_UP) for c in coefs]
-            fracParts = [getFraction(c) for c in coefs]
-            expanded = []
-            for i in range(len(coefs)):
-                expanded.append(f"{intParts[i]}e{i+1}")
-                if fracParts[i] != 0:
-                    expanded.append(
-                        f"+ {fracParts[i]:.4f}e{i+1}".replace(".", ","))
-            rhsInt = rhs.to_integral_value(rounding=ROUND_HALF_UP)
-            rhsFrac = getFraction(rhs)
-            rhsExpr = f"{rhsInt} + {rhsFrac:.4f}".replace(".", ",")
-            print(f"Xn + " + " + ".join(expanded) + f" = {rhsExpr}")
+        # Generate the Gomory cut using exact fraction arithmetic
+        fracCoefs = []
+        for c in coefs:
+            frac_part = getFractionalPart(c)
+            fracCoefs.append(-frac_part)
+        
+        rhsFrac = getFractionalPart(rhs)
+        negFracRhs = -rhsFrac
 
-            # Step 3: Move int terms to RHS and flip signs
-            negFracTerms = [
-                f"- {f:.4f}e{i+1}".replace(".", ",") for i, f in enumerate(fracParts) if f != 0]
-            print(
-                f"Xn + 0e1 -1e2 - 1 = {' '.join(negFracTerms)} + {rhsFrac:.4f}".replace(".", ","))
-
-            # Step 4: Inequality form with constant on left
-            gomoryLhs = " ".join(negFracTerms) + \
-                f" + {rhsFrac:.4f}".replace(".", ",")
-            print(f"{gomoryLhs} <= 0")
-
-            # Step 5: Final Gomory cut
-            print(f"{' '.join(negFracTerms)} <= -{rhsFrac:.4f}".replace(".", ","))
-
-        # Actual computation
-        fracCoefs = [-getFraction(c) for c in coefs]
-        fracRhs = getFraction(rhs)
-        negFracRhs = -fracRhs
-
-        result = [float(x) for x in fracCoefs] + [float(negFracRhs)]
+        # Convert back to floats and clean
+        result = [self.cleanValue(float(x)) for x in fracCoefs] + [self.cleanValue(float(negFracRhs))]
+        
+        if verbose:
+            print(f"Gomory cut coefficients: {result}")
 
         return result
     
     def getBasicVarSpots(self, tableaus):
         # get the spots of the basic variables
         basicVarSpots = []
-        for k in range(len(tableaus[-1][-1])):
+        tableau = tableaus[-1]
+        
+        for k in range(len(tableau[0])):
             columnIndex = k
-            tCVars = []
-
-            for i in range(len(tableaus[-1])):
-                columnValue = self.roundValue(tableaus[-1][i][columnIndex])
-                tCVars.append(columnValue)
-
-            sumVals = self.roundValue(sum(tCVars))
-            if abs(sumVals - 1.0) <= self.tolerance:
+            column = [self.cleanValue(tableau[i][columnIndex]) for i in range(len(tableau))]
+            
+            # Check if this is a unit vector (exactly one 1, rest 0s)
+            ones_count = sum(1 for x in column if abs(x - 1.0) < self.tolerance)
+            zeros_count = sum(1 for x in column if abs(x) < self.tolerance)
+            
+            if ones_count == 1 and zeros_count == len(column) - 1:
                 basicVarSpots.append(k)
-
-        # get the columns of the basic variables
-        basicVarCols = []
-        for i in range(len(tableaus[-1][-1])):
-            tLst = []
-            if i in basicVarSpots:
-                for j in range(len(tableaus[-1])):
-                    roundedVal = self.roundValue(tableaus[-1][j][i])
-                    tLst.append(roundedVal)
-                basicVarCols.append(tLst)
-
-        # sort the cbv according the basic var positions
-        zippedCbv = list(zip(basicVarCols, basicVarSpots))
-        sortedCbvZipped = sorted(
-            zippedCbv, key=lambda x: x[0].index(1.0) if 1.0 in x[0] else (x[0].index(1) if 1 in x[0] else len(x[0])))
-        if sortedCbvZipped:
-            sortedBasicVars, basicVarSpots = zip(*sortedCbvZipped)
-        else:
-            basicVarSpots = []
 
         return basicVarSpots
     
     def hasFractionalSolution(self, tableau):
         """Check if the current optimal solution has fractional basic variables"""
-        basicVarSpots = self.getBasicVarSpots([tableau])
-        
         for i in range(1, len(tableau)):  # Skip objective row
-            rhsValue = self.roundValue(tableau[i][-1])
-            decimalPart = abs(rhsValue - round(rhsValue))
+            rhsValue = self.cleanValue(tableau[i][-1])
             
-            if decimalPart > self.tolerance:
+            # Check if the value is significantly different from its integer part
+            integerPart = round(rhsValue)
+            if abs(rhsValue - integerPart) > self.tolerance:
                 return True
         
         return False
 
     def findMostFractionalRow(self, tableau):
         """Find the row with the most fractional RHS value for Gomory cut"""
-        rhsDecimals = []
-        for i in range(1, len(tableau)):
-            decimalPart = self.roundValue(tableau[i][-1] - int(tableau[i][-1]))
-            rhsDecimals.append(self.roundValue(decimalPart))
+        maxFractional = 0
+        selectedRow = 1
+        
+        for i in range(1, len(tableau)):  # Skip objective row
+            rhsValue = self.cleanValue(tableau[i][-1])
+            integerPart = int(rhsValue)
+            fractionalPart = rhsValue - integerPart
+            
+            # Normalize fractional part to [0, 1)
+            if fractionalPart < 0:
+                fractionalPart += 1
+                
+            # We want the fractional part closest to 0.5 (most fractional)
+            fractionalMeasure = min(fractionalPart, 1 - fractionalPart)
+            
+            if fractionalMeasure > maxFractional:
+                maxFractional = fractionalMeasure
+                selectedRow = i
+                
+        return selectedRow
 
-        rhsPickList = [self.roundValue(abs(dec - 0.5)) for dec in rhsDecimals]
-        pickedRowIndex = rhsPickList.index(min(rhsPickList))
-        
-        # Convert to actual row index in tableau
-        pickedRow = ((self.getBasicVarSpots([tableau])).index(pickedRowIndex)) + 1
-        
-        return pickedRow
-    
+    def cleanTableau(self, tableau):
+        """Clean the entire tableau to remove floating point errors"""
+        cleanedTableau = []
+        for row in tableau:
+            cleanedRow = [self.cleanValue(val) for val in row]
+            cleanedTableau.append(cleanedRow)
+        return cleanedTableau
+
     def doCuttingPlane(self, workingTableau):
-
-        currentTableau = workingTableau
+        currentTableau = self.cleanTableau(workingTableau)
         iteration = 1
 
         # Recursive cutting plane loop
         while self.hasFractionalSolution(currentTableau) and iteration <= self.maxIterations:
             print(f"\n=== CUTTING PLANE ITERATION {iteration} ===")
             
+            # Clean tableau before processing
+            currentTableau = self.cleanTableau(currentTableau)
+            
             # Find the most fractional row for Gomory cut
             pickedRow = self.findMostFractionalRow(currentTableau)
             
-            print(f"Selected row for Gomory cut: {self.roundValue(currentTableau[pickedRow])}")
+            print(f"Selected row {pickedRow} for Gomory cut: {[self.roundValue(x) for x in currentTableau[pickedRow]]}")
 
             # Generate Gomory cut from the selected row
-            tempList = self.roundValue(currentTableau[pickedRow])
-            tempList = tempList[len(self.objFunc):]  # Remove objective function coefficients
+            tempList = currentTableau[pickedRow][len(self.objFunc):]  # Remove objective function coefficients
             newCon = self.gomoryCut(tempList, verbose=True)
 
-            for i in range(len(newCon)):
-                newCon[i] = self.roundValue(newCon[i])
+            # Clean the new constraint
+            newCon = [self.cleanValue(x) for x in newCon]
 
             # Prepare the new constraint for tableau format
             for i in range(len(self.objFunc)):
                 newCon.insert(i, 0)
 
             newCon.insert(-1, 1)  # Add slack variable coefficient
-            print(f"Generated cutting plane constraint: {newCon}")
+            print(f"Generated cutting plane constraint: {[self.roundValue(x) for x in newCon]}")
 
             # Add new column for the slack variable
             print("Adding new slack variable column...")
@@ -300,8 +306,8 @@ class CuttingPlane():
             for i in range(len(finalTableaus)):
                 self.printTableau(finalTableaus[i], title=f"Iteration {iteration} - Tableau {i+1}")
 
-            # Update current tableau for next iteration
-            currentTableau = finalTableaus[-1]
+            # Clean and update current tableau for next iteration
+            currentTableau = self.cleanTableau(finalTableaus[-1])
             iteration += 1
 
         # Final results

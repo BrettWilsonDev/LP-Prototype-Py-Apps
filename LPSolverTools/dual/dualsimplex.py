@@ -11,6 +11,7 @@ import os
 class DualSimplex:
     def __init__(self, isConsoleOutput=False):
         self.isConsoleOutput = isConsoleOutput
+        # self.isConsoleOutput = True
 
         self.reset()
 
@@ -297,7 +298,7 @@ class DualSimplex:
                 minTheta = 0
             else:
                 return None, None
-
+            
         rowIndex = thetas.index(minTheta) + 1
 
         operationTab = []
@@ -373,7 +374,10 @@ class DualSimplex:
             rhsTest = []
             for i in range(len(tableaus[-1])):
                 rhsTest.append(tableaus[-1][i][-1])
-            allRhsPositive = all(num >= 0 for num in rhsTest)
+            # allRhsPositive = all(num >= 0 for num in rhsTest)
+            # allRhsPositive = all(num > 0 or (num == 0 and num is not -0.0) for num in rhsTest)
+            epsilon = 1e-9
+            allRhsPositive = all(num >= -epsilon for num in rhsTest)
 
             if allRhsPositive:
                 break
@@ -384,9 +388,9 @@ class DualSimplex:
                 if tabOverride is None:
                     if self.isConsoleOutput:
                         print("\nNo Optimal Solution Found")
-                    return None, None, None
+                    return tab, None, None
                 else:
-                    return None, None, None, None, None, None
+                    return tab, None, None, None, None, None
 
             for items in tab:
                 for item in items:

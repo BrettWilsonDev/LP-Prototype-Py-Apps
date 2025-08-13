@@ -27,7 +27,7 @@ class CuttingPlane():
 
     def reset(self):
         self.dual = Dual()
-        self.testInputSelected = 0
+        self.testInputSelected = 3
 
         self.isMin = False
 
@@ -104,6 +104,27 @@ class CuttingPlane():
             constraints = [[3, 1, 12, 0],
                            [1, 1, 5, 0],
                            ]
+        if testNum == 3: #knap sack
+            objFunc = [2, 3, 3, 5, 2, 4] 
+            constraints = [
+                [11, 8, 6, 14, 10, 10, 40, 0], # c1
+                [1, 0, 0, 0, 0, 0, 0, 1, 0], # c2
+                [0, 1, 0, 0, 0, 0, 0, 1, 0], # c3
+                [0, 0, 1, 0, 0, 0, 0, 1, 0], # c4
+                [0, 0, 0, 1, 0, 0, 0, 1, 0], # c5
+                [0, 0, 0, 0, 1, 0, 0, 1, 0], # c6
+                [0, 0, 0, 0, 0, 1, 0, 1, 0], # c7
+            ]
+            isMin = False
+
+        if testNum == 4: #knap sack
+            objFunc = [6, 8] 
+            constraints = [
+                [3, 1, 4, 1], # c1
+                [1, 2, 4, 1], # c1
+                
+            ]
+            isMin = True
 
         if testNum == -1:
             return None, None, None
@@ -216,41 +237,104 @@ class CuttingPlane():
 
         return basicVarSpots
     
+    # def hasFractionalSolution(self, tableau):
+    #     """Check if the current optimal solution has fractional basic variables"""
+    #     for i in range(1, len(tableau)):  # Skip objective row
+    #         rhsValue = self.cleanValue(tableau[i][-1])
+            
+    #         # Check if the value is significantly different from its integer part
+    #         integerPart = round(rhsValue)
+    #         if abs(rhsValue - integerPart) > self.tolerance:
+    #             return True
+        
+    #     return False
+
+    # def findMostFractionalRow(self, tableau):
+    #     """Find the row with the most fractional RHS value for Gomory cut"""
+    #     maxFractional = 0
+    #     selectedRow = 1
+        
+    #     for i in range(1, len(tableau)):  # Skip objective row
+    #         rhsValue = self.cleanValue(tableau[i][-1])
+    #         integerPart = int(rhsValue)
+    #         fractionalPart = rhsValue - integerPart
+            
+    #         # Normalize fractional part to [0, 1)
+    #         if fractionalPart < 0:
+    #             fractionalPart += 1
+                
+    #         # We want the fractional part closest to 0.5 (most fractional)
+    #         fractionalMeasure = min(fractionalPart, 1 - fractionalPart)
+            
+    #         if fractionalMeasure > maxFractional:
+    #             maxFractional = fractionalMeasure
+    #             selectedRow = i
+                
+    #     return selectedRow
+
+    def findMostFractionalRow(self, tableau):
+        """Find the row with the most fractional RHS value for Gomory cut
+        The most fractional is the one closest to 0.5
+        In case of ties, pick the one with the largest fractional part"""
+        bestFractionalScore = -1
+        selectedRow = 1
+        candidates = []
+        
+        if self.isConsoleOutput:
+            print(f"\nAnalyzing fractional parts:")
+        
+        for i in range(1, len(tableau)):  # Skip objective row
+            rhsValue = self.cleanValue(tableau[i][-1])
+            
+            # Calculate fractional part using floor method
+            fractionalPart = rhsValue - math.floor(rhsValue)
+            
+            # Calculate how "fractional" this is - distance from nearest 0 or 1
+            # Most fractional is closest to 0.5
+            fractionalScore = min(fractionalPart, 1 - fractionalPart)
+            
+            if self.isConsoleOutput:
+                print(f"Row {i}: RHS = {rhsValue:.4f}, fractional part = {fractionalPart:.4f}, score = {fractionalScore:.4f}")
+            
+            # Only consider rows with significant fractional parts
+            if fractionalPart > self.tolerance and fractionalPart < (1 - self.tolerance):
+                if fractionalScore > bestFractionalScore:
+                    bestFractionalScore = fractionalScore
+                    candidates = [(i, fractionalPart, rhsValue)]
+                elif abs(fractionalScore - bestFractionalScore) < self.tolerance:
+                    candidates.append((i, fractionalPart, rhsValue))
+        
+        # When scores are tied, pick the row with the largest fractional part
+        # If fractional parts are also tied, pick the smallest RHS value
+        if candidates:
+            # Sort by fractional part (desc), then by RHS value (asc) for tie-breaking
+            candidates.sort(key=lambda x: (-x[1], x[2]))
+            selectedRow = candidates[0][0]
+            
+            if self.isConsoleOutput:
+                print(f"Candidates with score {bestFractionalScore:.4f}: {[(c[0], f'RHS={c[2]:.4f}, frac={c[1]:.4f}') for c in candidates]}")
+        
+        if self.isConsoleOutput:
+            print(f"Selected row {selectedRow}")
+            
+        return selectedRow
+
     def hasFractionalSolution(self, tableau):
         """Check if the current optimal solution has fractional basic variables"""
         for i in range(1, len(tableau)):  # Skip objective row
             rhsValue = self.cleanValue(tableau[i][-1])
             
-            # Check if the value is significantly different from its integer part
-            integerPart = round(rhsValue)
-            if abs(rhsValue - integerPart) > self.tolerance:
+            # Calculate fractional part using floor method
+            fractionalPart = rhsValue - math.floor(rhsValue)
+            
+            # Check if the fractional part is significant
+            if fractionalPart > self.tolerance:
                 return True
         
         return False
+    
 
-    def findMostFractionalRow(self, tableau):
-        """Find the row with the most fractional RHS value for Gomory cut"""
-        maxFractional = 0
-        selectedRow = 1
-        
-        for i in range(1, len(tableau)):  # Skip objective row
-            rhsValue = self.cleanValue(tableau[i][-1])
-            integerPart = int(rhsValue)
-            fractionalPart = rhsValue - integerPart
-            
-            # Normalize fractional part to [0, 1)
-            if fractionalPart < 0:
-                fractionalPart += 1
-                
-            # We want the fractional part closest to 0.5 (most fractional)
-            fractionalMeasure = min(fractionalPart, 1 - fractionalPart)
-            
-            if fractionalMeasure > maxFractional:
-                maxFractional = fractionalMeasure
-                selectedRow = i
-                
-        return selectedRow
-
+    
     def cleanTableau(self, tableau):
         """Clean the entire tableau to remove floating point errors"""
         cleanedTableau = []

@@ -22,7 +22,7 @@ class LPDuality:
 
     def reset(self):
         self.dual = Dual()
-        self.testInputSelected = 0
+        self.testInputSelected = -1
 
         # simplex specific vars
         self.problemType = "Max"

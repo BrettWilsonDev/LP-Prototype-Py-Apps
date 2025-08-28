@@ -27,7 +27,7 @@ class CuttingPlane():
 
     def reset(self):
         self.dual = Dual()
-        self.testInputSelected = 3
+        self.testInputSelected = 0
 
         self.isMin = False
 
@@ -131,14 +131,67 @@ class CuttingPlane():
         else:
             return objFunc, constraints, isMin
 
-    def printTableau(self, tableau, title="Tableau"):
+    # def printTableau(self, tableau, title="Tableau", rows=[], cols=[]):
+    #     if self.isConsoleOutput:
+    #         print(f"\n{title}")
+    #         for i in range(len(tableau)):
+    #             for j in range(len(tableau[i])):
+    #                 print(f"{self.roundValue(tableau[i][j]):>8.4f}", end="  ")
+    #             print()
+    #         print()
+
+    # def printTableau(self, tableau, title="Tableau", row=0, col=0):
+    #     if self.isConsoleOutput:
+    #         print(f"\n{title}")
+    #         for i in range(len(tableau)):
+    #             for j in range(len(tableau[i])):
+    #                 print(f"{self.roundValue(tableau[i][j]):>8.4f}", end="  ")
+    #             print()
+    #         print()
+
+    # def printTableau(self, tableau, title="Tableau", row=-1, col=-1):
+    #     headerStr = []
+
+    #     for i in range(len(self.objFunc)):
+    #         headerStr.append(f"x{i+1}")
+
+    #     for i in range(len(self.objFunc), len(self.objFunc) - len(tableau[0])):
+    #         headerStr.append(f"s{i+1}")
+
+    #     if self.isConsoleOutput:
+    #         print(f"\n{title}")
+    #         for i in range(len(tableau)):
+    #             for j in range(len(tableau[i])):
+    #                 if row != -1 and (i == row or j == col):
+    #                     print(f"\033[92m{self.roundValue(tableau[i][j]):>8.4f}\033[0m", end="  ")
+    #                 else:
+    #                     print(f"{self.roundValue(tableau[i][j]):>8.4f}", end="  ")
+    #             print()
+    #         print()
+
+    def printTableau(self, tableau, title="Tableau", row=-1, col=-1):
+        headerStr = []
+
+        for i in range(len(self.objFunc)):
+            headerStr.append(f"x{i+1}")
+
+        for i in range(len(self.objFunc), len(tableau[0]) - 1):
+            headerStr.append(f"s/e{i-len(self.objFunc)+1}")
+
+        headerStr.append("rhs")
+
         if self.isConsoleOutput:
             print(f"\n{title}")
+            print("  ".join([f"{h:>8}" for h in headerStr]))
             for i in range(len(tableau)):
                 for j in range(len(tableau[i])):
-                    print(f"{self.roundValue(tableau[i][j]):>8.4f}", end="  ")
+                    if row != -1 and (i == row or j == col):
+                        print(f"\033[92m{self.roundValue(tableau[i][j]):>8.4f}\033[0m", end="  ")
+                    else:
+                        print(f"{self.roundValue(tableau[i][j]):>8.4f}", end="  ")
                 print()
             print()
+
 
     def roundValue(self, value):
         """Improved rounding with fraction conversion to avoid floating point errors"""
@@ -387,8 +440,15 @@ class CuttingPlane():
             finalTableaus, self.changingVars, self.optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow = self.dual.doDualSimplex(
                 [], [], self.isMin, currentTableau)
             
+            print(f"pivot rows: {(self.IMPivotRows)}")
+            print(f"pivot columns: {(self.IMPivotCols)}")
+            
             for i in range(len(finalTableaus)):
-                self.printTableau(finalTableaus[i], title=f"Iteration {iteration} - Tableau {i+1}")
+                # self.printTableau(finalTableaus[i], title=f"Iteration {iteration} - Tableau {i+1}", self.IMPivotRows, self.IMPivotCols)
+                try:
+                    self.printTableau(finalTableaus[i], f"Iteration {iteration} - Tableau {i+1}", self.IMPivotRows[i], self.IMPivotCols[i])
+                except:
+                    self.printTableau(finalTableaus[i], f"Iteration {iteration} - Tableau {i+1}")
 
             # Clean and update current tableau for next iteration
             currentTableau = self.cleanTableau(finalTableaus[-1])
@@ -415,8 +475,18 @@ class CuttingPlane():
         workingTableaus, self.changingVars, self.optimalSolution = self.dual.doDualSimplex(
             self.objFunc, self.constraints, self.isMin)
         
+        _, self.changingVars, self.optimalSolution, self.IMPivotCols, self.IMPivotRows, self.IMHeaderRow = self.dual.doDualSimplex(
+                [], [], self.isMin, workingTableaus[0])
+        
+        print(f"pivot rows: {(self.IMPivotRows)}")
+        print(f"pivot columns: {(self.IMPivotCols)}")
+        
         for i in range(len(workingTableaus)):
-            self.printTableau(workingTableaus[i], title=f"Initial Tableau {i+1}")
+            # self.printTableau(workingTableaus[i], title=f"Initial Tableau {i+1}")
+            try:
+                self.printTableau(workingTableaus[i], f"Initial Tableau {i+1}", self.IMPivotRows[i], self.IMPivotCols[i])
+            except:
+                self.printTableau(workingTableaus[i], f"Initial Tableau {i+1}")
 
         self.doCuttingPlane(workingTableaus[-1])
 

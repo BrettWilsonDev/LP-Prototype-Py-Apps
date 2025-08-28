@@ -236,8 +236,9 @@ class BranchAndBoundKnapsack:
         # Calculate bound AFTER integer check
         node.bound = self.calculateUpperBound(node, sortedItems)
         if node.bound <= self.bestValue:
-            print("Bound exceeded, pruned\n")
-            return
+            # print("Bound exceeded, pruned\n")
+            # return
+            pass
         
         # Get next variable to branch on
         nextVarIndex = self.getNextVariableToBranch(node, sortedItems)
@@ -253,6 +254,7 @@ class BranchAndBoundKnapsack:
             branchDisplay = f"Sub-P {nodeLabel}.1: x{nextVarIndex + 1} = 0    Sub-P {nodeLabel}.2: x{nextVarIndex + 1} = 1"
         
         print(branchDisplay)
+        print("==========================================================")
         
         # Process both branches
         for i, branchValue in enumerate([0, 1]):
@@ -267,6 +269,8 @@ class BranchAndBoundKnapsack:
             newNode = KnapsackNode(node.level + 1, newProfit, newWeight, 0, newFixedVars, node)
             currentLabel = childLabels[i]
             self.displaySubProblem(newNode, sortedItems, f"Sub-P {currentLabel}")
+
+            
             
             if not self.isFeasible(newNode):
                 print("Infeasible\n")
@@ -276,10 +280,11 @@ class BranchAndBoundKnapsack:
                     continue  # don’t branch further
 
                 newNode.bound = self.calculateUpperBound(newNode, sortedItems)
-                if newNode.bound <= self.bestValue:
-                    print("Bound exceeded, pruned\n")
-                else:
-                    self.solveRecursive(newNode, sortedItems, currentLabel, candidateCounter)
+                # if newNode.bound <= self.bestValue:
+                #     print("Bound exceeded, pruned\n")
+                # else:
+                #     self.solveRecursive(newNode, sortedItems, currentLabel, candidateCounter)
+                self.solveRecursive(newNode, sortedItems, currentLabel, candidateCounter)
 
 
     def _finalizeCandidate(self, node, candidateCounter):
@@ -342,13 +347,29 @@ class BranchAndBoundKnapsack:
 # Example usage with the given problem
 def main():
     # Problem data from your example
-    values = [16, 22, 12, 8]
-    weights = [5, 7, 4, 3]
-    capacity = 14
+    # values = [16, 22, 12, 8]
+    # weights = [5, 7, 4, 3]
+    # capacity = 14
 
     # values = [2, 3, 3, 5, 2, 4]
     # weights = [11, 8, 6, 14, 10, 10]
     # capacity = 40
+
+    # values = [2, 3, 3, 5, 2, 4]
+    # weights = [11, 8, 6, 14, 10, 10]
+    # capacity = 40
+
+    # values = [2, 3, 3, 5, 2, 4]
+    # weights = [11, 8, 6, 14, 10, 10]
+    # capacity = 40
+
+    # values = [4, 2, 2, 1, 10]
+    # weights = [12, 2, 1, 1, 4]
+    # capacity = 15
+
+    values = [300, 840, 160, 520]
+    weights = [7, 15, 3, 13]
+    capacity = 23
     
     knapsackSolver = BranchAndBoundKnapsack(values, weights, capacity)
     bestValue, bestSolution = knapsackSolver.solve()
